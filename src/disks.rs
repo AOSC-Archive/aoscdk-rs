@@ -1,11 +1,44 @@
 use libparted;
 use std::path::PathBuf;
+use std::path::Path;
+
+const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
+const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
+const DEFAULT_FS_TYPE: &str = "ext4";
 
 #[derive(Debug, Clone)]
 pub struct Partition {
     pub path: Option<PathBuf>,
     pub fs_type: Option<String>,
     pub size: u64,
+}
+
+#[inline]
+pub fn is_efi_booted() -> bool {
+    Path::new(EFI_DETECT_PATH).is_dir()
+}
+
+pub fn get_recommended_fs_type(type_: &str) -> &str {
+    for i in ALLOWED_FS_TYPE {
+        if *i == type_ {
+            return i;
+        }
+    }
+
+    DEFAULT_FS_TYPE
+}
+
+pub fn fill_fs_type(part: &Partition) -> Partition {
+    let mut new_part = part.clone();
+    let new_fs_type: String;
+    if let Some(fs_type) = new_part.fs_type.clone() {
+        new_fs_type = get_recommended_fs_type(&fs_type).to_string();
+    } else {
+        new_fs_type = DEFAULT_FS_TYPE.to_string();
+    }
+    new_part.fs_type = Some(new_fs_type);
+
+    new_part
 }
 
 pub fn list_partitions() -> Vec<Partition> {
@@ -40,4 +73,10 @@ pub fn list_partitions() -> Vec<Partition> {
     }
 
     partitions
+}
+
+#[test]
+fn test_fs_recommendation() {
+    assert_eq!(get_recommended_fs_type("btrfs"), "btrfs");
+    assert_eq!(get_recommended_fs_type("ext2"), "ext4");
 }

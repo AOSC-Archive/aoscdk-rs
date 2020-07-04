@@ -39,7 +39,7 @@ struct VariantData {
     general: DistroList,
     retro: DistroList,
 }
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct MirrorData {
     pub name: String,
     pub region: String,
@@ -53,7 +53,7 @@ pub struct MirrorList {
     pub mirrors: Vec<MirrorData>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VariantEntry {
     pub name: String,
     pub size: u64,
@@ -98,6 +98,19 @@ fn get_arch_name() -> Option<&'static str> {
     }
 }
 
+#[inline]
+fn get_file_size(url: &str) -> Result<u64, Error> {
+    let client = reqwest::blocking::Client::new();
+    let resp = client.head(url).send()?;
+    // FIXME: There is a bug in reqwest that content_length() does not work correctly
+    if let Some(length) = resp.headers().get("content-length") {
+        let length = length.to_str().unwrap_or("0").parse::<u64>().unwrap_or(0);
+        return Ok(length);
+    }
+
+    Err(format_err!("Unknown size"))
+}
+
 pub fn fetch_recipe() -> Result<Vec<VariantEntry>, Error> {
     let recipes = fetch_recipe_inner()?;
     let distro_list;
@@ -127,11 +140,12 @@ pub fn fetch_recipe() -> Result<Vec<VariantEntry>, Error> {
         }
         links.sort_by(|a, b| b.1.cmp(&a.1));
         let candidate = links.first_mut().unwrap();
+        let url = format!("{}/{}", page.url, candidate.0);
         results.push(VariantEntry {
             name: entry.name,
             date: candidate.1.clone(),
-            url: format!("{}/{}", page.url, candidate.0),
-            size: 0
+            size: get_file_size(&url).unwrap_or(0),
+            url,
         });
     }
 
