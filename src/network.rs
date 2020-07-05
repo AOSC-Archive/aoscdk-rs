@@ -2,6 +2,8 @@ use failure::{format_err, Error};
 use reqwest;
 use serde_derive::{Deserialize, Serialize};
 use std::env::consts::ARCH;
+use std::path::PathBuf;
+use std::io::prelude::*;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -109,6 +111,25 @@ fn get_file_size(url: &str) -> Result<u64, Error> {
     }
 
     Err(format_err!("Unknown size"))
+}
+
+pub fn download_file(url: &str) -> Result<reqwest::blocking::Response, Error> {
+    let client = reqwest::blocking::Client::new();
+    let resp = client.get(url).send()?;
+    let resp = resp.error_for_status()?;
+
+    Ok(resp)
+}
+
+pub fn fetch_file_checksum(url: &str) -> Result<String, Error> {
+    let url = format!("{}.sha256sum", url);
+    let mut buffer = [0u8; 64];
+    let client = reqwest::blocking::Client::new();
+    let resp = client.get(&url).send()?;
+    let mut resp = resp.error_for_status()?;
+    resp.read_exact(&mut buffer)?;
+
+    Ok(String::from_utf8_lossy(&buffer).to_string())
 }
 
 pub fn fetch_recipe() -> Result<Vec<VariantEntry>, Error> {

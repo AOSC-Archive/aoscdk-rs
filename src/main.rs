@@ -1,17 +1,25 @@
 mod disks;
+mod install;
 mod network;
 
 use cursive::traits::*;
+use cursive::utils::{Counter, ProgressReader};
 use cursive::view::SizeConstraint;
 use cursive::views::{
-    Dialog, DummyView, LinearLayout, NamedView, Panel, RadioGroup, ResizedView, ScrollView,
-    TextView,
+    Dialog, DummyView, LinearLayout, NamedView, Panel, ProgressBar, RadioGroup, ResizedView,
+    ScrollView, TextView,
 };
 use cursive::Cursive;
 use number_prefix::NumberPrefix;
+use std::convert::TryInto;
 use std::env;
+use std::path::PathBuf;
 use std::process::Command;
-use std::rc::Rc;
+use std::{sync::atomic::{AtomicBool, Ordering}, rc::Rc};
+use std::sync::Arc;
+
+use nix::unistd::{fork, ForkResult};
+
 
 #[derive(Debug, Clone)]
 struct InstallConfig {
@@ -24,7 +32,8 @@ fn show_error(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
         Dialog::around(TextView::new(msg))
             .title("Error")
-            .button("Exit", |s| s.quit()),
+            .button("Exit", |s| s.quit())
+            .padding_lrtb(2, 2, 1, 1),
     );
 }
 
@@ -34,12 +43,13 @@ fn show_msg(siv: &mut Cursive, msg: &str) {
             .title("Message")
             .button("OK", |s| {
                 s.pop_layer();
-            }),
+            })
+            .padding_lrtb(2, 2, 1, 1),
     );
 }
 
 fn show_blocking_message(siv: &mut Cursive, msg: &str) {
-    siv.add_layer(Dialog::around(TextView::new(msg)).title("Message"));
+    siv.add_layer(Dialog::around(TextView::new(msg)).title("Message").padding_lrtb(2, 2, 1, 1));
 }
 
 fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallConfig)) {
@@ -101,6 +111,7 @@ fn make_partition_list(
     if partitions.is_empty() {
         let dummy_partition = disks::Partition {
             path: None,
+            parent_path: None,
             fs_type: None,
             size: 0,
         };
@@ -258,8 +269,20 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
             let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
             if let Some(disk_list) = disk_list {
                 let disk_list = disk_list.clone();
-                let current_partition = disk_list.selection();
-                if current_partition.path.is_none() && current_partition.size == 0 {
+                let current_partition;
+                if cfg!(debug_assertions) {
+                    // prevent developer/tester accidentally delete their partitions
+                    current_partition = Rc::new(disks::Partition {
+                        fs_type: None,
+                        path: Some(PathBuf::from("/dev/loop0p1")),
+                        parent_path: Some(PathBuf::from("/dev/loop0")),
+                        size: 3145728,
+                        
+                    });
+                } else {
+                    current_partition = disk_list.selection();
+                }
+                if current_partition.parent_path.is_none() && current_partition.size == 0 {
                     show_msg(s, "Please specify a partition.");
                     s.refresh();
                     return;
@@ -278,6 +301,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
 fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     let mut path = String::new();
     let mut fs = String::new();
+    let config_copy = config.clone();
     if let Some(partition) = config.partition {
         if let Some(partition) = &partition.path {
             path = partition.to_string_lossy().to_string();
@@ -299,10 +323,81 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         .button("Cancel", |s| {
             s.pop_layer();
         })
-        .button("Install", |s| {
-            // TODO
+        .button("Install", move |s| {
+            s.pop_layer();
+            begin_install(s, config_copy.clone());
         })
     );
+}
+
+fn begin_install(siv: &mut Cursive, config: InstallConfig) {
+    siv.pop_layer();
+    let refresh_interval = std::time::Duration::from_millis(300);
+    let status_text = TextView::new("").with_name("status");
+    let counter = Counter::new(0);
+    let url;
+    let file_size: usize;
+    let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    siv.call_on_name("status", |v: &mut NamedView<TextView>| {
+        v.get_mut().set_content("Step 1 of 4: Formatting partition...");
+    });
+    siv.refresh();
+    if let Err(e) = disks::format_partition(&config.partition.unwrap()) {
+        show_error(siv, &e.to_string());
+        return;
+    }
+    if let Some(variant) = config.variant.as_ref() {
+        file_size = variant.size.try_into().unwrap();
+        url = variant.url.clone();
+    } else {
+        return;
+    }
+    let download_done_copy = download_done.clone();
+    let extract_done_copy = extract_done.clone();
+    let progress_bar = ProgressBar::new().max(file_size).with_value(counter.clone()).with_task(move |counter| {
+        let mut output;
+        if let Ok(reader) = network::download_file(&url) {
+            let mut reader = ProgressReader::new(counter.clone(), reader);
+            output = std::fs::File::create("/tmp/large_file").unwrap();
+            std::io::copy(&mut reader, &mut output).unwrap();
+            download_done_copy.fetch_or(true, Ordering::SeqCst);
+        } else {
+            return;
+        }
+        counter.clone().set(0);
+        output = std::fs::File::open("/tmp/large_file").unwrap();
+        let reader = ProgressReader::new(counter.clone(), output);
+        install::extract_tar_xz(reader, &PathBuf::from("/tmp/test/")).unwrap();
+        extract_done_copy.fetch_or(true, Ordering::SeqCst);
+    });
+    siv.add_layer(
+        Dialog::around(
+            LinearLayout::vertical().child(
+                TextView::new("Please wait while the installation is taking place.\nDuring installation, you may want to go around and get a feeling for AOSC OS!")
+            ).child(DummyView {}).child(progress_bar).child(status_text)
+        ).title("Installing")
+    );
+    siv.call_on_name("status", |v: &mut NamedView<TextView>| {
+        v.get_mut().set_content("Step 2 of 4: Downloading tarball...");
+    });
+    loop {
+        if download_done.load(Ordering::SeqCst) {
+            break;
+        }
+        siv.refresh();
+        std::thread::sleep(refresh_interval);
+    }
+    siv.call_on_name("status", |v: &mut NamedView<TextView>| {
+        v.get_mut().set_content("Step 3 of 4: Extracting tarball...");
+    });
+    loop {
+        if extract_done.load(Ordering::SeqCst) {
+            break;
+        }
+        siv.refresh();
+        std::thread::sleep(refresh_interval);
+    }
 }
 
 fn main() {
@@ -317,7 +412,8 @@ fn main() {
                     mirror: None,
                 };
                 select_variant(s, config)
-            }),
+            })
+            .padding_lrtb(2, 2, 1, 1),
     );
     siv.run();
     loop {
