@@ -6,6 +6,7 @@ use sha2::{Digest, Sha256};
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::process::Command;
+use tempfile::TempDir;
 use tar;
 use xz2;
 
@@ -26,6 +27,14 @@ pub fn sha256sum<R: Read>(mut reader: R) -> Result<String, Error> {
     std::io::copy(&mut reader, &mut hasher)?;
 
     Ok(hex::encode(hasher.finalize()))
+}
+
+pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf, Error> {
+    let tmp_dir = TempDir::new()?;
+    let tmp_path = tmp_dir.into_path();
+    mount_root_path(partition, &tmp_path)?;
+
+    Ok(tmp_path)
 }
 
 pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Error> {
@@ -49,7 +58,7 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Er
 pub fn get_root_distance(path: &PathBuf) -> Result<usize, Error> {
     let path = path.canonicalize()?;
 
-    Ok(path.components().count() + 1)
+    Ok(path.components().count() + 4)
 }
 
 pub fn escape_chroot(distance: usize) -> Result<(), Error> {

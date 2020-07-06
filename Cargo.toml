@@ -1,5 +1,5 @@
 [package]
-name = "aoscbootstrap-rs"
+name = "aoscdk-rs"
 version = "0.1.0"
 authors = ["liushuyu <liushuyu011@gmail.com>"]
 edition = "2018"
@@ -24,6 +24,7 @@ xz2 = "0.1"
 tar = "0.4"
 sha2 = "0.9"
 hex = "0.4"
+tempfile = "3.1"
 
 [profile.release]
 lto = true
