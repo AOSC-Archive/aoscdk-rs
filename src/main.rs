@@ -385,8 +385,16 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     if disks::is_efi_booted() {
         let mut efi_path = mount_path.clone();
         efi_path.push("efi");
-        let esp_part = disks::find_esp_partition(partition.path.as_ref().unwrap()).unwrap();
-        install::mount_root_path(&esp_part, &efi_path).unwrap();
+        let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap());
+        if let Err(e) = esp_part {
+            show_error(siv, &e.to_string());
+            return;
+        }
+        let esp_part = esp_part.unwrap();
+        if let Err(e) = install::mount_root_path(&esp_part, &efi_path) {
+            show_error(siv, &e.to_string());
+            return;
+        }
     }
     if let Some(variant) = config.variant.as_ref() {
         file_size = variant.size.try_into().unwrap();

@@ -42,7 +42,10 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Er
         return Err(format_err!("Path not specified."));
     }
     let source = partition.path.as_ref();
-    let fs_type = partition.fs_type.as_ref().unwrap().as_str();
+    let mut fs_type = partition.fs_type.as_ref().unwrap().as_str();
+    if fs_type.starts_with("fat") {
+        fs_type = "vfat";
+    }
     // FIXME: due to an issue in `nix` and `libc`, `MS_LAZYTIME` is not supported atm
     mount::mount(
         source,
