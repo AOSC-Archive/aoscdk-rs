@@ -381,6 +381,13 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     }
     let mount_path = mount_path.unwrap();
     let mount_path_copy = mount_path.clone();
+    let mount_path_copy2 = mount_path.clone();
+    if disks::is_efi_booted() {
+        let mut efi_path = mount_path.clone();
+        efi_path.push("efi");
+        let esp_part = disks::find_esp_partition(partition.path.as_ref().unwrap()).unwrap();
+        install::mount_root_path(&esp_part, &efi_path).unwrap();
+    }
     if let Some(variant) = config.variant.as_ref() {
         file_size = variant.size.try_into().unwrap();
         url = variant.url.clone();
@@ -440,21 +447,34 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         siv.refresh();
         std::thread::sleep(refresh_interval);
     }
+    siv.refresh();
+    siv.call_on_name("status", |v: &mut NamedView<TextView>| {
+        v.get_mut()
+            .set_content("Step 4 of 5: Generating initial RAM disk...");
+    });
+    let distance = install::get_root_distance(&mount_path_copy2);
+    install::remove_bind_mounts(&mount_path_copy2).ok();
+    install::dive_into_guest(&mount_path_copy2).unwrap();
+    install::execute_dracut().unwrap();
+    if let Err(e) = distance {
+        show_error(siv, &e.to_string());
+        return;
+    }
+    siv.refresh();
+    siv.call_on_name("status", |v: &mut NamedView<TextView>| {
+        v.get_mut()
+            .set_content("Step 5 of 5: Writing GRUB bootloader...");
+    });
+    if disks::is_efi_booted() {
+        install::execute_grub_install(None).unwrap();
+    } else {
+        install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap())).unwrap();
+    }
+    install::escape_chroot(distance.unwrap()).unwrap();
+    install::remove_bind_mounts(&mount_path_copy2).ok();
 }
 
 fn main() {
-    // let path = PathBuf::from("/tmp/test/");
-    // let distance = install::get_root_distance(&path).unwrap();
-    // let t = std::thread::spawn(move || {
-    //     install::remove_bind_mounts(&path);
-    //     install::dive_into_guest(&path).unwrap();
-    //     // install::execute_dracut().unwrap();
-    //     return;
-    // });
-    // t.join().unwrap();
-    // install::escape_chroot(distance).unwrap();
-    // std::process::Command::new("ls").arg("/tmp/").spawn().unwrap().wait().unwrap();
-    // install::remove_bind_mounts(&PathBuf::from("/tmp/test/")).unwrap();
     let mut siv = cursive::default();
     siv.add_layer(
         Dialog::around(TextView::new("Welcome to AOSC OS installer!"))

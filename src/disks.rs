@@ -42,7 +42,14 @@ pub fn format_partition(partition: &Partition) -> Result<(), Error> {
     } else {
         cmd = command.arg("-f");
     }
-    output = cmd.arg(partition.path.as_ref().ok_or(format_err!("Path not found"))?).output()?;
+    output = cmd
+        .arg(
+            partition
+                .path
+                .as_ref()
+                .ok_or(format_err!("Path not found"))?,
+        )
+        .output()?;
     if !output.status.success() {
         return Err(format_err!(
             "Failed to create filesystem: \n{}\n{}",
@@ -65,6 +72,36 @@ pub fn fill_fs_type(part: &Partition) -> Partition {
     new_part.fs_type = Some(new_fs_type);
 
     new_part
+}
+
+pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition, Error> {
+    let mut device = libparted::Device::get(device_path)?;
+    if let Ok(disk) = libparted::Disk::new(&mut device) {
+        for mut part in disk.parts() {
+            if part.num() < 0 {
+                continue;
+            }
+            if part.get_flag(libparted::PartitionFlag::PED_PARTITION_ESP) {
+                let fs_type;
+                if let Ok(type_) = part.get_geom().probe_fs() {
+                    fs_type = Some(type_.name().to_owned());
+                } else {
+                    fs_type = None;
+                }
+                let path = part.get_path().ok_or(format_err!(
+                    "Unable to get the device file for ESP partition"
+                ))?;
+                return Ok(Partition {
+                    path: Some(path.to_owned()),
+                    parent_path: None,
+                    size: 0,
+                    fs_type,
+                });
+            }
+        }
+    }
+
+    Err(format_err!("ESP partition not found."))
 }
 
 pub fn list_partitions() -> Vec<Partition> {
