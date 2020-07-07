@@ -138,7 +138,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<(), Error> {
     } else {
         cmd = command
             .arg("--target=x86_64-efi")
-            .arg("--bootloader-id=\"AOSC OS\"")
+            .arg("--bootloader-id=AOSC OS")
             .arg("--efi-directory=/efi");
     }
     let process = cmd.output()?;
