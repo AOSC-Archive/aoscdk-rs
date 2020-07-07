@@ -474,10 +474,15 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         v.get_mut()
             .set_content("Step 5 of 5: Writing GRUB bootloader...");
     });
+    let result;
     if disks::is_efi_booted() {
-        install::execute_grub_install(None).unwrap();
+        result = install::execute_grub_install(None);
     } else {
-        install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap())).unwrap();
+        result = install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()));
+    }
+    if let Err(e) = result {
+        show_error(siv, &e.to_string());
+        return;
     }
     install::escape_chroot(distance.unwrap()).unwrap();
     install::remove_bind_mounts(&mount_path_copy2).ok();

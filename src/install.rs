@@ -65,9 +65,7 @@ pub fn get_root_distance(path: &PathBuf) -> Result<usize, Error> {
 }
 
 pub fn escape_chroot(distance: usize) -> Result<(), Error> {
-    std::env::set_current_dir("/")?;  // reset cwd (in chroot)
     let escape_path = "../".repeat(distance);
-    println!("{}", escape_path);
     chroot(escape_path.as_str())?;
     std::env::set_current_dir("/")?;  // reset cwd (on host)
 
