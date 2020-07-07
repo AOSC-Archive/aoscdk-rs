@@ -456,11 +456,11 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         siv.refresh();
         std::thread::sleep(refresh_interval);
     }
-    siv.refresh();
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
         v.get_mut()
-            .set_content("Step 4 of 5: Generating initial RAM disk...");
+        .set_content("Step 4 of 5: Generating initial RAM disk...");
     });
+    siv.refresh();
     let distance = install::get_root_distance(&mount_path_copy2);
     install::remove_bind_mounts(&mount_path_copy2).ok();
     install::dive_into_guest(&mount_path_copy2).unwrap();
@@ -469,11 +469,11 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         show_error(siv, &e.to_string());
         return;
     }
-    siv.refresh();
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
         v.get_mut()
-            .set_content("Step 5 of 5: Writing GRUB bootloader...");
+        .set_content("Step 5 of 5: Writing GRUB bootloader...");
     });
+    siv.refresh();
     let result;
     if disks::is_efi_booted() {
         result = install::execute_grub_install(None);

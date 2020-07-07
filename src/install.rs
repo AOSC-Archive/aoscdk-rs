@@ -145,7 +145,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<(), Error> {
     if !process.status.success() {
         return Err(format_err!(
             "Failed to execute grub-install: {}",
-            process.status.code().unwrap_or(1)
+            String::from_utf8_lossy(&process.stderr)
         ));
     }
     let process = Command::new("grub-mkconfig")
@@ -155,7 +155,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<(), Error> {
     if !process.status.success() {
         return Err(format_err!(
             "Failed to execute grub-mkconfig: {}",
-            process.status.code().unwrap_or(1)
+            String::from_utf8_lossy(&process.stderr)
         ));
     }
 
