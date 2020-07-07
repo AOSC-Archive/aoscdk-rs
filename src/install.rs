@@ -1,7 +1,8 @@
 use failure::{format_err, Error};
 use hex;
 use nix::mount;
-use nix::unistd::chroot;
+use nix::unistd::{chroot, sync};
+use nix::sys::reboot::{reboot, RebootMode};
 use sha2::{Digest, Sha256};
 use std::io::prelude::*;
 use std::path::PathBuf;
@@ -37,6 +38,13 @@ pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf, Error> {
     Ok(tmp_path)
 }
 
+pub fn sync_and_reboot() -> Result<(), Error> {
+    sync();
+    reboot(RebootMode::RB_AUTOBOOT)?;
+
+    Ok(())
+}
+
 pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Error> {
     if partition.fs_type.is_none() || partition.path.is_none() {
         return Err(format_err!("Path not specified."));
@@ -54,6 +62,12 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Er
         mount::MsFlags::empty(),
         None::<&str>,
     )?;
+
+    Ok(())
+}
+
+pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
+    mount::umount2(root, mount::MntFlags::MNT_DETACH)?;
 
     Ok(())
 }

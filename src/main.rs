@@ -355,6 +355,26 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
+fn show_finished(siv: &mut Cursive) {
+    siv.pop_layer();
+    siv.add_layer(
+        Dialog::around(ResizedView::new(
+            SizeConstraint::AtMost(64),
+            SizeConstraint::Free,
+            ScrollView::new(TextView::new(
+                "All done!\nYou can continue playing around by pressing Quit button.",
+            )),
+        ))
+        .title("All Done")
+        .padding_lrtb(2, 2, 1, 1)
+        .button("Reboot", |s| {
+            install::sync_and_reboot().ok();
+            s.quit();
+        })
+        .button("Quit", |s| s.quit()),
+    );
+}
+
 fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
     let refresh_interval = std::time::Duration::from_millis(300);
@@ -382,8 +402,8 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     let mount_path = mount_path.unwrap();
     let mount_path_copy = mount_path.clone();
     let mount_path_copy2 = mount_path.clone();
+    let mut efi_path = mount_path.clone();
     if disks::is_efi_booted() {
-        let mut efi_path = mount_path.clone();
         efi_path.push("efi");
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap());
         if let Err(e) = esp_part {
@@ -458,7 +478,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     }
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
         v.get_mut()
-        .set_content("Step 4 of 5: Generating initial RAM disk...");
+            .set_content("Step 4 of 5: Generating initial RAM disk...");
     });
     siv.refresh();
     let distance = install::get_root_distance(&mount_path_copy2);
@@ -471,7 +491,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     }
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
         v.get_mut()
-        .set_content("Step 5 of 5: Writing GRUB bootloader...");
+            .set_content("Step 5 of 5: Writing GRUB bootloader...");
     });
     siv.refresh();
     let result;
@@ -485,7 +505,12 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         return;
     }
     install::escape_chroot(distance.unwrap()).unwrap();
-    install::remove_bind_mounts(&mount_path_copy2).ok();
+    if disks::is_efi_booted() {
+        install::umount_root_path(&efi_path).unwrap();
+    }
+    install::remove_bind_mounts(&mount_path_copy2).unwrap();
+    install::umount_root_path(&mount_path_copy2).ok();
+    show_finished(siv);
 }
 
 fn main() {
