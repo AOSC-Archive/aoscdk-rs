@@ -391,6 +391,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
             return;
         }
         let esp_part = esp_part.unwrap();
+        std::fs::create_dir_all(&efi_path).unwrap();
         if let Err(e) = install::mount_root_path(&esp_part, &efi_path) {
             show_error(siv, &e.to_string());
             return;
