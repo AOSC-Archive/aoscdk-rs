@@ -1,14 +1,15 @@
 use failure::{format_err, Error};
 use hex;
 use nix::mount;
-use nix::unistd::{chroot, sync};
 use nix::sys::reboot::{reboot, RebootMode};
+use nix::unistd::{chroot, sync};
 use sha2::{Digest, Sha256};
+use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use std::process::Command;
-use tempfile::TempDir;
+use std::process::{Command, Stdio};
 use tar;
+use tempfile::TempDir;
 use xz2;
 
 use crate::disks::Partition;
@@ -81,7 +82,7 @@ pub fn get_root_distance(path: &PathBuf) -> Result<usize, Error> {
 pub fn escape_chroot(distance: usize) -> Result<(), Error> {
     let escape_path = "../".repeat(distance);
     chroot(escape_path.as_str())?;
-    std::env::set_current_dir("/")?;  // reset cwd (on host)
+    std::env::set_current_dir("/")?; // reset cwd (on host)
 
     Ok(())
 }
@@ -120,7 +121,7 @@ pub fn remove_bind_mounts(root: &PathBuf) -> Result<(), Error> {
 pub fn dive_into_guest(root: &PathBuf) -> Result<(), Error> {
     setup_bind_mounts(root)?;
     chroot(root)?;
-    std::env::set_current_dir("/")?;  // jump to the root directory after chroot
+    std::env::set_current_dir("/")?; // jump to the root directory after chroot
 
     Ok(())
 }
@@ -138,6 +139,52 @@ pub fn execute_dracut() -> Result<(), Error> {
             String::from_utf8_lossy(&output.stdout)
         ));
     }
+
+    Ok(())
+}
+
+/// Sets hostname in the guest environment
+/// Must be used in a chroot context
+pub fn set_hostname(name: &str) -> Result<(), Error> {
+    let mut f = File::create("/etc/hostname")?;
+
+    Ok(f.write_all(name.as_bytes())?)
+}
+
+/// Sets locale in the guest environment
+/// Must be used in a chroot context
+pub fn set_locale(locale: &str) -> Result<(), Error> {
+    let mut f = File::create("/etc/locale.conf")?;
+    f.write_all("LANG=".as_bytes())?;
+
+    Ok(f.write_all(locale.as_bytes())?)
+}
+
+/// Adds a new normal user to the guest environment
+/// Must be used in a chroot context
+pub fn add_new_user(name: &str, password: &str) -> Result<(), Error> {
+    let command = Command::new("useradd")
+        .args(&["-m", "-s", "/bin/bash", name])
+        .output()?;
+    if !command.status.success() {
+        return Err(format_err!(
+            "Failed to add a new user: {}",
+            String::from_utf8_lossy(&command.stderr)
+        ));
+    }
+    let command = Command::new("usermod")
+        .args(&["-aG", "audio,cdrom,video,wheel", name])
+        .output()?;
+    if !command.status.success() {
+        return Err(format_err!(
+            "Failed to add a new user: {}",
+            String::from_utf8_lossy(&command.stderr)
+        ));
+    }
+    let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
+    let mut stdin = command.stdin.unwrap();
+    stdin.write_all(password.as_bytes())?;
+    stdin.flush()?;
 
     Ok(())
 }

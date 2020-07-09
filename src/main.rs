@@ -11,12 +11,14 @@ use cursive::views::{
 };
 use cursive::Cursive;
 use number_prefix::NumberPrefix;
+use std::cell::RefCell;
 use std::convert::TryInto;
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Arc;
 use std::{
+    borrow::BorrowMut,
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -28,6 +30,13 @@ struct InstallConfig {
     mirror: Option<Rc<network::MirrorData>>,
     user: Option<Rc<String>>,
     password: Option<Rc<String>>,
+    hostname: Option<String>,
+}
+
+macro_rules! SUMMARY_TEXT {
+    () => {
+        "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {} mirror server.\n- User {} will be created."
+    };
 }
 
 fn show_error(siv: &mut Cursive, msg: &str) {
@@ -295,7 +304,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let mut config = config.clone();
                 let new_part = disks::fill_fs_type(current_partition.as_ref());
                 config.partition = Some(Rc::new(new_part));
-                show_summary(s, config);
+                select_user(s, config);
             }
         })
         .padding_lrtb(2, 2, 1, 1)
@@ -303,12 +312,58 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
-fn select_user(siv: &mut Cursive, config: &InstallConfig) {
+fn select_user(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
+    let password = Rc::new(RefCell::new(String::new()));
+    let password_copy = Rc::clone(&password);
+    let password_confirm = Rc::new(RefCell::new(String::new()));
+    let password_confirm_copy = Rc::clone(&password_confirm);
+    let name = Rc::new(RefCell::new(String::new()));
+    let name_copy = Rc::clone(&name);
+    let hostname = Rc::new(RefCell::new(String::new()));
+    let hostname_copy = Rc::clone(&hostname);
+
     let config_view = ListView::new()
-        .child("Username", EditView::new().min_width(20))
-        .child("Password", EditView::new().min_width(20))
-        .child("Confirm Password", EditView::new().min_width(20));
+        .child(
+            "Username",
+            EditView::new()
+                .on_edit_mut(move |_, c, _| {
+                    name_copy.replace(c.to_owned());
+                })
+                .min_width(20)
+                .with_name("user"),
+        )
+        .child(
+            "Password",
+            EditView::new()
+                .secret()
+                .on_edit_mut(move |_, c, _| {
+                    password_copy.replace(c.to_owned());
+                })
+                .min_width(20)
+                .with_name("pwd"),
+        )
+        .child(
+            "Confirm Password",
+            EditView::new()
+                .secret()
+                .on_edit_mut(move |_, c, _| {
+                    password_confirm_copy.replace(c.to_owned());
+                })
+                .min_width(20)
+                .with_name("pwd2"),
+        )
+        .delimiter()
+        .child(
+            "Hostname",
+            EditView::new()
+                .secret()
+                .on_edit_mut(move |_, c, _| {
+                    hostname_copy.replace(c.to_owned());
+                })
+                .min_width(20)
+                .with_name("hostname"),
+        );
     siv.add_layer(
         Dialog::around(ResizedView::new(
             SizeConstraint::AtMost(64),
@@ -317,8 +372,19 @@ fn select_user(siv: &mut Cursive, config: &InstallConfig) {
         ))
         .padding_lrtb(2, 2, 1, 1)
         .title("AOSC OS Installation")
-        .button("Continue", |s| {
-            // TODO:
+        .button("Continue", move |s| {
+            let password = password.as_ref().to_owned().into_inner();
+            let password_confirm = password_confirm.as_ref().to_owned().into_inner();
+            let name = name.as_ref().to_owned().into_inner();
+            if password != password_confirm {
+                show_msg(s, "Password and confirm password do not match.");
+                return;
+            }
+            let mut config = config.clone();
+            config.password = Some(Rc::new(password));
+            config.user = Some(Rc::new(name));
+            config.hostname = Some(hostname.as_ref().to_owned().into_inner());
+            show_summary(s, config);
         }),
     );
 }
@@ -339,10 +405,14 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         Dialog::around(ResizedView::new(
             SizeConstraint::AtMost(64),
             SizeConstraint::Free,
-            ScrollView::new(
-                TextView::new(format!("The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {} mirror server.",
-                path, fs, config.variant.unwrap().name, config.mirror.unwrap().name))
-            ),
+            ScrollView::new(TextView::new(format!(
+                SUMMARY_TEXT!(),
+                path,
+                fs,
+                config.variant.unwrap().name,
+                config.mirror.unwrap().name,
+                config.user.unwrap()
+            ))),
         ))
         .title("Confirmation")
         .button("Cancel", |s| {
@@ -351,7 +421,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         .button("Install", move |s| {
             s.pop_layer();
             begin_install(s, config_copy.clone());
-        })
+        }),
     );
 }
 
@@ -504,6 +574,8 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         show_error(siv, &e.to_string());
         return;
     }
+    install::set_hostname(&config.hostname.unwrap()).unwrap();
+    install::add_new_user(&config.user.unwrap(), &config.password.unwrap()).unwrap();
     install::escape_chroot(distance.unwrap()).unwrap();
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path).unwrap();
@@ -525,6 +597,7 @@ fn main() {
                     mirror: None,
                     user: None,
                     password: None,
+                    hostname: None,
                 };
                 select_variant(s, config)
             })
