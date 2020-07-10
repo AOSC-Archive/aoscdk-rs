@@ -18,7 +18,6 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Arc;
 use std::{
-    borrow::BorrowMut,
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -357,7 +356,6 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
         .child(
             "Hostname",
             EditView::new()
-                .secret()
                 .on_edit_mut(move |_, c, _| {
                     hostname_copy.replace(c.to_owned());
                 })

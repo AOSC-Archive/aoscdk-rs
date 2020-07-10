@@ -19,6 +19,8 @@ const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
 pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<(), Error> {
     let decompress = xz2::read::XzDecoder::new(reader);
     let mut tar_processor = tar::Archive::new(decompress);
+    tar_processor.set_unpack_xattrs(true);
+    tar_processor.set_preserve_permissions(true);
     tar_processor.unpack(path)?;
 
     Ok(())
@@ -183,7 +185,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<(), Error> {
     }
     let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
     let mut stdin = command.stdin.unwrap();
-    stdin.write_all(password.as_bytes())?;
+    stdin.write_all(format!("{}:{}\n", name, password).as_bytes())?;
     stdin.flush()?;
 
     Ok(())
