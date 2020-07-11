@@ -2,7 +2,6 @@ use failure::{format_err, Error};
 use reqwest;
 use serde_derive::{Deserialize, Serialize};
 use std::env::consts::ARCH;
-use std::path::PathBuf;
 use std::io::prelude::*;
 
 use lazy_static::lazy_static;

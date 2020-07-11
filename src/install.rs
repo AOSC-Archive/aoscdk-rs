@@ -10,7 +10,6 @@ use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
-use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tar;
@@ -76,6 +75,7 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Er
 
 pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
     mount::umount2(root, mount::MntFlags::MNT_DETACH)?;
+    sync();
 
     Ok(())
 }

@@ -374,6 +374,15 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             let password = password.as_ref().to_owned().into_inner();
             let password_confirm = password_confirm.as_ref().to_owned().into_inner();
             let name = name.as_ref().to_owned().into_inner();
+            let hostname = hostname.as_ref().to_owned().into_inner();
+            if password.is_empty()
+                || password_confirm.is_empty()
+                || name.is_empty()
+                || hostname.is_empty()
+            {
+                show_msg(s, "Please fill in all the fields.");
+                return;
+            }
             if password != password_confirm {
                 show_msg(s, "Password and confirm password do not match.");
                 return;
@@ -381,7 +390,7 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             let mut config = config.clone();
             config.password = Some(Rc::new(password));
             config.user = Some(Rc::new(name));
-            config.hostname = Some(hostname.as_ref().to_owned().into_inner());
+            config.hostname = Some(hostname);
             show_summary(s, config);
         }),
     );

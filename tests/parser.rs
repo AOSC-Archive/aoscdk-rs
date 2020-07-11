@@ -2,7 +2,7 @@ use nom::{
     bytes::complete::{tag, take_until, take_while_m_n},
     character::complete::{char, space1},
     combinator::{map, map_res},
-    sequence::{tuple, separated_pair},
+    sequence::{separated_pair, tuple},
     IResult,
 };
 
@@ -48,7 +48,10 @@ fn test_single_line() {
     let test_3 = &b"value \x23\xff\n"[..];
     assert_eq!(single_line(&test), Ok((&b"\n"[..], &b"value"[..])));
     assert_eq!(single_line(&test_2), Ok((&b"\n"[..], &b"value\t\r"[..])));
-    assert_eq!(single_line(&test_3), Ok((&b"\n"[..], &b"value \x23\xff"[..])));
+    assert_eq!(
+        single_line(&test_3),
+        Ok((&b"\n"[..], &b"value \x23\xff"[..]))
+    );
 }
 
 #[test]
@@ -56,7 +59,16 @@ fn test_key_value() {
     let test = &b"name1: value\n"[..];
     let test_2 = &b"name2: value\t\r\n"[..];
     let test_3 = &b"name3: value \x23\xff\n"[..];
-    assert_eq!(key_value(&test), Ok((&b"\n"[..], (&b"name1"[..], &b"value"[..]))));
-    assert_eq!(key_value(&test_2), Ok((&b"\n"[..], (&b"name2"[..], &b"value\t\r"[..]))));
-    assert_eq!(key_value(&test_3), Ok((&b"\n"[..], (&b"name3"[..], &b"value \x23\xff"[..]))));
+    assert_eq!(
+        key_value(&test),
+        Ok((&b"\n"[..], (&b"name1"[..], &b"value"[..])))
+    );
+    assert_eq!(
+        key_value(&test_2),
+        Ok((&b"\n"[..], (&b"name2"[..], &b"value\t\r"[..])))
+    );
+    assert_eq!(
+        key_value(&test_3),
+        Ok((&b"\n"[..], (&b"name3"[..], &b"value \x23\xff"[..])))
+    );
 }
