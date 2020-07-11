@@ -9,7 +9,7 @@ use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
     ResizedView, ScrollView, TextView,
 };
-use cursive::Cursive;
+use cursive::{Cursive, View};
 use number_prefix::NumberPrefix;
 use std::cell::RefCell;
 use std::convert::TryInto;
@@ -135,6 +135,16 @@ fn make_partition_list(
     (disk_list, disk_view.with_name("part_list"))
 }
 
+fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S) -> Dialog {
+    Dialog::around(ResizedView::new(
+        SizeConstraint::AtMost(64),
+        SizeConstraint::Free,
+        ScrollView::new(inner),
+    ))
+    .padding_lrtb(2, 2, 1, 1)
+    .title(title)
+}
+
 fn select_variant(siv: &mut Cursive, config: InstallConfig) {
     // =cut
     siv.pop_layer();
@@ -176,20 +186,14 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
     let variant_view = Panel::new(variant_view).title("Variant");
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
-    siv.add_layer(
-        Dialog::around(ResizedView::new(
-            SizeConstraint::AtMost(64),
-            SizeConstraint::Free,
-            ScrollView::new(config_view),
-        ))
-        .button("Continue", move |s| {
+    siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
+        "Continue",
+        move |s| {
             let mut config = config.clone();
             config.variant = Some(variant_list.selection());
             select_mirrors(s, config);
-        })
-        .padding_lrtb(2, 2, 1, 1)
-        .title("AOSC OS Installation"),
-    );
+        },
+    ));
 }
 
 fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
@@ -229,20 +233,14 @@ fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
     let repo_view = Panel::new(repo_view).title("Repositories");
     config_view.add_child(repo_view);
     config_view.add_child(DummyView {});
-    siv.add_layer(
-        Dialog::around(ResizedView::new(
-            SizeConstraint::AtMost(64),
-            SizeConstraint::Free,
-            ScrollView::new(config_view),
-        ))
-        .button("Continue", move |s| {
+    siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
+        "Continue",
+        move |s| {
             let mut config = config.clone();
             config.mirror = Some(repo_list.selection());
             select_partition(s, config);
-        })
-        .padding_lrtb(2, 2, 1, 1)
-        .title("AOSC OS Installation"),
-    );
+        },
+    ));
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
@@ -256,58 +254,51 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     let partitions = disks::list_partitions();
     siv.pop_layer();
     // =cut
-    let mut config_view = LinearLayout::vertical();
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
     let dest_view = LinearLayout::vertical()
-        .child(TextView::new(
-            "Please select a partition to which you would like to install AOSC OS onto. If you would like to make changes to your partitions, please click on \"Open GParted.\"",
-        ))
-        .child(DummyView {})
-        .child(disk_view);
-    let dest_view = Panel::new(dest_view).title("Destination");
-    config_view.add_child(dest_view);
-    config_view.add_child(DummyView {});
+    .child(TextView::new(
+        "Please select a partition to which you would like to install AOSC OS onto. If you would like to make changes to your partitions, please click on \"Open GParted.\"",
+    ))
+    .child(DummyView {})
+    .child(disk_view);
+    let config_view = LinearLayout::vertical()
+        .child(Panel::new(dest_view).title("Destination"))
+        .child(DummyView {});
     let (btn_label, btn_cb) = partition_button();
     let config_copy = config.clone();
     siv.add_layer(
-        Dialog::around(ResizedView::new(
-            SizeConstraint::AtMost(64),
-            SizeConstraint::Free,
-            ScrollView::new(config_view),
-        ))
-        .button(btn_label, move |s| {
-            btn_cb(s, config_copy.clone());
-        })
-        .button("Continue", move |s| {
-            let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
-            if let Some(disk_list) = disk_list {
-                let disk_list = disk_list.clone();
-                let current_partition;
-                if cfg!(debug_assertions) {
-                    // prevent developer/tester accidentally delete their partitions
-                    current_partition = Rc::new(disks::Partition {
-                        fs_type: None,
-                        path: Some(PathBuf::from("/dev/loop0p1")),
-                        parent_path: Some(PathBuf::from("/dev/loop0")),
-                        size: 3145728,
-                    });
-                } else {
-                    current_partition = disk_list.selection();
+        wrap_in_dialog(config_view, "AOSC OS Installation")
+            .button(btn_label, move |s| {
+                btn_cb(s, config_copy.clone());
+            })
+            .button("Continue", move |s| {
+                let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
+                if let Some(disk_list) = disk_list {
+                    let disk_list = disk_list.clone();
+                    let current_partition;
+                    if cfg!(debug_assertions) {
+                        // prevent developer/tester accidentally delete their partitions
+                        current_partition = Rc::new(disks::Partition {
+                            fs_type: None,
+                            path: Some(PathBuf::from("/dev/loop0p1")),
+                            parent_path: Some(PathBuf::from("/dev/loop0")),
+                            size: 3145728,
+                        });
+                    } else {
+                        current_partition = disk_list.selection();
+                    }
+                    if current_partition.parent_path.is_none() && current_partition.size == 0 {
+                        show_msg(s, "Please specify a partition.");
+                        s.refresh();
+                        return;
+                    }
+                    let mut config = config.clone();
+                    let new_part = disks::fill_fs_type(current_partition.as_ref());
+                    config.partition = Some(Rc::new(new_part));
+                    select_user(s, config);
                 }
-                if current_partition.parent_path.is_none() && current_partition.size == 0 {
-                    show_msg(s, "Please specify a partition.");
-                    s.refresh();
-                    return;
-                }
-                let mut config = config.clone();
-                let new_part = disks::fill_fs_type(current_partition.as_ref());
-                config.partition = Some(Rc::new(new_part));
-                select_user(s, config);
-            }
-        })
-        .padding_lrtb(2, 2, 1, 1)
-        .title("AOSC OS Installation"),
+            }),
     );
 }
 
@@ -362,15 +353,9 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20)
                 .with_name("hostname"),
         );
-    siv.add_layer(
-        Dialog::around(ResizedView::new(
-            SizeConstraint::AtMost(64),
-            SizeConstraint::Free,
-            ScrollView::new(config_view),
-        ))
-        .padding_lrtb(2, 2, 1, 1)
-        .title("AOSC OS Installation")
-        .button("Continue", move |s| {
+    siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
+        "Continue",
+        move |s| {
             let password = password.as_ref().to_owned().into_inner();
             let password_confirm = password_confirm.as_ref().to_owned().into_inner();
             let name = name.as_ref().to_owned().into_inner();
@@ -392,8 +377,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             config.user = Some(Rc::new(name));
             config.hostname = Some(hostname);
             show_summary(s, config);
-        }),
-    );
+        },
+    ));
 }
 
 fn show_summary(siv: &mut Cursive, config: InstallConfig) {
@@ -409,19 +394,17 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         }
     }
     siv.add_layer(
-        Dialog::around(ResizedView::new(
-            SizeConstraint::AtMost(64),
-            SizeConstraint::Free,
-            ScrollView::new(TextView::new(format!(
+        wrap_in_dialog(
+            TextView::new(format!(
                 SUMMARY_TEXT!(),
                 path,
                 fs,
                 config.variant.unwrap().name,
                 config.mirror.unwrap().name,
                 config.user.unwrap()
-            ))),
-        ))
-        .title("Confirmation")
+            )),
+            "Confirmation",
+        )
         .button("Cancel", |s| {
             s.pop_layer();
         })
@@ -435,15 +418,10 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 fn show_finished(siv: &mut Cursive) {
     siv.pop_layer();
     siv.add_layer(
-        Dialog::around(ResizedView::new(
-            SizeConstraint::AtMost(64),
-            SizeConstraint::Free,
-            ScrollView::new(TextView::new(
-                "All done!\nYou can continue playing around by pressing Quit button.",
-            )),
-        ))
-        .title("All Done")
-        .padding_lrtb(2, 2, 1, 1)
+        wrap_in_dialog(
+            TextView::new("All done!\nYou can continue playing around by pressing Quit button."),
+            "All Done",
+        )
         .button("Reboot", |s| {
             install::sync_and_reboot().ok();
             s.quit();
