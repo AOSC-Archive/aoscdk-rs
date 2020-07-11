@@ -21,7 +21,6 @@ use std::{
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
 };
-use failure::Error;
 
 #[derive(Debug, Clone)]
 struct InstallConfig {
@@ -40,36 +39,50 @@ macro_rules! SUMMARY_TEXT {
 }
 
 macro_rules! show_fetch_progress {
-    ($siv:ident, $m:tt, $e:tt, $f:block) => {
-        {
-            $siv.pop_layer();
-            $siv.add_layer(
-                Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
-                    .title("Progress"),
-            );
-            $siv.refresh();
-            let ret = { $f };
-            if ret.is_err() {
-                show_error($siv, $e);
-                return;
-            }
-            $siv.pop_layer();
-            ret.unwrap()
+    ($siv:ident, $m:tt, $e:tt, $f:block) => {{
+        $siv.pop_layer();
+        $siv.add_layer(
+            Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
+                .title("Progress"),
+        );
+        $siv.refresh();
+        let ret = { $f };
+        if ret.is_err() {
+            show_error($siv, $e);
+            return;
         }
-    };
-    ($siv:ident, $m:tt, $f:block) => {
-        {
-            $siv.pop_layer();
-            $siv.add_layer(
-                Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
-                    .title("Progress"),
-            );
-            $siv.refresh();
-            let ret = { $f };
-            $siv.pop_layer();
-            ret
+        $siv.pop_layer();
+        ret.unwrap()
+    }};
+    ($siv:ident, $m:tt, $f:block) => {{
+        $siv.pop_layer();
+        $siv.add_layer(
+            Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
+                .title("Progress"),
+        );
+        $siv.refresh();
+        let ret = { $f };
+        $siv.pop_layer();
+        ret
+    }};
+}
+
+macro_rules! unwrap_or_show_error {
+    ($siv:ident, $f:block) => {{
+        let tmp = { $f };
+        if let Err(e) = tmp {
+            show_error($siv, &e.to_string());
+            return;
         }
-    };
+        tmp.unwrap()
+    }};
+    ($siv:ident, $x:ident) => {{
+        if let Err(e) = $x {
+            show_error($siv, &e.to_string());
+            return;
+        }
+        $x.unwrap()
+    }};
 }
 
 fn show_error(siv: &mut Cursive, msg: &str) {
@@ -256,11 +269,7 @@ fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
-    let partitions = show_fetch_progress!(
-        siv,
-        "Probing disks...",
-        { disks::list_partitions() }
-    );
+    let partitions = show_fetch_progress!(siv, "Probing disks...", { disks::list_partitions() });
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
     let dest_view = LinearLayout::vertical()
@@ -452,32 +461,17 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     });
     siv.refresh();
     let partition = &config.partition.unwrap();
-    if let Err(e) = disks::format_partition(partition) {
-        show_error(siv, &e.to_string());
-        return;
-    }
-    let mount_path = install::auto_mount_root_path(partition);
-    if let Err(e) = mount_path {
-        show_error(siv, &e.to_string());
-        return;
-    }
-    let mount_path = mount_path.unwrap();
+    unwrap_or_show_error!(siv, { disks::format_partition(partition) });
+    let mount_path = unwrap_or_show_error!(siv, { install::auto_mount_root_path(partition) });
     let mount_path_copy = mount_path.clone();
     let mount_path_copy2 = mount_path.clone();
     let mut efi_path = mount_path.clone();
     if disks::is_efi_booted() {
         efi_path.push("efi");
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap());
-        if let Err(e) = esp_part {
-            show_error(siv, &e.to_string());
-            return;
-        }
-        let esp_part = esp_part.unwrap();
+        let esp_part = unwrap_or_show_error!(siv, esp_part);
         std::fs::create_dir_all(&efi_path).unwrap();
-        if let Err(e) = install::mount_root_path(&esp_part, &efi_path) {
-            show_error(siv, &e.to_string());
-            return;
-        }
+        unwrap_or_show_error!(siv, { install::mount_root_path(&esp_part, &efi_path) });
     }
     if let Some(variant) = config.variant.as_ref() {
         file_size = variant.size.try_into().unwrap();
@@ -543,13 +537,9 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
             .set_content("Step 4 of 5: Generating initial RAM disk...");
     });
     siv.refresh();
-    let distance = install::get_dir_fd(PathBuf::from("/"));
-    install::dive_into_guest(&mount_path_copy2).unwrap();
-    install::execute_dracut().unwrap();
-    if let Err(e) = distance {
-        show_error(siv, &e.to_string());
-        return;
-    }
+    let escape_vector = unwrap_or_show_error!(siv, { install::get_dir_fd(PathBuf::from("/")) });
+    unwrap_or_show_error!(siv, { install::dive_into_guest(&mount_path_copy2) });
+    unwrap_or_show_error!(siv, { install::execute_dracut() });
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
         v.get_mut()
             .set_content("Step 5 of 5: Writing GRUB bootloader...");
@@ -561,25 +551,14 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     } else {
         result = install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()));
     }
-    if let Err(e) = result {
-        show_error(siv, &e.to_string());
-        return;
-    }
-    let escape_vector = distance.unwrap();
+    unwrap_or_show_error!(siv, result);
     install::set_hostname(&config.hostname.unwrap()).unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap()).unwrap();
     install::escape_chroot(escape_vector).unwrap();
     if disks::is_efi_booted() {
-        let result = install::umount_root_path(&efi_path);
-        if let Err(e) = result {
-            show_error(siv, &e.to_string());
-            return;
-        }
+        unwrap_or_show_error!(siv, { install::umount_root_path(&efi_path) });
     }
-    let result = install::remove_bind_mounts(&mount_path_copy2);
-    if let Err(e) = result {
-        show_error(siv, &e.to_string());
-    }
+    unwrap_or_show_error!(siv, { install::remove_bind_mounts(&mount_path_copy2) });
     install::umount_root_path(&mount_path_copy2).ok();
     show_finished(siv);
 }
