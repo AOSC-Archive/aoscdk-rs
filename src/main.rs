@@ -21,6 +21,7 @@ use std::{
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
 };
+use failure::Error;
 
 #[derive(Debug, Clone)]
 struct InstallConfig {
@@ -35,6 +36,39 @@ struct InstallConfig {
 macro_rules! SUMMARY_TEXT {
     () => {
         "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {} mirror server.\n- User {} will be created."
+    };
+}
+
+macro_rules! show_fetch_progress {
+    ($siv:ident, $m:tt, $e:tt, $f:block) => {
+        {
+            $siv.pop_layer();
+            $siv.add_layer(
+                Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
+                    .title("Progress"),
+            );
+            $siv.refresh();
+            let ret = { $f };
+            if ret.is_err() {
+                show_error($siv, $e);
+                return;
+            }
+            $siv.pop_layer();
+            ret.unwrap()
+        }
+    };
+    ($siv:ident, $m:tt, $f:block) => {
+        {
+            $siv.pop_layer();
+            $siv.add_layer(
+                Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
+                    .title("Progress"),
+            );
+            $siv.refresh();
+            let ret = { $f };
+            $siv.pop_layer();
+            ret
+        }
     };
 }
 
@@ -146,23 +180,12 @@ fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S) -> Dialog {
 }
 
 fn select_variant(siv: &mut Cursive, config: InstallConfig) {
-    // =cut
-    siv.pop_layer();
-    siv.add_layer(
-        Dialog::around(TextView::new(
-            "Downloading distribution information...\nThis can take a while...",
-        ))
-        .title("Progress"),
+    let variants = show_fetch_progress!(
+        siv,
+        "Downloading distribution information...",
+        "Could not download recipe information",
+        { network::fetch_recipe() }
     );
-    siv.refresh();
-    let recipe = network::fetch_recipe();
-    if recipe.is_err() {
-        show_error(siv, "Could not download recipe information");
-        return;
-    }
-    let variants = recipe.unwrap();
-    siv.pop_layer();
-    // =cut
     let mut config_view = LinearLayout::vertical();
 
     let mut variant_list = RadioGroup::new();
@@ -197,23 +220,12 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
-    // =cut
-    siv.pop_layer();
-    siv.add_layer(
-        Dialog::around(TextView::new(
-            "Downloading mirrors information...\nThis can take a while...",
-        ))
-        .title("Progress"),
+    let mirrors = show_fetch_progress!(
+        siv,
+        "Downloading mirrors information...",
+        "Could not download mirrors information",
+        { network::fetch_mirrors() }
     );
-    siv.refresh();
-    let mirrors = network::fetch_mirrors();
-    if mirrors.is_err() {
-        show_error(siv, "Could not download mirrors information");
-        return;
-    }
-    let mirrors = mirrors.unwrap();
-    siv.pop_layer();
-    // =cut
     let mut config_view = LinearLayout::vertical();
 
     let mut repo_list = RadioGroup::new();
@@ -244,16 +256,11 @@ fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
-    // =cut
-    siv.pop_layer();
-    siv.add_layer(
-        Dialog::around(TextView::new("Probing disks...\nThis can take a while..."))
-            .title("Progress"),
+    let partitions = show_fetch_progress!(
+        siv,
+        "Probing disks...",
+        { disks::list_partitions() }
     );
-    siv.refresh();
-    let partitions = disks::list_partitions();
-    siv.pop_layer();
-    // =cut
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
     let dest_view = LinearLayout::vertical()
