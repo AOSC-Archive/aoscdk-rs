@@ -549,8 +549,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
             .set_content("Step 4 of 5: Generating initial RAM disk...");
     });
     siv.refresh();
-    let distance = install::get_root_distance(&mount_path_copy2);
-    install::remove_bind_mounts(&mount_path_copy2).ok();
+    let distance = install::get_dir_fd(PathBuf::from("/"));
     install::dive_into_guest(&mount_path_copy2).unwrap();
     install::execute_dracut().unwrap();
     if let Err(e) = distance {
@@ -572,13 +571,21 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         show_error(siv, &e.to_string());
         return;
     }
+    let escape_vector = distance.unwrap();
     install::set_hostname(&config.hostname.unwrap()).unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap()).unwrap();
-    install::escape_chroot(distance.unwrap()).unwrap();
+    install::escape_chroot(escape_vector).unwrap();
     if disks::is_efi_booted() {
-        install::umount_root_path(&efi_path).unwrap();
+        let result = install::umount_root_path(&efi_path);
+        if let Err(e) = result {
+            show_error(siv, &e.to_string());
+            return;
+        }
     }
-    install::remove_bind_mounts(&mount_path_copy2).unwrap();
+    let result = install::remove_bind_mounts(&mount_path_copy2);
+    if let Err(e) = result {
+        show_error(siv, &e.to_string());
+    }
     install::umount_root_path(&mount_path_copy2).ok();
     show_finished(siv);
 }

@@ -1,11 +1,16 @@
 use failure::{format_err, Error};
 use hex;
+use nix::dir::Dir;
+use nix::fcntl::OFlag;
 use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
-use nix::unistd::{chroot, sync};
+use nix::sys::stat::Mode;
+use nix::unistd::{chroot, fchdir, sync};
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::prelude::*;
+use std::os::unix::io::AsRawFd;
+use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tar;
@@ -75,15 +80,19 @@ pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn get_root_distance(path: &PathBuf) -> Result<usize, Error> {
-    let path = path.canonicalize()?;
+pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir, Error> {
+    let path = Dir::open(
+        &path,
+        OFlag::O_RDONLY | OFlag::O_DIRECTORY | OFlag::O_NONBLOCK,
+        Mode::empty(),
+    )?;
 
-    Ok(path.components().count() + 4)
+    Ok(path)
 }
 
-pub fn escape_chroot(distance: usize) -> Result<(), Error> {
-    let escape_path = "../".repeat(distance);
-    chroot(escape_path.as_str())?;
+pub fn escape_chroot(root_fd: Dir) -> Result<(), Error> {
+    fchdir(root_fd.as_raw_fd())?;
+    chroot(".")?;
     std::env::set_current_dir("/")?; // reset cwd (on host)
 
     Ok(())
