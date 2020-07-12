@@ -17,9 +17,30 @@ use tempfile::TempDir;
 use xz2;
 
 use crate::disks::Partition;
+use crate::parser::locale_names;
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
+const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
+const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
 
+fn read_system_locale_list() -> Result<Vec<u8>, Error> {
+    let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
+    let mut data: Vec<u8> = Vec::new();
+    data.reserve(8800);
+    f.read_to_end(&mut data)?;
+
+    Ok(data)
+}
+
+/// Get the list of available locales
+pub fn get_locale_list() -> Result<Vec<String>, Error> {
+    let data = read_system_locale_list().unwrap_or(BUNDLED_LOCALE_GEN.to_vec());
+    let names = locale_names(&data).or(Err(format_err!("Could not parse system locale list")))?;
+    let names = names.1.into_iter().map(|x| x.to_string()).collect();
+    Ok(names)
+}
+
+/// Extract the given .tar.xz stream and preserve all the file attributes
 pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<(), Error> {
     let decompress = xz2::read::XzDecoder::new(reader);
     let mut tar_processor = tar::Archive::new(decompress);
@@ -30,6 +51,7 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
+/// Calculate the Sha256 checksum of the given stream
 pub fn sha256sum<R: Read>(mut reader: R) -> Result<String, Error> {
     let mut hasher = Sha256::new();
     std::io::copy(&mut reader, &mut hasher)?;
@@ -37,6 +59,7 @@ pub fn sha256sum<R: Read>(mut reader: R) -> Result<String, Error> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+/// Mount the filesystem to a temporary directory
 pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf, Error> {
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.into_path();
@@ -45,6 +68,7 @@ pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf, Error> {
     Ok(tmp_path)
 }
 
+/// Sync the filesystem and then reboot IMMEDIATELY (ignores init)
 pub fn sync_and_reboot() -> Result<(), Error> {
     sync();
     reboot(RebootMode::RB_AUTOBOOT)?;
@@ -52,6 +76,7 @@ pub fn sync_and_reboot() -> Result<(), Error> {
     Ok(())
 }
 
+/// Mount the filesystem
 pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Error> {
     if partition.fs_type.is_none() || partition.path.is_none() {
         return Err(format_err!("Path not specified."));
@@ -73,6 +98,7 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Er
     Ok(())
 }
 
+/// Unmount the filesystem given at `root` and then do a sync
 pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
     mount::umount2(root, mount::MntFlags::MNT_DETACH)?;
     sync();
@@ -80,16 +106,18 @@ pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
+/// Get the open file descriptor to the specified path
 pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir, Error> {
-    let path = Dir::open(
+    let fd = Dir::open(
         &path,
         OFlag::O_RDONLY | OFlag::O_DIRECTORY | OFlag::O_NONBLOCK,
         Mode::empty(),
     )?;
 
-    Ok(path)
+    Ok(fd)
 }
 
+/// Escape the chroot context using the previously obtained `root_fd` as a trampoline
 pub fn escape_chroot(root_fd: Dir) -> Result<(), Error> {
     fchdir(root_fd.as_raw_fd())?;
     chroot(".")?;
@@ -98,6 +126,7 @@ pub fn escape_chroot(root_fd: Dir) -> Result<(), Error> {
     Ok(())
 }
 
+/// Setup all the necessary bind mounts
 pub fn setup_bind_mounts(root: &PathBuf) -> Result<(), Error> {
     for mount in BIND_MOUNTS {
         let mut root = root.clone();

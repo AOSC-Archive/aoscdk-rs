@@ -1,13 +1,14 @@
 mod disks;
 mod install;
 mod network;
+mod parser;
 
 use cursive::traits::*;
 use cursive::utils::{Counter, ProgressReader};
 use cursive::view::SizeConstraint;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
-    ResizedView, ScrollView, TextView,
+    ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{Cursive, View};
 use number_prefix::NumberPrefix;
@@ -30,6 +31,7 @@ struct InstallConfig {
     user: Option<Rc<String>>,
     password: Option<Rc<String>>,
     hostname: Option<String>,
+    locale: Option<Rc<String>>,
 }
 
 macro_rules! SUMMARY_TEXT {
@@ -182,6 +184,15 @@ fn make_partition_list(
     (disk_list, disk_view.with_name("part_list"))
 }
 
+fn make_locale_list(locales: Vec<String>) -> SelectView {
+    let mut locale_view = SelectView::new().popup();
+    for locale in &locales {
+        locale_view.add_item_str(locale);
+    }
+
+    locale_view
+}
+
 fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S) -> Dialog {
     Dialog::around(ResizedView::new(
         SizeConstraint::AtMost(64),
@@ -320,6 +331,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
 
 fn select_user(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
+    let locales = install::get_locale_list().unwrap();
     let password = Rc::new(RefCell::new(String::new()));
     let password_copy = Rc::clone(&password);
     let password_confirm = Rc::new(RefCell::new(String::new()));
@@ -328,6 +340,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
     let name_copy = Rc::clone(&name);
     let hostname = Rc::new(RefCell::new(String::new()));
     let hostname_copy = Rc::clone(&hostname);
+    let locale = Rc::new(RefCell::new(String::new()));
+    let locale_copy = Rc::clone(&locale);
 
     let config_view = ListView::new()
         .child(
@@ -368,6 +382,12 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 })
                 .min_width(20)
                 .with_name("hostname"),
+        )
+        .child(
+            "Locale",
+            make_locale_list(locales).on_select(move |_, c| {
+                locale_copy.replace(c.to_owned());
+            }),
         );
     siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
         "Continue",
@@ -376,6 +396,7 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             let password_confirm = password_confirm.as_ref().to_owned().into_inner();
             let name = name.as_ref().to_owned().into_inner();
             let hostname = hostname.as_ref().to_owned().into_inner();
+            let locale = locale.as_ref().to_owned().into_inner();
             if password.is_empty()
                 || password_confirm.is_empty()
                 || name.is_empty()
@@ -392,6 +413,7 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             config.password = Some(Rc::new(password));
             config.user = Some(Rc::new(name));
             config.hostname = Some(hostname);
+            config.locale = Some(Rc::new(locale));
             show_summary(s, config);
         },
     ));
@@ -554,6 +576,9 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     unwrap_or_show_error!(siv, result);
     install::set_hostname(&config.hostname.unwrap()).unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap()).unwrap();
+    unwrap_or_show_error!(siv, {
+        install::set_locale(&config.locale.as_ref().unwrap())
+    });
     install::escape_chroot(escape_vector).unwrap();
     if disks::is_efi_booted() {
         unwrap_or_show_error!(siv, { install::umount_root_path(&efi_path) });
@@ -576,6 +601,7 @@ fn main() {
                     user: None,
                     password: None,
                     hostname: None,
+                    locale: None,
                 };
                 select_variant(s, config)
             })
