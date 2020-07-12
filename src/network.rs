@@ -1,12 +1,11 @@
 use failure::{format_err, Error};
 use reqwest;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 use std::env::consts::ARCH;
 use std::io::prelude::*;
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde_yaml;
 
 const RECIPE_URL: &str =
     "https://cdn.jsdelivr.net/gh/AOSC-Dev/aosc-portal-kiss.github.io@9bb2d45/data/distro.yml";

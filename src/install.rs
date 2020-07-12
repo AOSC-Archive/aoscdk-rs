@@ -34,8 +34,9 @@ fn read_system_locale_list() -> Result<Vec<u8>, Error> {
 
 /// Get the list of available locales
 pub fn get_locale_list() -> Result<Vec<String>, Error> {
-    let data = read_system_locale_list().unwrap_or(BUNDLED_LOCALE_GEN.to_vec());
-    let names = locale_names(&data).or(Err(format_err!("Could not parse system locale list")))?;
+    let data = read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec());
+    let names =
+        locale_names(&data).or_else(|_| Err(format_err!("Could not parse system locale list")))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
     Ok(names)
 }
@@ -195,7 +196,7 @@ pub fn set_hostname(name: &str) -> Result<(), Error> {
 /// Must be used in a chroot context
 pub fn set_locale(locale: &str) -> Result<(), Error> {
     let mut f = File::create("/etc/locale.conf")?;
-    f.write_all("LANG=".as_bytes())?;
+    f.write_all(b"LANG=")?;
 
     Ok(f.write_all(locale.as_bytes())?)
 }

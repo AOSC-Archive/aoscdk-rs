@@ -140,12 +140,10 @@ fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallCon
 
 #[inline]
 fn human_size(size: u64) -> String {
-    let result = match NumberPrefix::binary(size as f64) {
+    match NumberPrefix::binary(size as f64) {
         NumberPrefix::Standalone(bytes) => format!("{} B", bytes),
         NumberPrefix::Prefixed(prefix, n) => format!("{:.1} {}B", n, prefix),
-    };
-
-    result
+    }
 }
 
 fn make_partition_list(
@@ -303,18 +301,17 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
                 if let Some(disk_list) = disk_list {
                     let disk_list = disk_list.clone();
-                    let current_partition;
-                    if cfg!(debug_assertions) {
+                    let current_partition = if cfg!(debug_assertions) {
                         // prevent developer/tester accidentally delete their partitions
-                        current_partition = Rc::new(disks::Partition {
+                        Rc::new(disks::Partition {
                             fs_type: None,
                             path: Some(PathBuf::from("/dev/loop0p1")),
                             parent_path: Some(PathBuf::from("/dev/loop0")),
                             size: 3145728,
-                        });
+                        })
                     } else {
-                        current_partition = disk_list.selection();
-                    }
+                        disk_list.selection()
+                    };
                     if current_partition.parent_path.is_none() && current_partition.size == 0 {
                         show_msg(s, "Please specify a partition.");
                         s.refresh();
@@ -505,7 +502,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
     let extract_done_copy = extract_done.clone();
     let progress_bar = ProgressBar::new()
         .max(file_size)
-        .with_value(counter.clone())
+        .with_value(counter)
         .with_task(move |counter| {
             let mut tarball_file = mount_path.clone();
             tarball_file.push("tarball");
@@ -518,9 +515,9 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
             } else {
                 return;
             }
-            counter.clone().set(0);
+            counter.set(0);
             output = std::fs::File::open(tarball_file.clone()).unwrap();
-            let reader = ProgressReader::new(counter.clone(), output);
+            let reader = ProgressReader::new(counter, output);
             install::extract_tar_xz(reader, &mount_path_copy).unwrap();
             extract_done_copy.fetch_or(true, Ordering::SeqCst);
             std::fs::remove_file(tarball_file).ok();
@@ -567,12 +564,11 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
             .set_content("Step 5 of 5: Writing GRUB bootloader...");
     });
     siv.refresh();
-    let result;
-    if disks::is_efi_booted() {
-        result = install::execute_grub_install(None);
+    let result = if disks::is_efi_booted() {
+        install::execute_grub_install(None)
     } else {
-        result = install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()));
-    }
+        install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()))
+    };
     unwrap_or_show_error!(siv, result);
     install::set_hostname(&config.hostname.unwrap()).unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap()).unwrap();

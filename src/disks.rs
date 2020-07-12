@@ -116,12 +116,11 @@ pub fn list_partitions() -> Vec<Partition> {
                 }
                 let fs_type;
                 let geom_length: i64 = part.geom_length();
-                let part_length: u64;
-                if geom_length < 0 {
-                    part_length = 0;
+                let part_length = if geom_length < 0 {
+                    0
                 } else {
-                    part_length = geom_length as u64;
-                }
+                    geom_length as u64
+                };
                 if let Ok(type_) = part.get_geom().probe_fs() {
                     fs_type = Some(type_.name().to_owned());
                 } else {
