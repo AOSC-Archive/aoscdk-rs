@@ -2,21 +2,62 @@ use failure::{format_err, Error};
 use reqwest;
 use serde_derive::Deserialize;
 use std::env::consts::ARCH;
-use std::io::prelude::*;
 
-use lazy_static::lazy_static;
-use regex::Regex;
-
-const RECIPE_URL: &str =
-    "https://cdn.jsdelivr.net/gh/AOSC-Dev/aosc-portal-kiss.github.io@9bb2d45/data/distro.yml";
-
-const MIRRORS_URL: &str = "https://aosc.io/api/mirrors";
-const REPO_URL: &str = "https://releases.aosc.io/";
+const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = false;
 
-lazy_static! {
-    static ref LINK_PATTERN: Regex =
-        Regex::new(r#"="(aosc-os_[a-zA-Z%0-9]+_(\d{8})(?:_amd64)?\.tar\.(?:gz|xz))"#).unwrap();
+// mirror manifests
+#[derive(Deserialize, Clone, Debug)]
+pub struct Mirror {
+    pub name: String,
+    #[serde(rename = "name-tr")]
+    pub name_tr: String,
+    pub loc: String,
+    #[serde(rename = "loc-tr")]
+    pub loc_tr: String,
+    pub url: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Tarball {
+    pub arch: String,
+    pub date: String,
+    #[serde(rename = "downloadSize")]
+    pub download_size: i64,
+    #[serde(rename = "instSize")]
+    pub inst_size: i64,
+    pub path: String,
+    pub sha256sum: String,
+}
+
+#[derive(Deserialize)]
+pub struct Variant {
+    name: String,
+    retro: bool,
+    pub description: String,
+    #[serde(rename = "description-tr")]
+    pub description_tr: String,
+    tarballs: Vec<Tarball>,
+}
+
+#[derive(Deserialize)]
+pub struct Bulletin {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub title: String,
+    #[serde(rename = "title-tr")]
+    pub title_tr: String,
+    pub body: String,
+    #[serde(rename = "body-tr")]
+    pub body_tr: String,
+}
+
+#[derive(Deserialize)]
+pub struct Recipe {
+    pub version: usize,
+    pub bulletin: Bulletin,
+    variants: Vec<Variant>,
+    mirrors: Vec<Mirror>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -39,52 +80,23 @@ struct VariantData {
     general: DistroList,
     retro: DistroList,
 }
-#[derive(Clone, Deserialize, Debug)]
-pub struct MirrorData {
-    pub name: String,
-    pub region: String,
-    pub url: String,
-    pub updated: i32,
-}
-#[derive(Deserialize, Debug)]
-pub struct MirrorList {
-    #[serde(rename = "ref")]
-    reference: i32,
-    pub mirrors: Vec<MirrorData>,
-}
 
 #[derive(Debug, Clone)]
 pub struct VariantEntry {
     pub name: String,
     pub size: u64,
+    pub install_size: u64,
     pub date: String,
+    pub sha256sum: String,
     pub url: String,
 }
 
-fn fetch_recipe_inner() -> Result<VariantData, Error> {
-    let recipe = reqwest::blocking::get(RECIPE_URL)?.text()?;
-
-    Ok(serde_yaml::from_str(&recipe)?)
+pub fn fetch_recipe() -> Result<Recipe, Error> {
+    Ok(reqwest::blocking::get(MANIFEST_URL)?.json()?)
 }
 
-pub fn fetch_mirrors() -> Result<MirrorList, Error> {
-    Ok(reqwest::blocking::get(MIRRORS_URL)?.json()?)
-}
-
-pub fn fetch_links(url: &str) -> Result<Vec<(String, String)>, Error> {
-    let content = reqwest::blocking::get(url)?.text()?;
-    let captures = LINK_PATTERN.captures_iter(&content);
-    let mut links: Vec<(String, String)> = Vec::new();
-    for capture in captures {
-        // capture group 1: full name; capture group 2: date
-        if let Some(cap) = capture.get(1) {
-            if let Some(cap_2) = capture.get(2) {
-                links.push((cap.as_str().to_owned(), cap_2.as_str().to_owned()));
-            }
-        }
-    }
-
-    Ok(links)
+pub fn fetch_mirrors(recipe: &Recipe) -> Vec<Mirror> {
+    recipe.mirrors.clone()
 }
 
 #[inline]
@@ -98,19 +110,6 @@ fn get_arch_name() -> Option<&'static str> {
     }
 }
 
-#[inline]
-fn get_file_size(url: &str) -> Result<u64, Error> {
-    let client = reqwest::blocking::Client::new();
-    let resp = client.head(url).send()?;
-    // FIXME: There is a bug in reqwest that content_length() does not work correctly
-    if let Some(length) = resp.headers().get("content-length") {
-        let length = length.to_str().unwrap_or("0").parse::<u64>().unwrap_or(0);
-        return Ok(length);
-    }
-
-    Err(format_err!("Unknown size"))
-}
-
 pub fn download_file(url: &str) -> Result<reqwest::blocking::Response, Error> {
     let client = reqwest::blocking::Client::new();
     let resp = client.get(url).send()?;
@@ -119,54 +118,31 @@ pub fn download_file(url: &str) -> Result<reqwest::blocking::Response, Error> {
     Ok(resp)
 }
 
-pub fn fetch_file_checksum(url: &str) -> Result<String, Error> {
-    let url = format!("{}.sha256sum", url);
-    let mut buffer = [0u8; 64];
-    let client = reqwest::blocking::Client::new();
-    let resp = client.get(&url).send()?;
-    let mut resp = resp.error_for_status()?;
-    resp.read_exact(&mut buffer)?;
-
-    Ok(String::from_utf8_lossy(&buffer).to_string())
-}
-
-pub fn fetch_recipe() -> Result<Vec<VariantEntry>, Error> {
-    let recipes = fetch_recipe_inner()?;
-    let distro_list;
+pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>, Error> {
     let mut results: Vec<VariantEntry> = Vec::new();
-    if IS_RETRO {
-        distro_list = recipes.retro;
-    } else {
-        distro_list = recipes.general;
+    let arch_name = get_arch_name();
+    if arch_name.is_none() {
+        return Err(format_err!("Unsupported architecture."));
     }
-    for entry in distro_list.list {
-        let downloads = entry.downloads;
-        let arch_name = get_arch_name();
-        if arch_name.is_none() {
-            return Err(format_err!("Unsupported architecture."));
-        }
-        let arch_name = arch_name.unwrap();
-        let link = downloads
-            .into_iter()
-            .find(|download| download.name.to_ascii_lowercase() == arch_name);
-        if link.is_none() {
-            return Err(format_err!("Download link not found."));
-        }
-        let page = link.unwrap();
-        let mut links = fetch_links(&page.url)?;
-        if links.is_empty() {
-            return Err(format_err!("Failed to parse download page."));
-        }
-        links.sort_by(|a, b| b.1.cmp(&a.1));
-        let candidate = links.first_mut().unwrap();
-        let url = format!("{}/{}", page.url, candidate.0);
+    // filter: tarballs array is not empty and the mainline/retro switch matches
+    for recipe in recipes
+        .variants
+        .into_iter()
+        .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty())
+    {
+        let mut sorted_tarballs = recipe.tarballs;
+        sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
+        let candidate = sorted_tarballs.first().unwrap();
         results.push(VariantEntry {
-            name: entry.name,
-            date: candidate.1.clone(),
-            size: get_file_size(&url).unwrap_or(0),
-            url,
+            name: recipe.name.clone(),
+            size: candidate.download_size as u64,
+            install_size: candidate.inst_size as u64,
+            date: candidate.date.clone(),
+            url: candidate.path.clone(),
+            sha256sum: candidate.sha256sum.clone(),
         });
     }
+    results.sort_by(|a, b| a.name.cmp(&b.name));
 
     Ok(results)
 }

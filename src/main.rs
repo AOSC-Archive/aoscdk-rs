@@ -22,12 +22,13 @@ use std::{
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
 };
+use network::Mirror;
 
 #[derive(Debug, Clone)]
 struct InstallConfig {
     variant: Option<Rc<network::VariantEntry>>,
     partition: Option<Rc<disks::Partition>>,
-    mirror: Option<Rc<network::MirrorData>>,
+    mirror: Option<Rc<network::Mirror>>,
     user: Option<Rc<String>>,
     password: Option<Rc<String>>,
     hostname: Option<String>,
@@ -191,9 +192,9 @@ fn make_locale_list(locales: Vec<String>) -> SelectView {
     locale_view
 }
 
-fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S) -> Dialog {
+fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
     Dialog::around(ResizedView::new(
-        SizeConstraint::AtMost(64),
+        SizeConstraint::AtMost(width.unwrap_or(64)),
         SizeConstraint::Free,
         ScrollView::new(inner),
     ))
@@ -202,11 +203,18 @@ fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S) -> Dialog {
 }
 
 fn select_variant(siv: &mut Cursive, config: InstallConfig) {
-    let variants = show_fetch_progress!(
+    let manifest = show_fetch_progress!(
         siv,
         "Downloading distribution information...",
         "Could not download recipe information",
         { network::fetch_recipe() }
+    );
+    let mirrors = network::fetch_mirrors(&manifest);
+    let variants = show_fetch_progress!(
+        siv,
+        "Downloading distribution information...",
+        "Could not download recipe information",
+        { network::find_variant_candidates(manifest) }
     );
     let mut config_view = LinearLayout::vertical();
 
@@ -231,27 +239,24 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
     let variant_view = Panel::new(variant_view).title("Variant");
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
-    siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
-        "Continue",
-        move |s| {
-            let mut config = config.clone();
-            config.variant = Some(variant_list.selection());
-            select_mirrors(s, config);
-        },
-    ));
+    siv.add_layer(
+        wrap_in_dialog(config_view, "AOSC OS Installation", Some(128)).button(
+            "Continue",
+            move |s| {
+                let mut config = config.clone();
+                config.variant = Some(variant_list.selection());
+                select_mirrors(s, mirrors.clone(), config);
+            },
+        ),
+    );
 }
 
-fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
-    let mirrors = show_fetch_progress!(
-        siv,
-        "Downloading mirrors information...",
-        "Could not download mirrors information",
-        { network::fetch_mirrors() }
-    );
+fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig) {
+    siv.pop_layer();
     let mut config_view = LinearLayout::vertical();
 
     let mut repo_list = RadioGroup::new();
-    let mirror_list = mirrors.mirrors;
+    let mirror_list = mirrors;
     let mut repo_view = LinearLayout::vertical()
         .child(TextView::new(
             "Please select a mirror from which you would like to download AOSC OS and the extra components you specified. Generally, a mirror closest to you geographically would be the best bet for download speeds.",
@@ -260,21 +265,20 @@ fn select_mirrors(siv: &mut Cursive, config: InstallConfig) {
     for mirror in mirror_list {
         let radio = repo_list.button(
             mirror.clone(),
-            format!("{} ({})", mirror.name, mirror.region),
+            format!("{} ({})", mirror.name, mirror.loc),
         );
         repo_view.add_child(radio);
     }
     let repo_view = Panel::new(repo_view).title("Repositories");
     config_view.add_child(repo_view);
     config_view.add_child(DummyView {});
-    siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
-        "Continue",
-        move |s| {
+    siv.add_layer(
+        wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
             let mut config = config.clone();
             config.mirror = Some(repo_list.selection());
             select_partition(s, config);
-        },
-    ));
+        }),
+    );
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
@@ -293,7 +297,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     let (btn_label, btn_cb) = partition_button();
     let config_copy = config.clone();
     siv.add_layer(
-        wrap_in_dialog(config_view, "AOSC OS Installation")
+        wrap_in_dialog(config_view, "AOSC OS Installation", None)
             .button(btn_label, move |s| {
                 btn_cb(s, config_copy.clone());
             })
@@ -386,9 +390,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 locale_copy.replace(c.to_owned());
             }),
         );
-    siv.add_layer(wrap_in_dialog(config_view, "AOSC OS Installation").button(
-        "Continue",
-        move |s| {
+    siv.add_layer(
+        wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
             let password = password.as_ref().to_owned().into_inner();
             let password_confirm = password_confirm.as_ref().to_owned().into_inner();
             let name = name.as_ref().to_owned().into_inner();
@@ -412,8 +415,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             config.hostname = Some(hostname);
             config.locale = Some(Rc::new(locale));
             show_summary(s, config);
-        },
-    ));
+        }),
+    );
 }
 
 fn show_summary(siv: &mut Cursive, config: InstallConfig) {
@@ -439,6 +442,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                 config.user.unwrap()
             )),
             "Confirmation",
+            None,
         )
         .button("Cancel", |s| {
             s.pop_layer();
@@ -456,6 +460,7 @@ fn show_finished(siv: &mut Cursive) {
         wrap_in_dialog(
             TextView::new("All done!\nYou can continue playing around by pressing Quit button."),
             "All Done",
+            None,
         )
         .button("Reboot", |s| {
             install::sync_and_reboot().ok();
@@ -493,8 +498,9 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         unwrap_or_show_error!(siv, { install::mount_root_path(&esp_part, &efi_path) });
     }
     if let Some(variant) = config.variant.as_ref() {
+        let mirror_url = &config.mirror.as_ref().unwrap().url;
         file_size = variant.size.try_into().unwrap();
-        url = variant.url.clone();
+        url = format!("{}{}", mirror_url, variant.url);
     } else {
         return;
     }
