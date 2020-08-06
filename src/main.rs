@@ -11,6 +11,8 @@ use cursive::views::{
     ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{Cursive, View};
+use cursive_table_view::{TableView, TableViewItem};
+use network::Mirror;
 use number_prefix::NumberPrefix;
 use std::cell::RefCell;
 use std::convert::TryInto;
@@ -22,7 +24,6 @@ use std::{
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
 };
-use network::Mirror;
 
 #[derive(Debug, Clone)]
 struct InstallConfig {
@@ -35,6 +36,32 @@ struct InstallConfig {
     locale: Option<Rc<String>>,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+enum VariantColumn {
+    Name,
+    Date,
+    Size,
+}
+
+impl TableViewItem<VariantColumn> for network::VariantEntry {
+    fn to_column(&self, column: VariantColumn) -> String {
+        match column {
+            VariantColumn::Name => self.name.clone(),
+            VariantColumn::Date => self.date.clone(),
+            VariantColumn::Size => human_size(self.size),
+        }
+    }
+    fn cmp(&self, other: &Self, column: VariantColumn) -> std::cmp::Ordering
+    where
+        Self: Sized,
+    {
+        match column {
+            VariantColumn::Name => self.name.cmp(&other.name),
+            VariantColumn::Date => self.date.cmp(&other.date),
+            VariantColumn::Size => self.size.cmp(&other.size),
+        }
+    }
+}
 macro_rules! SUMMARY_TEXT {
     () => {
         "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {} mirror server.\n- User {} will be created."
@@ -216,39 +243,27 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
         "Could not download recipe information",
         { network::find_variant_candidates(manifest) }
     );
+    let variants_copy = variants.clone();
     let mut config_view = LinearLayout::vertical();
 
-    let mut variant_list = RadioGroup::new();
-    let mut variant_view = LinearLayout::vertical()
-        .child(TextView::new(
-            "AOSC OS comes in a slew of flavors. From your modern Plasma Desktop and GNOME, timelessly designed MATE Desktop, to your non-graphical Base systems, there is surely one that suits your taste.",
-        ))
-        .child(DummyView {});
-    for variant in variants {
-        let radio = variant_list.button(
-            variant.clone(),
-            format!(
-                "{} (Released {}, Download size {})",
-                variant.name,
-                variant.date,
-                human_size(variant.size)
-            ),
-        );
-        variant_view.add_child(radio);
-    }
+    let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
+        .column(VariantColumn::Name, "Name", |c| c.width(60))
+        .column(VariantColumn::Date, "Date", |c| c.width(20))
+        .column(VariantColumn::Size, "Size", |c| c.width(20))
+        .items(variants_copy)
+        .on_submit(move |siv, _row, index| {
+            let mut config = config.clone();
+            config.variant = Some(Rc::new(variants.get(index).unwrap().clone()));
+            select_mirrors(siv, mirrors.clone(), config);
+        }).min_width(106).min_height(30);
     let variant_view = Panel::new(variant_view).title("Variant");
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
-    siv.add_layer(
-        wrap_in_dialog(config_view, "AOSC OS Installation", Some(128)).button(
-            "Continue",
-            move |s| {
-                let mut config = config.clone();
-                config.variant = Some(variant_list.selection());
-                select_mirrors(s, mirrors.clone(), config);
-            },
-        ),
-    );
+    siv.add_layer(wrap_in_dialog(
+        config_view,
+        "AOSC OS Installation",
+        Some(128),
+    ));
 }
 
 fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig) {
@@ -263,10 +278,7 @@ fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig
         ))
         .child(DummyView {});
     for mirror in mirror_list {
-        let radio = repo_list.button(
-            mirror.clone(),
-            format!("{} ({})", mirror.name, mirror.loc),
-        );
+        let radio = repo_list.button(mirror.clone(), format!("{} ({})", mirror.name, mirror.loc));
         repo_view.add_child(radio);
     }
     let repo_view = Panel::new(repo_view).title("Repositories");

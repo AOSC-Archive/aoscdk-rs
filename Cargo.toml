@@ -16,6 +16,7 @@ serde_derive = "1.0"
 nix = "0.18"
 libparted = "0.1"
 cursive = "0.15"
+cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view" }
 lazy_static = "1.4"
 number_prefix = "0.4"
 xz2 = "0.1"

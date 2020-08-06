@@ -3,8 +3,8 @@ use nom::{
     bytes::complete::{tag, take_until},
     character::complete::multispace1,
     combinator::{map, map_res},
-    sequence::{preceded, terminated},
     multi::many0,
+    sequence::{preceded, terminated},
     IResult,
 };
 
