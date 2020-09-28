@@ -255,7 +255,9 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
             let mut config = config.clone();
             config.variant = Some(Rc::new(variants.get(index).unwrap().clone()));
             select_mirrors(siv, mirrors.clone(), config);
-        }).min_width(106).min_height(30);
+        })
+        .min_width(106)
+        .min_height(30);
     let variant_view = Panel::new(variant_view).title("Variant");
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
