@@ -1,7 +1,7 @@
-use failure::{format_err, Error};
 use reqwest;
 use serde_derive::Deserialize;
 use std::env::consts::ARCH;
+use anyhow::{Result, anyhow};
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = false;
@@ -91,7 +91,7 @@ pub struct VariantEntry {
     pub url: String,
 }
 
-pub fn fetch_recipe() -> Result<Recipe, Error> {
+pub fn fetch_recipe() -> Result<Recipe> {
     Ok(reqwest::blocking::get(MANIFEST_URL)?.json()?)
 }
 
@@ -110,7 +110,7 @@ fn get_arch_name() -> Option<&'static str> {
     }
 }
 
-pub fn download_file(url: &str) -> Result<reqwest::blocking::Response, Error> {
+pub fn download_file(url: &str) -> Result<reqwest::blocking::Response> {
     let client = reqwest::blocking::Client::new();
     let resp = client.get(url).send()?;
     let resp = resp.error_for_status()?;
@@ -118,11 +118,11 @@ pub fn download_file(url: &str) -> Result<reqwest::blocking::Response, Error> {
     Ok(resp)
 }
 
-pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>, Error> {
+pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     let mut results: Vec<VariantEntry> = Vec::new();
     let arch_name = get_arch_name();
     if arch_name.is_none() {
-        return Err(format_err!("Unsupported architecture."));
+        return Err(anyhow!("Unsupported architecture."));
     }
     // filter: tarballs array is not empty and the mainline/retro switch matches
     for recipe in recipes

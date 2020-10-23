@@ -1,4 +1,3 @@
-use failure::{format_err, Error};
 use hex;
 use nix::dir::Dir;
 use nix::fcntl::OFlag;
@@ -15,6 +14,7 @@ use std::process::{Command, Stdio};
 use tar;
 use tempfile::TempDir;
 use xz2;
+use anyhow::{Result, anyhow};
 
 use crate::disks::Partition;
 use crate::parser::locale_names;
@@ -23,7 +23,7 @@ const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
 const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
 const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
 
-fn read_system_locale_list() -> Result<Vec<u8>, Error> {
+fn read_system_locale_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
     let mut data: Vec<u8> = Vec::new();
     data.reserve(8800);
@@ -33,16 +33,16 @@ fn read_system_locale_list() -> Result<Vec<u8>, Error> {
 }
 
 /// Get the list of available locales
-pub fn get_locale_list() -> Result<Vec<String>, Error> {
+pub fn get_locale_list() -> Result<Vec<String>> {
     let data = read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec());
     let names =
-        locale_names(&data).or_else(|_| Err(format_err!("Could not parse system locale list")))?;
+        locale_names(&data).or_else(|_| Err(anyhow!("Could not parse system locale list")))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
     Ok(names)
 }
 
 /// Extract the given .tar.xz stream and preserve all the file attributes
-pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<(), Error> {
+pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<()> {
     let decompress = xz2::read::XzDecoder::new(reader);
     let mut tar_processor = tar::Archive::new(decompress);
     tar_processor.set_unpack_xattrs(true);
@@ -53,7 +53,7 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<(), Error> {
 }
 
 /// Calculate the Sha256 checksum of the given stream
-pub fn sha256sum<R: Read>(mut reader: R) -> Result<String, Error> {
+pub fn sha256sum<R: Read>(mut reader: R) -> Result<String> {
     let mut hasher = Sha256::new();
     std::io::copy(&mut reader, &mut hasher)?;
 
@@ -61,7 +61,7 @@ pub fn sha256sum<R: Read>(mut reader: R) -> Result<String, Error> {
 }
 
 /// Mount the filesystem to a temporary directory
-pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf, Error> {
+pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf> {
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.into_path();
     mount_root_path(partition, &tmp_path)?;
@@ -70,7 +70,7 @@ pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf, Error> {
 }
 
 /// Sync the filesystem and then reboot IMMEDIATELY (ignores init)
-pub fn sync_and_reboot() -> Result<(), Error> {
+pub fn sync_and_reboot() -> Result<()> {
     sync();
     reboot(RebootMode::RB_AUTOBOOT)?;
 
@@ -78,9 +78,9 @@ pub fn sync_and_reboot() -> Result<(), Error> {
 }
 
 /// Mount the filesystem
-pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Error> {
+pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<()> {
     if partition.fs_type.is_none() || partition.path.is_none() {
-        return Err(format_err!("Path not specified."));
+        return Err(anyhow!("Path not specified."));
     }
     let source = partition.path.as_ref();
     let mut fs_type = partition.fs_type.as_ref().unwrap().as_str();
@@ -100,7 +100,7 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<(), Er
 }
 
 /// Unmount the filesystem given at `root` and then do a sync
-pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
+pub fn umount_root_path(root: &PathBuf) -> Result<()> {
     mount::umount2(root, mount::MntFlags::MNT_DETACH)?;
     sync();
 
@@ -108,7 +108,7 @@ pub fn umount_root_path(root: &PathBuf) -> Result<(), Error> {
 }
 
 /// Get the open file descriptor to the specified path
-pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir, Error> {
+pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir> {
     let fd = Dir::open(
         &path,
         OFlag::O_RDONLY | OFlag::O_DIRECTORY | OFlag::O_NONBLOCK,
@@ -119,7 +119,7 @@ pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir, Error> {
 }
 
 /// Escape the chroot context using the previously obtained `root_fd` as a trampoline
-pub fn escape_chroot(root_fd: Dir) -> Result<(), Error> {
+pub fn escape_chroot(root_fd: Dir) -> Result<()> {
     fchdir(root_fd.as_raw_fd())?;
     chroot(".")?;
     std::env::set_current_dir("/")?; // reset cwd (on host)
@@ -128,7 +128,7 @@ pub fn escape_chroot(root_fd: Dir) -> Result<(), Error> {
 }
 
 /// Setup all the necessary bind mounts
-pub fn setup_bind_mounts(root: &PathBuf) -> Result<(), Error> {
+pub fn setup_bind_mounts(root: &PathBuf) -> Result<()> {
     for mount in BIND_MOUNTS {
         let mut root = root.clone();
         root.push(&mount[1..]);
@@ -147,7 +147,7 @@ pub fn setup_bind_mounts(root: &PathBuf) -> Result<(), Error> {
 
 /// Remove bind mounts
 /// Note: This function should be called outside of the chroot context
-pub fn remove_bind_mounts(root: &PathBuf) -> Result<(), Error> {
+pub fn remove_bind_mounts(root: &PathBuf) -> Result<()> {
     for mount in BIND_MOUNTS {
         let mut root = root.clone();
         root.push(&mount[1..]);
@@ -159,7 +159,7 @@ pub fn remove_bind_mounts(root: &PathBuf) -> Result<(), Error> {
 
 /// Setup bind mounts and chroot into the guest system
 /// Warning: This will make the program trapped in the new root directory
-pub fn dive_into_guest(root: &PathBuf) -> Result<(), Error> {
+pub fn dive_into_guest(root: &PathBuf) -> Result<()> {
     setup_bind_mounts(root)?;
     chroot(root)?;
     std::env::set_current_dir("/")?; // jump to the root directory after chroot
@@ -169,12 +169,12 @@ pub fn dive_into_guest(root: &PathBuf) -> Result<(), Error> {
 
 /// Runs dracut
 /// Must be used in a chroot context
-pub fn execute_dracut() -> Result<(), Error> {
+pub fn execute_dracut() -> Result<()> {
     let output = Command::new("sh")
         .arg("/var/ab/triggered/dracut")
         .output()?;
     if !output.status.success() {
-        return Err(format_err!(
+        return Err(anyhow!(
             "Failed to execute dracut: \n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
@@ -186,7 +186,7 @@ pub fn execute_dracut() -> Result<(), Error> {
 
 /// Sets hostname in the guest environment
 /// Must be used in a chroot context
-pub fn set_hostname(name: &str) -> Result<(), Error> {
+pub fn set_hostname(name: &str) -> Result<()> {
     let mut f = File::create("/etc/hostname")?;
 
     Ok(f.write_all(name.as_bytes())?)
@@ -194,7 +194,7 @@ pub fn set_hostname(name: &str) -> Result<(), Error> {
 
 /// Sets locale in the guest environment
 /// Must be used in a chroot context
-pub fn set_locale(locale: &str) -> Result<(), Error> {
+pub fn set_locale(locale: &str) -> Result<()> {
     let mut f = File::create("/etc/locale.conf")?;
     f.write_all(b"LANG=")?;
 
@@ -203,12 +203,12 @@ pub fn set_locale(locale: &str) -> Result<(), Error> {
 
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
-pub fn add_new_user(name: &str, password: &str) -> Result<(), Error> {
+pub fn add_new_user(name: &str, password: &str) -> Result<()> {
     let command = Command::new("useradd")
         .args(&["-m", "-s", "/bin/bash", name])
         .output()?;
     if !command.status.success() {
-        return Err(format_err!(
+        return Err(anyhow!(
             "Failed to add a new user: {}",
             String::from_utf8_lossy(&command.stderr)
         ));
@@ -217,7 +217,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<(), Error> {
         .args(&["-aG", "audio,cdrom,video,wheel", name])
         .output()?;
     if !command.status.success() {
-        return Err(format_err!(
+        return Err(anyhow!(
             "Failed to add a new user: {}",
             String::from_utf8_lossy(&command.stderr)
         ));
@@ -232,7 +232,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<(), Error> {
 
 /// Runs grub-install and grub-mkconfig
 /// Must be used in a chroot context
-pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<(), Error> {
+pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let mut command = Command::new("grub-install");
     let cmd;
     if let Some(mbr_dev) = mbr_dev {
@@ -245,7 +245,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<(), Error> {
     }
     let process = cmd.output()?;
     if !process.status.success() {
-        return Err(format_err!(
+        return Err(anyhow!(
             "Failed to execute grub-install: {}",
             String::from_utf8_lossy(&process.stderr)
         ));
@@ -255,7 +255,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<(), Error> {
         .arg("/boot/grub/grub.cfg")
         .output()?;
     if !process.status.success() {
-        return Err(format_err!(
+        return Err(anyhow!(
             "Failed to execute grub-mkconfig: {}",
             String::from_utf8_lossy(&process.stderr)
         ));

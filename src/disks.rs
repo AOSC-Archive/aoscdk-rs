@@ -1,8 +1,8 @@
-use failure::{format_err, Error};
 use libparted;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use anyhow::{Result, anyhow};
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
@@ -31,7 +31,7 @@ pub fn get_recommended_fs_type(type_: &str) -> &str {
     DEFAULT_FS_TYPE
 }
 
-pub fn format_partition(partition: &Partition) -> Result<(), Error> {
+pub fn format_partition(partition: &Partition) -> Result<()> {
     let default_fs = DEFAULT_FS_TYPE.to_owned();
     let fs_type = partition.fs_type.as_ref().unwrap_or(&default_fs);
     let mut command = Command::new(format!("mkfs.{}", fs_type));
@@ -47,11 +47,11 @@ pub fn format_partition(partition: &Partition) -> Result<(), Error> {
             partition
                 .path
                 .as_ref()
-                .ok_or(format_err!("Path not found"))?,
+                .ok_or(anyhow!("Path not found"))?,
         )
         .output()?;
     if !output.status.success() {
-        return Err(format_err!(
+        return Err(anyhow!(
             "Failed to create filesystem: \n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
@@ -74,7 +74,7 @@ pub fn fill_fs_type(part: &Partition) -> Partition {
     new_part
 }
 
-pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition, Error> {
+pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition> {
     let mut device = libparted::Device::get(device_path)?;
     if let Ok(disk) = libparted::Disk::new(&mut device) {
         for mut part in disk.parts() {
@@ -88,7 +88,7 @@ pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition, Error> {
                 } else {
                     fs_type = None;
                 }
-                let path = part.get_path().ok_or(format_err!(
+                let path = part.get_path().ok_or(anyhow!(
                     "Unable to get the device file for ESP partition"
                 ))?;
                 return Ok(Partition {
@@ -101,7 +101,7 @@ pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition, Error> {
         }
     }
 
-    Err(format_err!("ESP partition not found."))
+    Err(anyhow!("ESP partition not found."))
 }
 
 pub fn list_partitions() -> Vec<Partition> {
