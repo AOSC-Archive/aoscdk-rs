@@ -1,7 +1,7 @@
+use anyhow::{anyhow, Result};
 use reqwest;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use std::env::consts::ARCH;
-use anyhow::{Result, anyhow};
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = false;
@@ -124,13 +124,18 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     if arch_name.is_none() {
         return Err(anyhow!("Unsupported architecture."));
     }
+    let arch_name = arch_name.unwrap();
     // filter: tarballs array is not empty and the mainline/retro switch matches
     for recipe in recipes
         .variants
         .into_iter()
         .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty())
     {
-        let mut sorted_tarballs = recipe.tarballs;
+        let mut sorted_tarballs: Vec<Tarball> = recipe
+            .tarballs
+            .into_iter()
+            .filter(|x| x.arch == arch_name)
+            .collect();
         sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
         let candidate = sorted_tarballs.first().unwrap();
         results.push(VariantEntry {

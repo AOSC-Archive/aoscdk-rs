@@ -1,8 +1,8 @@
+use anyhow::{anyhow, Result};
 use libparted;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
-use anyhow::{Result, anyhow};
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
@@ -43,12 +43,7 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
         cmd = command.arg("-f");
     }
     output = cmd
-        .arg(
-            partition
-                .path
-                .as_ref()
-                .ok_or(anyhow!("Path not found"))?,
-        )
+        .arg(partition.path.as_ref().ok_or(anyhow!("Path not found"))?)
         .output()?;
     if !output.status.success() {
         return Err(anyhow!(
@@ -88,9 +83,9 @@ pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition> {
                 } else {
                     fs_type = None;
                 }
-                let path = part.get_path().ok_or(anyhow!(
-                    "Unable to get the device file for ESP partition"
-                ))?;
+                let path = part
+                    .get_path()
+                    .ok_or(anyhow!("Unable to get the device file for ESP partition"))?;
                 return Ok(Partition {
                     path: Some(path.to_owned()),
                     parent_path: None,

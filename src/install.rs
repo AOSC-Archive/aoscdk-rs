@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use hex;
 use nix::dir::Dir;
 use nix::fcntl::OFlag;
@@ -14,7 +15,6 @@ use std::process::{Command, Stdio};
 use tar;
 use tempfile::TempDir;
 use xz2;
-use anyhow::{Result, anyhow};
 
 use crate::disks::Partition;
 use crate::parser::locale_names;

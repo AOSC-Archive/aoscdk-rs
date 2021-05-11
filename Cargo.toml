@@ -7,15 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nom = "5.1"
-serde = "1.0"
+nom = "6.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
-reqwest = { version = "0.10", features = ["json", "blocking"] }
-serde_derive = "1.0"
-nix = "0.19"
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+nix = "0.20"
 libparted = "0.1"
-cursive = "0.15"
+cursive = "0.16"
 cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view" }
 lazy_static = "1.4"
 number_prefix = "0.4"
@@ -23,7 +22,7 @@ xz2 = "0.1"
 tar = "0.4"
 sha2 = "0.9"
 hex = "0.4"
-tempfile = "3.1"
+tempfile = "3.2"
 
 [profile.release]
 lto = true
