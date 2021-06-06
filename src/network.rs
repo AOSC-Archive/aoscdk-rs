@@ -105,7 +105,8 @@ fn get_arch_name() -> Option<&'static str> {
         "x86_64" => Some("amd64"),
         "x86" => Some("i486"),
         "powerpc" => Some("powerpc"),
-        "powerpc64" => Some("ppc64"),
+        "aarch64" => Some("arm64"),
+        "mips64" => Some("loongson3"),
         _ => None,
     }
 }

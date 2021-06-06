@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["liushuyu <liushuyu011@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 nom = "6.0"
@@ -12,7 +11,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
-nix = "0.20"
+nix = "0.21"
 libparted = "0.1"
 cursive = "0.16"
 cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view" }
@@ -23,6 +22,7 @@ tar = "0.4"
 sha2 = "0.9"
 hex = "0.4"
 tempfile = "3.2"
+cursive-async-view = "0.5"
 
 [profile.release]
 lto = true

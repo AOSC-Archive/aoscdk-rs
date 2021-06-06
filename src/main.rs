@@ -11,8 +11,9 @@ use cursive::views::{
     ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{Cursive, View};
+use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
-use network::Mirror;
+use network::{Mirror, VariantEntry};
 use number_prefix::NumberPrefix;
 use std::cell::RefCell;
 use std::convert::TryInto;
@@ -90,7 +91,7 @@ macro_rules! show_fetch_progress {
             Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
                 .title("Progress"),
         );
-        $siv.refresh();
+        // $siv.refresh();
         let ret = { $f };
         $siv.pop_layer();
         ret
@@ -147,7 +148,7 @@ fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallCon
     if env::var("DISPLAY").is_ok() {
         return ("Open GParted", &|s, _| {
             show_blocking_message(s, "Waiting for GParted Partitioning Program to finish");
-            s.refresh();
+            // s.refresh();
             Command::new("gparted").output().ok();
             let new_parts = disks::list_partitions();
             let (disk_list, disk_view) = make_partition_list(new_parts);
@@ -229,28 +230,18 @@ fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<us
     .title(title)
 }
 
-fn select_variant(siv: &mut Cursive, config: InstallConfig) {
-    let manifest = show_fetch_progress!(
-        siv,
-        "Downloading distribution information...",
-        "Could not download recipe information",
-        { network::fetch_recipe() }
-    );
-    let mirrors = network::fetch_mirrors(&manifest);
-    let variants = show_fetch_progress!(
-        siv,
-        "Downloading distribution information...",
-        "Could not download recipe information",
-        { network::find_variant_candidates(manifest) }
-    );
-    let variants_copy = variants.clone();
+fn build_variant_list(
+    mirrors: Vec<Mirror>,
+    variants: Vec<VariantEntry>,
+    config: InstallConfig,
+) -> Dialog {
     let mut config_view = LinearLayout::vertical();
 
     let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
         .column(VariantColumn::Name, "Name", |c| c.width(60))
         .column(VariantColumn::Date, "Date", |c| c.width(20))
         .column(VariantColumn::Size, "Size", |c| c.width(20))
-        .items(variants_copy)
+        .items(variants.clone())
         .on_submit(move |siv, _row, index| {
             let mut config = config.clone();
             config.variant = Some(Rc::new(variants.get(index).unwrap().clone()));
@@ -261,11 +252,23 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
     let variant_view = Panel::new(variant_view).title("Variant");
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
-    siv.add_layer(wrap_in_dialog(
-        config_view,
-        "AOSC OS Installation",
-        Some(128),
-    ));
+
+    wrap_in_dialog(config_view, "AOSC OS Installation", Some(128))
+}
+
+fn select_variant(siv: &mut Cursive, config: InstallConfig) {
+    let loader = AsyncView::new_with_bg_creator(
+        siv,
+        move || {
+            let manifest = network::fetch_recipe().map_err(|e| e.to_string())?;
+            let mirrors = network::fetch_mirrors(&manifest);
+            let variants = network::find_variant_candidates(manifest).map_err(|e| e.to_string())?;
+            Ok((mirrors, variants))
+        },
+        move |(mirrors, variants)| build_variant_list(mirrors, variants, config.clone()),
+    );
+
+    siv.add_layer(loader);
 }
 
 fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig) {
@@ -332,7 +335,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     };
                     if current_partition.parent_path.is_none() && current_partition.size == 0 {
                         show_msg(s, "Please specify a partition.");
-                        s.refresh();
+                        // s.refresh();
                         return;
                     }
                     let mut config = config.clone();
@@ -400,9 +403,11 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
         )
         .child(
             "Locale",
-            make_locale_list(locales).on_select(move |_, c| {
-                locale_copy.replace(c.to_owned());
-            }),
+            make_locale_list(locales)
+                .on_select(move |_, c| {
+                    locale_copy.replace(c.to_owned());
+                })
+                .min_width(20),
         );
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
@@ -497,7 +502,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         v.get_mut()
             .set_content("Step 1 of 5: Formatting partition...");
     });
-    siv.refresh();
+    // siv.refresh();
     let partition = &config.partition.unwrap();
     unwrap_or_show_error!(siv, { disks::format_partition(partition) });
     let mount_path = unwrap_or_show_error!(siv, { install::auto_mount_root_path(partition) });
@@ -557,7 +562,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         if download_done.load(Ordering::SeqCst) {
             break;
         }
-        siv.refresh();
+        // siv.refresh();
         std::thread::sleep(refresh_interval);
     }
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
@@ -568,14 +573,14 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         if extract_done.load(Ordering::SeqCst) {
             break;
         }
-        siv.refresh();
+        // siv.refresh();
         std::thread::sleep(refresh_interval);
     }
     siv.call_on_name("status", |v: &mut NamedView<TextView>| {
         v.get_mut()
             .set_content("Step 4 of 5: Generating initial RAM disk...");
     });
-    siv.refresh();
+    // siv.refresh();
     let escape_vector = unwrap_or_show_error!(siv, { install::get_dir_fd(PathBuf::from("/")) });
     unwrap_or_show_error!(siv, { install::dive_into_guest(&mount_path_copy2) });
     unwrap_or_show_error!(siv, { install::execute_dracut() });
@@ -583,7 +588,7 @@ fn begin_install(siv: &mut Cursive, config: InstallConfig) {
         v.get_mut()
             .set_content("Step 5 of 5: Writing GRUB bootloader...");
     });
-    siv.refresh();
+    // siv.refresh();
     let result = if disks::is_efi_booted() {
         install::execute_grub_install(None)
     } else {
