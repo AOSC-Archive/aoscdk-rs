@@ -39,6 +39,8 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     let output;
     if fs_type == "ext4" {
         cmd = command.arg("-Fq");
+    } else if fs_type == "vfat" {
+        cmd = command.arg("-F32");
     } else {
         cmd = command.arg("-f");
     }

@@ -7,7 +7,7 @@ use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
 use sha2::{Digest, Sha256};
-use std::fs::File;
+use std::{fs::File, path::Path};
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
@@ -42,7 +42,7 @@ pub fn get_locale_list() -> Result<Vec<String>> {
 }
 
 /// Extract the given .tar.xz stream and preserve all the file attributes
-pub fn extract_tar_xz<R: Read>(reader: R, path: &PathBuf) -> Result<()> {
+pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
     let decompress = xz2::read::XzDecoder::new(reader);
     let mut tar_processor = tar::Archive::new(decompress);
     tar_processor.set_unpack_xattrs(true);
@@ -100,7 +100,7 @@ pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<()> {
 }
 
 /// Unmount the filesystem given at `root` and then do a sync
-pub fn umount_root_path(root: &PathBuf) -> Result<()> {
+pub fn umount_root_path(root: &Path) -> Result<()> {
     mount::umount2(root, mount::MntFlags::MNT_DETACH)?;
     sync();
 
@@ -128,9 +128,9 @@ pub fn escape_chroot(root_fd: Dir) -> Result<()> {
 }
 
 /// Setup all the necessary bind mounts
-pub fn setup_bind_mounts(root: &PathBuf) -> Result<()> {
+pub fn setup_bind_mounts(root: &Path) -> Result<()> {
     for mount in BIND_MOUNTS {
-        let mut root = root.clone();
+        let mut root = root.to_owned();
         root.push(&mount[1..]);
         std::fs::create_dir_all(root.clone())?;
         mount::mount(
@@ -147,9 +147,9 @@ pub fn setup_bind_mounts(root: &PathBuf) -> Result<()> {
 
 /// Remove bind mounts
 /// Note: This function should be called outside of the chroot context
-pub fn remove_bind_mounts(root: &PathBuf) -> Result<()> {
+pub fn remove_bind_mounts(root: &Path) -> Result<()> {
     for mount in BIND_MOUNTS {
-        let mut root = root.clone();
+        let mut root = root.to_owned();
         root.push(&mount[1..]);
         mount::umount2(&root, mount::MntFlags::MNT_DETACH)?;
     }
@@ -159,7 +159,7 @@ pub fn remove_bind_mounts(root: &PathBuf) -> Result<()> {
 
 /// Setup bind mounts and chroot into the guest system
 /// Warning: This will make the program trapped in the new root directory
-pub fn dive_into_guest(root: &PathBuf) -> Result<()> {
+pub fn dive_into_guest(root: &Path) -> Result<()> {
     setup_bind_mounts(root)?;
     chroot(root)?;
     std::env::set_current_dir("/")?; // jump to the root directory after chroot
