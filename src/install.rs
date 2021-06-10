@@ -170,8 +170,7 @@ pub fn dive_into_guest(root: &Path) -> Result<()> {
 /// Runs dracut
 /// Must be used in a chroot context
 pub fn execute_dracut() -> Result<()> {
-    let output = Command::new("sh")
-        .arg("/var/ab/triggered/dracut")
+    let output = Command::new("/usr/bin/update-initramfs")
         .output()?;
     if !output.status.success() {
         return Err(anyhow!(
