@@ -42,7 +42,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     sender.send(InstallProgress::Pending(
-        "Step 1 of 5: Formatting partitions...".to_string(),
+        "Step 1 of 5: Formatting partitions ...".to_string(),
         0,
     ))?;
 
@@ -67,7 +67,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         file_size = variant.size.try_into().unwrap();
         url = format!("{}{}", mirror_url, variant.url);
     } else {
-        return Err(anyhow!("Internal error: no variant field found"));
+        return Err(anyhow!("Internal error: no variant field found."));
     }
     let download_done_copy = download_done.clone();
     let extract_done_copy = extract_done.clone();
@@ -94,7 +94,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     // Progress update
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 2 of 5: Downloading tarball...".to_string(),
+            "Step 2 of 5: Downloading system release ...".to_string(),
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -104,7 +104,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 3 of 5: Extracting tarball...".to_string(),
+            "Step 3 of 5: Extracting system release ...".to_string(),
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -115,7 +115,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     // GC the worker thread
     worker.join().unwrap();
     sender.send(InstallProgress::Pending(
-        "Step 4 of 5: Generating initial RAM disk...".to_string(),
+        "Step 4 of 5: Generating initramfs (initial RAM filesystem) ...".to_string(),
         0,
     ))?;
 
@@ -123,7 +123,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     install::dive_into_guest(&mount_path_copy)?;
     install::execute_dracut()?;
     sender.send(InstallProgress::Pending(
-        "Step 5 of 5: Writing GRUB bootloader...".to_string(),
+        "Step 5 of 5: Installing and configuring GRUB bootloader ...".to_string(),
         0,
     ))?;
 

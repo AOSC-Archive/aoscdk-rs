@@ -56,7 +56,7 @@ macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $e:tt, $f:block) => {{
         $siv.pop_layer();
         $siv.add_layer(
-            Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
+            Dialog::around(TextView::new(format!("{}\nThis can take a while ...", $m)))
                 .title("Progress"),
         );
         $siv.refresh();
@@ -71,7 +71,7 @@ macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $f:block) => {{
         $siv.pop_layer();
         $siv.add_layer(
-            Dialog::around(TextView::new(format!("{}\nThis can take a while...", $m)))
+            Dialog::around(TextView::new(format!("{}\nThis can take a while ...", $m)))
                 .title("Progress"),
         );
         // $siv.refresh();
@@ -112,7 +112,7 @@ fn show_blocking_message(siv: &mut Cursive, msg: &str) {
 fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallConfig)) {
     if env::var("DISPLAY").is_ok() {
         return ("Open GParted", &|s, _| {
-            show_blocking_message(s, "Waiting for GParted Partitioning Program to finish");
+            show_blocking_message(s, "Waiting for GParted Partitioning Program to finish ...");
             // s.refresh();
             Command::new("gparted").output().ok();
             let new_parts = disks::list_partitions();
@@ -265,7 +265,7 @@ fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
-    let partitions = show_fetch_progress!(siv, "Probing disks...", { disks::list_partitions() });
+    let partitions = show_fetch_progress!(siv, "Probing disks ...", { disks::list_partitions() });
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
     let dest_view = LinearLayout::vertical()
@@ -448,7 +448,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(
         wrap_in_dialog(
             LinearLayout::vertical().child(
-                TextView::new("Please wait while the installation is taking place.\nDuring installation, you may want to go around and get a feeling for AOSC OS!")
+                TextView::new("Please wait while the installation is taking place.")
             ).child(DummyView {}).child(
                 ProgressBar::new().max(100).with_value(counter)
             ).child(status_message),
