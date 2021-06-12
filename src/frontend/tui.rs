@@ -2,12 +2,12 @@ use crate::{
     disks, install,
     network::{self, Mirror, VariantEntry},
 };
-use cursive::traits::*;
 use cursive::view::SizeConstraint;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
     ResizedView, ScrollView, SelectView, TextView,
 };
+use cursive::{traits::*, utils::Counter};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
@@ -78,24 +78,6 @@ macro_rules! show_fetch_progress {
         let ret = { $f };
         $siv.pop_layer();
         ret
-    }};
-}
-
-macro_rules! unwrap_or_show_error {
-    ($siv:ident, $f:block) => {{
-        let tmp = { $f };
-        if let Err(e) = tmp {
-            show_error($siv, &e.to_string());
-            return;
-        }
-        tmp.unwrap()
-    }};
-    ($siv:ident, $x:ident) => {{
-        if let Err(e) = $x {
-            show_error($siv, &e.to_string());
-            return;
-        }
-        $x.unwrap()
     }};
 }
 
@@ -458,12 +440,46 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
+    siv.pop_layer();
+    let counter = Counter::new(0);
+    let counter_clone = counter.clone();
+    let mut status_message = TextView::new("");
+    let status_text = Arc::new(status_message.get_shared_content());
+    siv.add_layer(
+        wrap_in_dialog(
+            LinearLayout::vertical().child(
+                TextView::new("Please wait while the installation is taking place.\nDuring installation, you may want to go around and get a feeling for AOSC OS!")
+            ).child(DummyView {}).child(
+                ProgressBar::new().max(100).with_value(counter)
+            ).child(status_message),
+            "Installing",
+            None
+        )
+    );
+
     let (tx, rx) = std::sync::mpsc::channel();
-    let handle = thread::spawn(move || begin_install(tx, config));
-
-    let result = handle.join().unwrap();
-
-    show_finished(siv);
+    siv.set_autorefresh(true);
+    let cb_sink = siv.cb_sink().clone();
+    let install_thread = thread::spawn(move || begin_install(tx, config));
+    thread::spawn(move || loop {
+        if let Ok(progress) = rx.recv() {
+            match progress {
+                super::InstallProgress::Pending(msg, pct) => {
+                    counter_clone.set(pct);
+                    status_text.set_content(msg);
+                }
+                super::InstallProgress::Finished => cb_sink.send(Box::new(show_finished)).unwrap(),
+            }
+        } else {
+            let err = install_thread.join().unwrap().unwrap_err();
+            cb_sink
+                .send(Box::new(move |s| {
+                    show_error(s, &err.to_string());
+                }))
+                .unwrap();
+            return;
+        }
+    });
 }
 
 fn show_finished(siv: &mut Cursive) {

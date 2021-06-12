@@ -7,11 +7,11 @@ use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
 use sha2::{Digest, Sha256};
-use std::{fs::File, path::Path};
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::{fs::File, path::Path};
 use tar;
 use tempfile::TempDir;
 use xz2;
@@ -170,8 +170,7 @@ pub fn dive_into_guest(root: &Path) -> Result<()> {
 /// Runs dracut
 /// Must be used in a chroot context
 pub fn execute_dracut() -> Result<()> {
-    let output = Command::new("/usr/bin/update-initramfs")
-        .output()?;
+    let output = Command::new("/usr/bin/update-initramfs").output()?;
     if !output.status.success() {
         return Err(anyhow!(
             "Failed to execute dracut: \n{}\n{}",

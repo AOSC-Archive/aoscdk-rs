@@ -1,7 +1,6 @@
 use std::{
     convert::TryInto,
     path::PathBuf,
-    rc::Rc,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::Sender,
@@ -19,7 +18,7 @@ mod tui;
 pub use tui::tui_main;
 
 pub(crate) enum InstallProgress {
-    Pending(String, f32),
+    Pending(String, usize),
     Finished,
 }
 
@@ -35,7 +34,7 @@ struct InstallConfig {
 }
 
 fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Result<()> {
-    let refresh_interval = std::time::Duration::from_millis(300);
+    let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
     let url;
@@ -44,7 +43,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     sender.send(InstallProgress::Pending(
         "Step 1 of 5: Formatting partitions...".to_string(),
-        0.0,
+        0,
     ))?;
 
     let partition = &config.partition.unwrap();
@@ -94,30 +93,30 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
 
     // Progress update
     loop {
+        sender.send(InstallProgress::Pending(
+            "Step 2 of 5: Downloading tarball...".to_string(),
+            counter.get() * 100 / file_size,
+        ))?;
+        std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;
         }
-        sender.send(InstallProgress::Pending(
-            "Step 2 of 5: Downloading tarball...".to_string(),
-            (counter.get() * 100 / file_size) as f32,
-        ))?;
-        std::thread::sleep(refresh_interval);
     }
     loop {
+        sender.send(InstallProgress::Pending(
+            "Step 3 of 5: Extracting tarball...".to_string(),
+            counter.get() * 100 / file_size,
+        ))?;
+        std::thread::sleep(refresh_interval);
         if extract_done.load(Ordering::SeqCst) {
             break;
         }
-        sender.send(InstallProgress::Pending(
-            "Step 3 of 5: Extracting tarball...".to_string(),
-            (counter.get() * 100 / file_size) as f32,
-        ))?;
-        std::thread::sleep(refresh_interval);
     }
     // GC the worker thread
     worker.join().unwrap();
     sender.send(InstallProgress::Pending(
         "Step 4 of 5: Generating initial RAM disk...".to_string(),
-        0.0,
+        0,
     ))?;
 
     let escape_vector = install::get_dir_fd(PathBuf::from("/"))?;
@@ -125,7 +124,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     install::execute_dracut()?;
     sender.send(InstallProgress::Pending(
         "Step 5 of 5: Writing GRUB bootloader...".to_string(),
-        0.0,
+        0,
     ))?;
 
     if disks::is_efi_booted() {
