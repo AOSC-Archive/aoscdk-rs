@@ -37,7 +37,7 @@ checksum = "15af2628f6890fe2609a3b91bef4c83450512802e59489f9c1cb1fa5df064a61"
 
 [[package]]
 name = "aoscdk-rs"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 dependencies = [
  "anyhow",
  "cursive",
