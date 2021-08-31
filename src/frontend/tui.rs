@@ -113,15 +113,19 @@ fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallCon
     if env::var("DISPLAY").is_ok() {
         return ("Open GParted", &|s, _| {
             show_blocking_message(s, "Waiting for GParted Partitioning Program to finish ...");
-            // s.refresh();
-            Command::new("gparted").output().ok();
-            let new_parts = disks::list_partitions();
-            let (disk_list, disk_view) = make_partition_list(new_parts);
-            s.set_user_data(disk_list);
-            s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
-                *view = disk_view;
+            let cb_sink = s.cb_sink().clone();
+            thread::spawn(move || {
+                Command::new("gparted").output().ok();
+                cb_sink.send(Box::new(|s| {
+                    let new_parts = disks::list_partitions();
+                    let (disk_list, disk_view) = make_partition_list(new_parts);
+                    s.set_user_data(disk_list);
+                    s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
+                        *view = disk_view;
+                    });
+                    s.pop_layer();
+                })).unwrap();
             });
-            s.pop_layer();
         });
     }
     ("Open Shell", &|s, config| {
@@ -177,10 +181,10 @@ fn make_partition_list(
 }
 
 fn make_locale_list(locales: Vec<String>) -> SelectView {
-    let mut locale_view = SelectView::new().popup();
-    for locale in &locales {
-        locale_view.add_item_str(locale);
-    }
+    let locale_view = SelectView::new()
+        .popup()
+        .autojump()
+        .with_all_str(locales.iter());
 
     locale_view
 }
@@ -445,17 +449,17 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let counter_clone = counter.clone();
     let mut status_message = TextView::new("");
     let status_text = Arc::new(status_message.get_shared_content());
-    siv.add_layer(
-        wrap_in_dialog(
-            LinearLayout::vertical().child(
-                TextView::new("Please wait while the installation is taking place.")
-            ).child(DummyView {}).child(
-                ProgressBar::new().max(100).with_value(counter)
-            ).child(status_message),
-            "Installing",
-            None
-        )
-    );
+    siv.add_layer(wrap_in_dialog(
+        LinearLayout::vertical()
+            .child(TextView::new(
+                "Please wait while the installation is taking place.",
+            ))
+            .child(DummyView {})
+            .child(ProgressBar::new().max(100).with_value(counter))
+            .child(status_message),
+        "Installing",
+        None,
+    ));
 
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
