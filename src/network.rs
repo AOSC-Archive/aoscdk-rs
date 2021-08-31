@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::env::consts::ARCH;
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
-const IS_RETRO: bool = false;
+const IS_RETRO: bool = cfg!(feature = "is_retro");
 
 // mirror manifests
 #[derive(Deserialize, Clone, Debug)]

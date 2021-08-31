@@ -6,12 +6,12 @@ edition = "2018"
 
 
 [dependencies]
-nom = "6.0"
+nom = "^7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
-nix = "0.21"
+nix = "0.22"
 libparted = "0.1"
 cursive = "0.16"
 cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view" }
@@ -23,6 +23,9 @@ sha2 = "0.9"
 hex = "0.4"
 tempfile = "3.2"
 cursive-async-view = "0.5"
+
+[features]
+is_retro = []
 
 [profile.release]
 lto = true

@@ -169,6 +169,7 @@ pub fn dive_into_guest(root: &Path) -> Result<()> {
 
 /// Runs dracut
 /// Must be used in a chroot context
+#[cfg(not(feature = "is_retro"))]
 pub fn execute_dracut() -> Result<()> {
     let output = Command::new("/usr/bin/update-initramfs").output()?;
     if !output.status.success() {
@@ -179,6 +180,13 @@ pub fn execute_dracut() -> Result<()> {
         ));
     }
 
+    Ok(())
+}
+
+/// Runs dracut (dummy function for retro mode)
+/// Must be used in a chroot context
+#[cfg(feature = "is_retro")]
+pub fn execute_dracut() -> Result<()> {
     Ok(())
 }
 
