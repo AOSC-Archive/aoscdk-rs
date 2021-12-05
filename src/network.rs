@@ -130,7 +130,7 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     for recipe in recipes
         .variants
         .into_iter()
-        .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty())
+        .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty() && x.name != "BuildKit")
     {
         let mut sorted_tarballs: Vec<Tarball> = recipe
             .tarballs
