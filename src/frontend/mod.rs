@@ -40,6 +40,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let url;
     let file_size: usize;
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    let download_success: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     sender.send(InstallProgress::Pending(
         "Step 1 of 5: Formatting partitions ...".to_string(),
@@ -71,6 +72,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     let download_done_copy = download_done.clone();
     let extract_done_copy = extract_done.clone();
+    let download_success_copy = download_success.clone();
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -78,7 +80,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         if let Ok(reader) = network::download_file(&url) {
             let mut reader = ProgressReader::new(counter_clone.clone(), reader);
             output = std::fs::File::create(tarball_file.clone()).unwrap();
-            std::io::copy(&mut reader, &mut output).unwrap();
+            if std::io::copy(&mut reader, &mut output).is_err() {
+                download_success_copy.fetch_and(false, Ordering::SeqCst);
+                return;
+            }
             download_done_copy.fetch_or(true, Ordering::SeqCst);
         } else {
             return;
@@ -98,6 +103,9 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
+        if !download_success.load(Ordering::SeqCst) {
+            return Err(anyhow!("Network error: failed to download tarball!"));
+        }
         if download_done.load(Ordering::SeqCst) {
             break;
         }
