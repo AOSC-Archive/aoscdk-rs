@@ -1,13 +1,13 @@
 use anyhow::{anyhow, Result};
 use reqwest;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::env::consts::ARCH;
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = cfg!(feature = "is_retro");
 
 // mirror manifests
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct Mirror {
     pub name: String,
     #[serde(rename = "name-tr")]
@@ -81,7 +81,7 @@ struct VariantData {
     retro: DistroList,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VariantEntry {
     pub name: String,
     pub size: u64,

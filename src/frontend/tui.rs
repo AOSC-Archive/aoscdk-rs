@@ -2,6 +2,7 @@ use crate::{
     disks, install,
     network::{self, Mirror, VariantEntry},
 };
+use anyhow::Result;
 use cursive::view::SizeConstraint;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
@@ -12,13 +13,14 @@ use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use number_prefix::NumberPrefix;
-use std::env;
-use std::path::PathBuf;
 use std::process::Command;
 use std::rc::Rc;
 use std::{cell::RefCell, sync::Arc, thread};
+use std::{env, fs, io::Read, path::PathBuf};
 
 use super::{begin_install, InstallConfig};
+
+const USER_CONFIG_FILE: &str = "/tmp/deploykit-config.toml";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum VariantColumn {
@@ -116,15 +118,17 @@ fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallCon
             let cb_sink = s.cb_sink().clone();
             thread::spawn(move || {
                 Command::new("gparted").output().ok();
-                cb_sink.send(Box::new(|s| {
-                    let new_parts = disks::list_partitions();
-                    let (disk_list, disk_view) = make_partition_list(new_parts);
-                    s.set_user_data(disk_list);
-                    s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
-                        *view = disk_view;
-                    });
-                    s.pop_layer();
-                })).unwrap();
+                cb_sink
+                    .send(Box::new(|s| {
+                        let new_parts = disks::list_partitions();
+                        let (disk_list, disk_view) = make_partition_list(new_parts);
+                        s.set_user_data(disk_list);
+                        s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
+                            *view = disk_view;
+                        });
+                        s.pop_layer();
+                    }))
+                    .unwrap();
             });
         });
     }
@@ -408,6 +412,22 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
+fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
+    siv.add_layer(
+        wrap_in_dialog(
+            TextView::new("Using the last configuration?"),
+            "AOSC OS Installer",
+            None,
+        )
+        .button("Yes", move |s| show_summary(s, config.clone()))
+        .button("No", |s| {
+            fs::remove_file(USER_CONFIG_FILE).ok();
+            clean_start(s);
+        })
+        .button("Exit", |s| s.quit()),
+    );
+}
+
 fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     let mut path = String::new();
     let mut fs = String::new();
@@ -444,6 +464,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
+    save_user_config_to_file(config.clone()).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
@@ -486,6 +507,23 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     });
 }
 
+fn save_user_config_to_file(config_copy: InstallConfig) -> Result<()> {
+    let value = toml::Value::try_from(config_copy)?;
+    let file_str = toml::to_string(&value)?;
+    fs::File::create(USER_CONFIG_FILE)?;
+    fs::write(USER_CONFIG_FILE, file_str)?;
+
+    Ok(())
+}
+
+fn read_user_config_on_file() -> Result<InstallConfig> {
+    let mut file = fs::File::open(USER_CONFIG_FILE)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+
+    Ok(toml::from_slice(&buffer)?)
+}
+
 fn show_finished(siv: &mut Cursive) {
     siv.pop_layer();
     siv.add_layer(
@@ -508,16 +546,11 @@ pub fn tui_main() {
         Dialog::around(TextView::new("Welcome to AOSC OS installer!"))
             .title("Welcome")
             .button("Start", |s| {
-                let config = InstallConfig {
-                    variant: None,
-                    partition: None,
-                    mirror: None,
-                    user: None,
-                    password: None,
-                    hostname: None,
-                    locale: None,
-                };
-                select_variant(s, config)
+                if let Ok(config) = read_user_config_on_file() {
+                    is_use_last_config(s, config)
+                } else {
+                    clean_start(s);
+                }
             })
             .padding_lrtb(2, 2, 1, 1),
     );
@@ -543,4 +576,17 @@ pub fn tui_main() {
             break;
         }
     }
+}
+
+fn clean_start(s: &mut Cursive) {
+    let config = InstallConfig {
+        variant: None,
+        partition: None,
+        mirror: None,
+        user: None,
+        password: None,
+        hostname: None,
+        locale: None,
+    };
+    select_variant(s, config);
 }
