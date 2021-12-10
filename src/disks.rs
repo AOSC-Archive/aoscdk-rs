@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use libparted;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -8,7 +9,7 @@ const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Partition {
     pub path: Option<PathBuf>,
     pub parent_path: Option<PathBuf>,

@@ -12,6 +12,7 @@ use std::{
 use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
+use serde::{Deserialize, Serialize};
 
 mod tui;
 
@@ -22,7 +23,7 @@ pub(crate) enum InstallProgress {
     Finished,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct InstallConfig {
     variant: Option<Arc<network::VariantEntry>>,
     partition: Option<Arc<disks::Partition>>,
