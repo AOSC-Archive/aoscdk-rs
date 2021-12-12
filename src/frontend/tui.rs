@@ -20,7 +20,8 @@ use std::{env, fs, io::Read, path::PathBuf};
 
 use super::{begin_install, InstallConfig};
 
-const USER_CONFIG_FILE: &str = "/tmp/deploykit-config.toml";
+const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
+const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum VariantColumn {
@@ -267,7 +268,11 @@ fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig
             let mut config = config.clone();
             let mirror = repo_list.selection();
             config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
-            select_partition(s, config);
+            if config.partition.is_some() {
+                select_user(s, config);
+            } else {
+                select_partition(s, config);
+            }
         }),
     );
 }
@@ -315,7 +320,11 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     let mut config = config.clone();
                     let new_part = disks::fill_fs_type(current_partition.as_ref());
                     config.partition = Some(Arc::new(new_part));
-                    select_user(s, config);
+                    if config.user.is_some() {
+                        is_use_last_config(s, config);
+                    } else {
+                        select_user(s, config);
+                    }
                 }
             }),
     );
@@ -413,16 +422,26 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
+    let config_copy = config.clone();
     siv.add_layer(
         wrap_in_dialog(
             TextView::new("Using the last configuration?"),
             "AOSC OS Installer",
             None,
         )
-        .button("Yes", move |s| show_summary(s, config.clone()))
-        .button("No", |s| {
-            fs::remove_file(USER_CONFIG_FILE).ok();
-            clean_start(s);
+        .button("Yes", move |s| show_summary(s, config_copy.clone()))
+        .button("No", move |s| {
+            fs::remove_file(LAST_USER_CONFIG_FILE).ok();
+            let new_config = InstallConfig {
+                variant: None,
+                partition: config.clone().partition,
+                mirror: None,
+                user: None,
+                password: None,
+                hostname: None,
+                locale: None,
+            };
+            select_variant(s, new_config);
         })
         .button("Exit", |s| s.quit()),
     );
@@ -432,6 +451,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     let mut path = String::new();
     let mut fs = String::new();
     let config_copy = config.clone();
+    let config_copy_2 = config.clone();
     if let Some(partition) = config.partition {
         if let Some(partition) = &partition.path {
             path = partition.to_string_lossy().to_string();
@@ -459,12 +479,22 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         .button("Install", move |s| {
             s.pop_layer();
             start_install(s, config_copy.clone());
+        })
+        .button("Save Config", move |s| {
+            if let Err(e) = save_user_config_to_file(config_copy_2.clone(), SAVE_USER_CONFIG_FILE) {
+                show_error(s, &e.to_string())
+            } else {
+                show_msg(
+                    s,
+                    &format!("Success saved, path: {}!", SAVE_USER_CONFIG_FILE),
+                )
+            }
         }),
     );
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
-    save_user_config_to_file(config.clone()).ok();
+    save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
@@ -507,21 +537,22 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     });
 }
 
-fn save_user_config_to_file(config_copy: InstallConfig) -> Result<()> {
-    let value = toml::Value::try_from(config_copy)?;
-    let file_str = toml::to_string(&value)?;
-    fs::File::create(USER_CONFIG_FILE)?;
-    fs::write(USER_CONFIG_FILE, file_str)?;
+fn save_user_config_to_file(config: InstallConfig, path: &str) -> Result<()> {
+    let mut config_copy = config.clone();
+    config_copy.partition = None;
+    let file_str = serde_json::to_string(&config_copy)?;
+    fs::File::create(LAST_USER_CONFIG_FILE)?;
+    fs::write(path, file_str)?;
 
     Ok(())
 }
 
 fn read_user_config_on_file() -> Result<InstallConfig> {
-    let mut file = fs::File::open(USER_CONFIG_FILE)?;
+    let mut file = fs::File::open(LAST_USER_CONFIG_FILE)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    Ok(toml::from_slice(&buffer)?)
+    Ok(serde_json::from_slice(&buffer)?)
 }
 
 fn show_finished(siv: &mut Cursive) {
@@ -547,9 +578,18 @@ pub fn tui_main() {
             .title("Welcome")
             .button("Start", |s| {
                 if let Ok(config) = read_user_config_on_file() {
-                    is_use_last_config(s, config)
+                    select_partition(s, config);
                 } else {
-                    clean_start(s);
+                    let config = InstallConfig {
+                        variant: None,
+                        partition: None,
+                        mirror: None,
+                        user: None,
+                        password: None,
+                        hostname: None,
+                        locale: None,
+                    };
+                    select_variant(s, config);
                 }
             })
             .padding_lrtb(2, 2, 1, 1),
@@ -576,17 +616,4 @@ pub fn tui_main() {
             break;
         }
     }
-}
-
-fn clean_start(s: &mut Cursive) {
-    let config = InstallConfig {
-        variant: None,
-        partition: None,
-        mirror: None,
-        user: None,
-        password: None,
-        hostname: None,
-        locale: None,
-    };
-    select_variant(s, config);
 }
