@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::Sender,
+        mpsc::{self, Sender},
         Arc,
     },
     thread,
@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 mod tui;
 
+use sha2::{Digest, Sha256};
 pub use tui::tui_main;
 
 pub(crate) enum InstallProgress {
@@ -40,9 +41,11 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let counter_clone = counter.clone();
     let url;
     let file_size: usize;
+    let right_sha256;
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let download_success: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    let download_right: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     sender.send(InstallProgress::Pending(
         "Step 1 of 5: Formatting partitions ...".to_string(),
         0,
@@ -68,12 +71,14 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         let mirror_url = &config.mirror.as_ref().unwrap().url;
         file_size = variant.size.try_into().unwrap();
         url = format!("{}{}", mirror_url, variant.url);
+        right_sha256 = variant.sha256sum.clone();
     } else {
         return Err(anyhow!("Internal error: no variant field found."));
     }
     let download_done_copy = download_done.clone();
     let extract_done_copy = extract_done.clone();
     let download_success_copy = download_success.clone();
+    let download_right_copy = download_right.clone();
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -81,9 +86,14 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         if let Ok(reader) = network::download_file(&url) {
             let mut reader = ProgressReader::new(counter_clone.clone(), reader);
             output = std::fs::File::create(tarball_file.clone()).unwrap();
+            let mut hasher = Sha256::new();
+            std::io::copy(&mut reader, &mut hasher).unwrap();
             if std::io::copy(&mut reader, &mut output).is_err() {
                 download_success_copy.fetch_and(false, Ordering::SeqCst);
                 return;
+            }
+            if hex::encode(hasher.finalize()) != right_sha256 {
+                download_right_copy.fetch_and(false, Ordering::SeqCst);
             }
             download_done_copy.fetch_or(true, Ordering::SeqCst);
         } else {
@@ -107,6 +117,9 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         if !download_success.load(Ordering::SeqCst) {
             return Err(anyhow!("Network error: failed to download tarball!"));
         }
+        if !download_right.load(Ordering::SeqCst) {
+            return Err(anyhow!("Network error: checksum do not match!"));
+        }
         if download_done.load(Ordering::SeqCst) {
             break;
         }
@@ -123,6 +136,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     // GC the worker thread
     worker.join().unwrap();
+    // sha256sum_work.join().unwrap();
     sender.send(InstallProgress::Pending(
         "Step 4 of 5: Generating initramfs (initial RAM filesystem) ...".to_string(),
         0,
@@ -153,4 +167,12 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     sender.send(InstallProgress::Finished)?;
 
     Ok(())
+}
+
+#[test]
+fn test_download() {
+    let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":""}"#;
+    let config = serde_json::from_str(json).unwrap();
+    let (tx, rx) = std::sync::mpsc::channel();
+    begin_install(tx, config).unwrap();
 }
