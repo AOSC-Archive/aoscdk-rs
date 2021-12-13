@@ -111,8 +111,11 @@ fn get_arch_name() -> Option<&'static str> {
     }
 }
 
+//         .user_agent("Mozilla/5.0 (X11; AOSC OS; Linux x86_64; rv:93.0) Gecko/20100101 Firefox/93.0")
 pub fn download_file(url: &str) -> Result<reqwest::blocking::Response> {
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::ClientBuilder::new()
+        .user_agent("Mozilla/5.0 (X11; AOSC OS; Linux x86_64; rv:93.0) Gecko/20100101 Firefox/93.0")
+        .build()?;
     let resp = client.get(url).send()?;
     let resp = resp.error_for_status()?;
 
