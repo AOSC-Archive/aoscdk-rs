@@ -79,6 +79,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let extract_done_copy = extract_done.clone();
     let download_success_copy = download_success.clone();
     let download_right_copy = download_right.clone();
+    let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -87,13 +88,19 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             let mut reader = ProgressReader::new(counter_clone.clone(), reader);
             output = std::fs::File::create(tarball_file.clone()).unwrap();
             let mut hasher = Sha256::new();
-            std::io::copy(&mut reader, &mut hasher).unwrap();
-            if std::io::copy(&mut reader, &mut output).is_err() {
+            if let Err(e) = std::io::copy(&mut reader, &mut hasher) {
                 download_success_copy.fetch_and(false, Ordering::SeqCst);
+                error_channel_tx.send(e).unwrap();
+                return;
+            }
+            if let Err(e) = std::io::copy(&mut reader, &mut output) {
+                download_success_copy.fetch_and(false, Ordering::SeqCst);
+                error_channel_tx.send(e).unwrap();
                 return;
             }
             if hex::encode(hasher.finalize()) != right_sha256 {
                 download_right_copy.fetch_and(false, Ordering::SeqCst);
+                return;
             }
             download_done_copy.fetch_or(true, Ordering::SeqCst);
         } else {
@@ -115,7 +122,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         ))?;
         std::thread::sleep(refresh_interval);
         if !download_success.load(Ordering::SeqCst) {
-            return Err(anyhow!("Network error: failed to download tarball!"));
+            let err = error_channel_rx.recv().unwrap();
+            return Err(anyhow!(err.to_string()));
         }
         if !download_right.load(Ordering::SeqCst) {
             return Err(anyhow!("Network error: checksum do not match!"));
