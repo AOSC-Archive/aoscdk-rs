@@ -1,5 +1,6 @@
 use std::{
     convert::TryInto,
+    io::{Read, Write},
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -42,10 +43,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let url;
     let file_size: usize;
     let right_sha256;
-    let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    let download_success: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    let download_right: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
+    let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     sender.send(InstallProgress::Pending(
         "Step 1 of 5: Formatting partitions ...".to_string(),
         0,
@@ -75,34 +74,43 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     } else {
         return Err(anyhow!("Internal error: no variant field found."));
     }
-    let download_done_copy = download_done.clone();
     let extract_done_copy = extract_done.clone();
-    let download_success_copy = download_success.clone();
-    let download_right_copy = download_right.clone();
+    let download_done_copy = download_done.clone();
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
+    let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
+    let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
         let mut output;
-        if let Ok(reader) = network::download_file(&url) {
-            let mut reader = ProgressReader::new(counter_clone.clone(), reader);
+        if let Ok(mut reader) = network::download_file(&url) {
             output = std::fs::File::create(tarball_file.clone()).unwrap();
-            let mut hasher = Sha256::new();
-            if let Err(e) = std::io::copy(&mut reader, &mut hasher) {
-                download_success_copy.fetch_and(false, Ordering::SeqCst);
-                error_channel_tx.send(e).unwrap();
-                return;
+            let mut tarball_size = 0;
+            loop {
+                let mut buf = vec![0; 4096];
+                let reader_size;
+                match reader.read(&mut buf[..]) {
+                    Ok(size) => reader_size = size,
+                    Err(e) => {
+                        error_channel_tx.send(e.to_string()).unwrap();
+                        return;
+                    }
+                };
+                tarball_size += reader_size;
+                output.write_all(&buf[..reader_size]).unwrap();
+                sha256_work_tx.send((buf, reader_size)).unwrap();
+                counter_clone.set(tarball_size);
+                if tarball_size == file_size {
+                    // dbg!("download complete");
+                    break;
+                }
             }
-            if let Err(e) = std::io::copy(&mut reader, &mut output) {
-                download_success_copy.fetch_and(false, Ordering::SeqCst);
-                error_channel_tx.send(e).unwrap();
-                return;
+            drop(sha256_work_tx);
+            loop {
+                if download_done.load(Ordering::SeqCst) {
+                    break;
+                }
             }
-            if hex::encode(hasher.finalize()) != right_sha256 {
-                download_right_copy.fetch_and(false, Ordering::SeqCst);
-                return;
-            }
-            download_done_copy.fetch_or(true, Ordering::SeqCst);
         } else {
             return;
         }
@@ -113,6 +121,22 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
         std::fs::remove_file(tarball_file).ok();
     });
+    let sha256sum_work = thread::spawn(move || {
+        let mut hasher = Sha256::new();
+        loop {
+            let rx;
+            if let Ok(result) = sha256_work_rx.recv() {
+                rx = result;
+            } else {
+                // dbg!("sha256sum complete");
+                get_sha256_tx.send(hasher.clone()).unwrap();
+                download_done_copy.fetch_or(true, Ordering::SeqCst);
+                return;
+            }
+            let (mut buf, reader_size) = rx;
+            hasher.write_all(&mut buf[..reader_size]).unwrap();
+        }
+    });
 
     // Progress update
     loop {
@@ -121,14 +145,18 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
-        if !download_success.load(Ordering::SeqCst) {
-            let err = error_channel_rx.recv().unwrap();
-            return Err(anyhow!(err.to_string()));
+        if let Some(err) = error_channel_rx.try_recv().ok() {
+            return Err(anyhow!(err));
         }
-        if !download_right.load(Ordering::SeqCst) {
-            return Err(anyhow!("Network error: checksum do not match!"));
-        }
-        if download_done.load(Ordering::SeqCst) {
+        if let Ok(hasher) = get_sha256_rx.try_recv() {
+            let final_hash = hex::encode(hasher.finalize());
+            if final_hash != right_sha256 {
+                return Err(anyhow!(
+                    "Network error: checksum do not match! \nright hash: {}\nfinal hash: {}",
+                    right_sha256,
+                    final_hash
+                ));
+            }
             break;
         }
     }
@@ -144,7 +172,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     // GC the worker thread
     worker.join().unwrap();
-    // sha256sum_work.join().unwrap();
+    sha256sum_work.join().unwrap();
     sender.send(InstallProgress::Pending(
         "Step 4 of 5: Generating initramfs (initial RAM filesystem) ...".to_string(),
         0,
