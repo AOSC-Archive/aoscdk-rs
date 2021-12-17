@@ -1,5 +1,6 @@
 use std::{
     convert::TryInto,
+    fs::File,
     io::{Read, Write},
     path::PathBuf,
     sync::{
@@ -10,9 +11,12 @@ use std::{
     thread,
 };
 
+use std::os::unix::io::AsRawFd;
+
 use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
+use nix::fcntl::FallocateFlags;
 use serde::{Deserialize, Serialize};
 
 mod tui;
@@ -84,9 +88,18 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
-        let mut output;
+        let mut output = std::fs::File::create(tarball_file.clone()).unwrap();
         if let Ok(mut reader) = network::download_file(&url) {
-            output = std::fs::File::create(tarball_file.clone()).unwrap();
+            if let Err(e) = nix::fcntl::fallocate(
+                output.as_raw_fd(),
+                FallocateFlags::empty(),
+                0,
+                file_size.try_into().unwrap(),
+            ) {
+                error_channel_tx_copy.send(e.to_string()).unwrap();
+                return;
+            }
+            output.flush().unwrap();
             let mut tarball_size = 0;
             loop {
                 let mut buf = vec![0; 4096];
@@ -100,6 +113,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 };
                 tarball_size += reader_size;
                 if let Err(e) = output.write_all(&buf[..reader_size]) {
+                    dbg!("aaa");
                     error_channel_tx_copy.send(e.to_string()).unwrap();
                     return;
                 }
@@ -120,7 +134,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             return;
         }
         counter_clone.set(0);
-        output = std::fs::File::open(tarball_file.clone()).unwrap();
+        let output = std::fs::File::open(tarball_file.clone()).unwrap();
         let reader = ProgressReader::new(counter_clone, output);
         install::extract_tar_xz(reader, &mount_path).unwrap();
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
