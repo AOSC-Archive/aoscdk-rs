@@ -28,6 +28,13 @@ pub(crate) enum InstallProgress {
     Finished,
 }
 
+macro_rules! send_error {
+    ($error_channel_tx_copy:ident, $e:ident) => {
+        $error_channel_tx_copy.send($e.to_string()).unwrap();
+        return;
+    };
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct InstallConfig {
     variant: Option<Arc<network::VariantEntry>>,
@@ -91,8 +98,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         match std::fs::File::create(tarball_file.clone()) {
             Ok(file) => output = file,
             Err(e) => {
-                error_channel_tx_copy.send(e.to_string()).unwrap();
-                return;
+                send_error!(error_channel_tx_copy, e);
             }
         }
         if let Ok(mut reader) = network::download_file(&url) {
@@ -102,12 +108,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 0,
                 file_size.try_into().unwrap(),
             ) {
-                error_channel_tx_copy.send(e.to_string()).unwrap();
-                return;
+                send_error!(error_channel_tx_copy, e);
             }
             if let Err(e) = output.flush() {
-                error_channel_tx_copy.send(e.to_string()).unwrap();
-                return;
+                send_error!(error_channel_tx_copy, e);
             }
             let mut tarball_size = 0;
             loop {
@@ -116,15 +120,12 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 match reader.read(&mut buf[..]) {
                     Ok(size) => reader_size = size,
                     Err(e) => {
-                        error_channel_tx_copy.send(e.to_string()).unwrap();
-                        return;
+                        send_error!(error_channel_tx_copy, e);
                     }
                 };
                 tarball_size += reader_size;
                 if let Err(e) = output.write_all(&buf[..reader_size]) {
-                    dbg!("aaa");
-                    error_channel_tx_copy.send(e.to_string()).unwrap();
-                    return;
+                    send_error!(error_channel_tx_copy, e);
                 }
                 sha256_work_tx.send((buf, reader_size)).unwrap();
                 counter_clone.set(tarball_size);
