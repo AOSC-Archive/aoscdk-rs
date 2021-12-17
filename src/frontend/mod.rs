@@ -79,6 +79,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
+    let error_channel_tx_copy = error_channel_tx.clone();
+    let error_channel_tx_copy_2 = error_channel_tx.clone();
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -92,12 +94,15 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 match reader.read(&mut buf[..]) {
                     Ok(size) => reader_size = size,
                     Err(e) => {
-                        error_channel_tx.send(e.to_string()).unwrap();
+                        error_channel_tx_copy.send(e.to_string()).unwrap();
                         return;
                     }
                 };
                 tarball_size += reader_size;
-                output.write_all(&buf[..reader_size]).unwrap();
+                if let Err(e) = output.write_all(&buf[..reader_size]) {
+                    error_channel_tx_copy.send(e.to_string()).unwrap();
+                    return;
+                }
                 sha256_work_tx.send((buf, reader_size)).unwrap();
                 counter_clone.set(tarball_size);
                 if tarball_size == file_size {
@@ -134,7 +139,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 return;
             }
             let (mut buf, reader_size) = rx;
-            hasher.write_all(&mut buf[..reader_size]).unwrap();
+            if let Err(e) = hasher.write_all(&mut buf[..reader_size]) {
+                error_channel_tx_copy_2.send(e.to_string()).unwrap();
+                return;
+            }
         }
     });
 
@@ -209,6 +217,6 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
 fn test_download() {
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":""}"#;
     let config = serde_json::from_str(json).unwrap();
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, _rx) = std::sync::mpsc::channel();
     begin_install(tx, config).unwrap();
 }
