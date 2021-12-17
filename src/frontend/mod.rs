@@ -144,11 +144,20 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             return;
         }
         counter_clone.set(0);
-        let output = std::fs::File::open(tarball_file.clone()).unwrap();
+        match std::fs::File::open(tarball_file.clone()) {
+            Ok(file) => output = file,
+            Err(e) => {
+                send_error!(error_channel_tx_copy, e);
+            }
+        }
         let reader = ProgressReader::new(counter_clone, output);
-        install::extract_tar_xz(reader, &mount_path).unwrap();
+        if let Err(e) = install::extract_tar_xz(reader, &mount_path) {
+            send_error!(error_channel_tx_copy, e);
+        }
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
-        std::fs::remove_file(tarball_file).ok();
+        if let Err(e) = std::fs::remove_file(tarball_file) {
+            send_error!(error_channel_tx_copy, e);
+        }
     });
     let sha256sum_work = thread::spawn(move || {
         let mut hasher = Sha256::new();
