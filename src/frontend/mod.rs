@@ -1,6 +1,5 @@
 use std::{
     convert::TryInto,
-    fs::File,
     io::{Read, Write},
     path::PathBuf,
     sync::{
@@ -88,7 +87,14 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
-        let mut output = std::fs::File::create(tarball_file.clone()).unwrap();
+        let mut output;
+        match std::fs::File::create(tarball_file.clone()) {
+            Ok(file) => output = file,
+            Err(e) => {
+                error_channel_tx_copy.send(e.to_string()).unwrap();
+                return;
+            }
+        }
         if let Ok(mut reader) = network::download_file(&url) {
             if let Err(e) = nix::fcntl::fallocate(
                 output.as_raw_fd(),
@@ -99,7 +105,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 error_channel_tx_copy.send(e.to_string()).unwrap();
                 return;
             }
-            output.flush().unwrap();
+            if let Err(e) = output.flush() {
+                error_channel_tx_copy.send(e.to_string()).unwrap();
+                return;
+            }
             let mut tarball_size = 0;
             loop {
                 let mut buf = vec![0; 4096];
