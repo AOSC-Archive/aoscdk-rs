@@ -155,9 +155,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             send_error!(error_channel_tx_copy, e);
         }
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
-        if let Err(e) = std::fs::remove_file(tarball_file) {
-            send_error!(error_channel_tx_copy, e);
-        }
+        std::fs::remove_file(tarball_file).ok();
     });
     let sha256sum_work = thread::spawn(move || {
         let mut hasher = Sha256::new();
