@@ -17,11 +17,13 @@ use tempfile::TempDir;
 use xz2;
 
 use crate::disks::Partition;
-use crate::parser::locale_names;
+use crate::parser::{list_zoneinfo, locale_names};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
 const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
 const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
+const SYSTEM_ZONEINFO1970_PATH: &str = "/usr/share/zoneinfo/zone1970.tab";
+const BUNDLED_ZONEINFO_LIST: &[u8] = include_bytes!("../res/zone1970.tab");
 
 fn read_system_locale_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
@@ -39,6 +41,42 @@ pub fn get_locale_list() -> Result<Vec<String>> {
         locale_names(&data).or_else(|_| Err(anyhow!("Could not parse system locale list")))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
     Ok(names)
+}
+
+fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
+    let mut f = std::fs::File::open(SYSTEM_ZONEINFO1970_PATH)?;
+    let mut data: Vec<u8> = Vec::new();
+    data.reserve(8800);
+    f.read_to_end(&mut data)?;
+
+    Ok(data)
+}
+
+pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
+    let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
+    let mut zoneinfo_list = list_zoneinfo(&data)
+        .or_else(|_| Err(anyhow!("Could not parse zoneinfo list")))?
+        .1;
+    if zoneinfo_list.is_empty() {
+        return Err(anyhow!("zoneinfo list is empty!"));
+    }
+    zoneinfo_list.sort();
+    let mut continent = zoneinfo_list[0].split("/").collect::<Vec<_>>()[0];
+    let mut result = Vec::new();
+    let mut city = Vec::new();
+    for i in &zoneinfo_list {
+        let split_name = i.split("/").collect::<Vec<_>>();
+        if split_name[0] == continent {
+            city.push(split_name[1].to_string());
+        } else {
+            result.push((continent.to_string(), city.clone()));
+            city.clear();
+            city.push(split_name[1].to_string());
+            continent = split_name[0];
+        }
+    }
+
+    Ok(result)
 }
 
 /// Extract the given .tar.xz stream and preserve all the file attributes
@@ -275,4 +313,9 @@ fn test_path_strip() {
     for mount in BIND_MOUNTS {
         println!("{}", &mount[1..]);
     }
+}
+
+#[test]
+fn test_get_zoneinfo_list() {
+    dbg!(get_zoneinfo_list().unwrap());
 }
