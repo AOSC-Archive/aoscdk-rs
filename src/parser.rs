@@ -1,10 +1,10 @@
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_until},
+    bytes::complete::{tag, take_until, take_while1},
     character::complete::multispace1,
     combinator::{map, map_res},
     multi::many0,
-    sequence::{preceded, terminated},
+    sequence::{preceded, terminated, tuple},
     IResult,
 };
 
@@ -44,6 +44,68 @@ pub fn locale_names(input: &[u8]) -> IResult<&[u8], Vec<&str>> {
         hr,
         map_res(single_line, |s| std::str::from_utf8(s)),
     ))(input)
+}
+
+#[inline]
+fn zone1970_single_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    let (input, (_, _, _, _, tz, _, _)) = tuple((
+        take_until("\t"),
+        multispace1,
+        take_until("\t"),
+        multispace1,
+        take_while1(|c| c != b'\t' && c != b'\n'),
+        take_until("\n"),
+        line_rest,
+    ))(input)?;
+
+    Ok((input, tz))
+}
+
+#[inline]
+pub fn list_zoneinfo(input: &[u8]) -> IResult<&[u8], Vec<String>> {
+    let (input, result) = many0(preceded(
+        hr,
+        map_res(zone1970_single_line, |s| std::str::from_utf8(s)),
+    ))(input)?;
+
+    Ok((input, result.into_iter().map(|x| x.into()).collect()))
+}
+
+#[test]
+fn test_zone1970_single_line() {
+    use std::str;
+
+    // no comments item on zone1970.tab
+    assert_eq!(
+        str::from_utf8(
+            zone1970_single_line(&b"AD\t+4230+00131\tEurope/Andorra8\n"[..])
+                .unwrap()
+                .1
+        )
+        .unwrap(),
+        "Europe/Andorra8"
+    );
+
+    // have comments item on zone1970.tab
+    assert_eq!(
+        str::from_utf8(
+            zone1970_single_line(&b"AQ\t-6617+1103\tAntarctica/Casey\tCasey\n"[..])
+                .unwrap()
+                .1
+        )
+        .unwrap(),
+        "Antarctica/Casey"
+    );
+}
+
+#[test]
+fn test_list_zoneinfo() {
+    use std::io::Read;
+    let mut f = std::fs::File::open("/usr/share/zoneinfo/zone1970.tab").unwrap();
+    let mut buf: Vec<u8> = vec![];
+    f.read_to_end(&mut buf).unwrap();
+    dbg!(std::str::from_utf8(&buf).unwrap());
+    dbg!(list_zoneinfo(&buf).unwrap().1.len());
 }
 
 #[test]
