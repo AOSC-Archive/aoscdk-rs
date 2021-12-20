@@ -44,6 +44,7 @@ struct InstallConfig {
     password: Option<Arc<String>>,
     hostname: Option<String>,
     locale: Option<Arc<String>>,
+    zone: Option<Arc<String>>,
 }
 
 fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Result<()> {
@@ -230,6 +231,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     } else {
         install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()))?;
     };
+    install::set_zoneinfo(&config.zone.unwrap())?;
     install::set_hostname(&config.hostname.unwrap())?;
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
     install::set_locale(&config.locale.as_ref().unwrap())?;
