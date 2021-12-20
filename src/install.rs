@@ -245,6 +245,61 @@ pub fn set_locale(locale: &str) -> Result<()> {
     Ok(f.write_all(locale.as_bytes())?)
 }
 
+/// Sets zoneinfo in the guest environment
+/// Must be used in a chroot context
+pub fn set_zoneinfo(zone: &str) -> Result<()> {
+    std::os::unix::fs::symlink(format!("/usr/share/zoneinfo/{}", zone), "/etc/localtime")?;
+
+    Ok(())
+}
+
+/// Sets utc/rtc time in the guest environment
+/// Must be used in a chroot context
+pub fn set_hwclock_tc(utc: bool) -> Result<()> {
+    let adjtime_file = std::fs::File::open("/etc/adjtime");
+    let status_is_rtc = if let Ok(mut adjtime_file) = adjtime_file {
+        let mut buf = String::new();
+        adjtime_file.read_to_string(&mut buf)?;
+        let line: Vec<&str> = buf.split("\n").collect();
+        if line.len() < 3 || line[2] == "UTC" {
+            false
+        } else if line[2] == "LOCAL" {
+            true
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+    if utc {
+        if !status_is_rtc {
+            return Ok(());
+        } else {
+            let command = Command::new("hwoclock").arg("-u").output()?;
+            if !command.status.success() {
+                return Err(anyhow!(
+                    "Failed to set UTC: {}",
+                    String::from_utf8_lossy(&command.stderr)
+                ));
+            }
+        }
+    } else {
+        if status_is_rtc {
+            return Ok(());
+        } else {
+            let command = Command::new("hwoclock").arg("-l").output()?;
+            if !command.status.success() {
+                return Err(anyhow!(
+                    "Failed to set RTC: {}",
+                    String::from_utf8_lossy(&command.stderr)
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
 pub fn add_new_user(name: &str, password: &str) -> Result<()> {
