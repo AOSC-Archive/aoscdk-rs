@@ -309,6 +309,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 btn_cb(s, config_copy.clone());
             })
             .button("Continue", move |s| {
+                s.pop_layer();
                 let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
                 if let Some(disk_list) = disk_list {
                     let disk_list = disk_list.clone();
@@ -416,40 +417,7 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 let zoneinfo = install::get_zoneinfo_list().unwrap();
                 let city_clone = Rc::clone(&city_copy);
                 let continent_copy_copy = Rc::clone(&continent_copy);
-                s.add_layer(wrap_in_dialog(
-                    make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
-                        let index = zoneinfo.iter().position(|(x, _)| x == c).unwrap();
-                        let citys = &zoneinfo[index].1;
-                        let city_clone_clone = Rc::clone(&city_clone);
-                        continent_copy_copy.replace(c.to_string());
-                        s.pop_layer();
-                        s.add_layer(
-                            wrap_in_dialog(
-                                LinearLayout::vertical().child(
-                                    SelectView::new()
-                                        .autojump()
-                                        .popup()
-                                        .with_all_str(citys.iter())
-                                        .on_submit(move |_, c: &String| {
-                                            city_clone_clone.replace(c.to_string());
-                                        })
-                                        .min_width(20),
-                                ),
-                                "Set city",
-                                None,
-                            )
-                            .button("Ok", |s| {
-                                s.cb_sink()
-                                    .send(Box::new(|s| {
-                                        s.pop_layer();
-                                    }))
-                                    .unwrap()
-                            }),
-                        )
-                    }),
-                    "Set continent",
-                    None,
-                ))
+                s.add_layer(set_timezone(zoneinfo, city_clone, continent_copy_copy))
             }),
         )
         .child(
@@ -498,6 +466,58 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             show_summary(s, config);
         }),
     );
+}
+
+fn set_timezone(
+    zoneinfo: Vec<(String, Vec<String>)>,
+    city_clone: Rc<RefCell<String>>,
+    continent_copy_copy: Rc<RefCell<String>>,
+) -> Dialog {
+    wrap_in_dialog(
+        make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
+            let zoneinfo_clone = zoneinfo.clone();
+            let index = zoneinfo.iter().position(|(x, _)| x == c).unwrap();
+            let citys = &zoneinfo[index].1;
+            let city_clone_clone = Rc::clone(&city_clone);
+            let city_clone_3 = Rc::clone(&city_clone_clone);
+            let continent_clone_3 =  Rc::clone(&continent_copy_copy);
+            continent_copy_copy.replace(c.to_string());
+            s.pop_layer();
+            s.add_layer(
+                wrap_in_dialog(
+                    LinearLayout::vertical().child(
+                        SelectView::new()
+                            .autojump()
+                            .popup()
+                            .with_all_str(citys.iter())
+                            .on_submit(move |_, c: &String| {
+                                city_clone_clone.replace(c.to_string());
+                            })
+                            .min_width(20),
+                    ),
+                    "Set city",
+                    None,
+                )
+                .button("Ok", |s| {
+                    s.cb_sink()
+                        .send(Box::new(|s| {
+                            s.pop_layer();
+                        }))
+                        .unwrap()
+                })
+                .button("Cancel", move |s| {
+                    s.pop_layer();
+                    s.add_layer(set_timezone(
+                        zoneinfo_clone.clone(),
+                        Rc::clone(&city_clone_3),
+                        Rc::clone(&continent_clone_3),
+                    ));
+                }),
+            )
+        }),
+        "Set continent",
+        None,
+    )
 }
 
 fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
