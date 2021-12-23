@@ -3,12 +3,12 @@ use crate::{
     network::{self, Mirror, VariantEntry},
 };
 use anyhow::Result;
+use cursive::view::SizeConstraint;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
     ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{traits::*, utils::Counter};
-use cursive::{view::SizeConstraint};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
@@ -359,6 +359,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
     let continent_copy = Rc::clone(&continent);
     let city = Rc::new(RefCell::new(String::new()));
     let city_copy = Rc::clone(&city);
+    let tc = Rc::new(RefCell::new(String::new()));
+    let tc_copy = Rc::clone(&tc);
 
     let config_view = ListView::new()
         .child(
@@ -439,6 +441,17 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                     }),
                 )
             }),
+        )
+        .child(
+            "Set UTC/RTC",
+            SelectView::new()
+                .autojump()
+                .popup()
+                .with_all_str(vec!["UTC", "RTC"])
+                .on_submit(move |_, c: &String| {
+                    tc_copy.replace(c.to_string());
+                })
+                .min_width(20),
         );
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
@@ -449,10 +462,14 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             let locale = locale.as_ref().to_owned().into_inner();
             let continent = continent.as_ref().to_owned().into_inner();
             let city = city.as_ref().to_owned().into_inner();
+            let tc = tc.as_ref().to_owned().into_inner();
             if password.is_empty()
                 || password_confirm.is_empty()
                 || name.is_empty()
                 || hostname.is_empty()
+                || continent.is_empty()
+                || city.is_empty()
+                || tc.is_empty()
             {
                 show_msg(s, "Please fill in all the fields.");
                 return;
@@ -468,6 +485,7 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             config.locale = Some(Arc::new(locale));
             config.continent = Some(Arc::new(continent));
             config.city = Some(Arc::new(city));
+            config.tc = Some(Arc::new(tc));
             show_summary(s, config);
         }),
     );
@@ -494,6 +512,7 @@ fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
                 locale: None,
                 continent: None,
                 city: None,
+                tc: None,
             };
             select_variant(s, new_config);
         })
@@ -644,6 +663,7 @@ pub fn tui_main() {
                         locale: None,
                         continent: None,
                         city: None,
+                        tc: None,
                     };
                     select_variant(s, config);
                 }
