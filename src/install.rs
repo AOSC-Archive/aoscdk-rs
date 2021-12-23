@@ -52,7 +52,7 @@ fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
     Ok(data)
 }
 
-pub fn get_zoneinfo_list() -> Result<Vec<String>> {
+pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
     let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
     let mut zoneinfo_list = list_zoneinfo(&data)
         .or_else(|_| Err(anyhow!("Could not parse zoneinfo list")))?
@@ -61,22 +61,22 @@ pub fn get_zoneinfo_list() -> Result<Vec<String>> {
         return Err(anyhow!("zoneinfo list is empty!"));
     }
     zoneinfo_list.sort();
-    // let mut continent = zoneinfo_list[0].split("/").collect::<Vec<_>>()[0];
-    // let mut result = Vec::new();
-    // let mut city = Vec::new();
-    // for i in &zoneinfo_list {
-    //     let split_name = i.split("/").collect::<Vec<_>>();
-    //     if split_name[0] == continent {
-    //         city.push(split_name[1].to_string());
-    //     } else {
-    //         result.push((continent.to_string(), city.clone()));
-    //         city.clear();
-    //         city.push(split_name[1].to_string());
-    //         continent = split_name[0];
-    //     }
-    // }
+    let mut continent = zoneinfo_list[0].split_once("/").unwrap().0;
+    let mut result = Vec::new();
+    let mut city = Vec::new();
+    for i in &zoneinfo_list {
+        let split_name = i.split_once("/").unwrap();
+        if split_name.0 == continent {
+            city.push(split_name.1.to_string());
+        } else {
+            result.push((continent.to_string(), city.clone()));
+            city.clear();
+            city.push(split_name.1.to_string());
+            continent = split_name.0;
+        }
+    }
 
-    Ok(zoneinfo_list)
+    Ok(result)
 }
 
 /// Extract the given .tar.xz stream and preserve all the file attributes

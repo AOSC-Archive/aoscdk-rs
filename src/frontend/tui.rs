@@ -3,12 +3,12 @@ use crate::{
     network::{self, Mirror, VariantEntry},
 };
 use anyhow::Result;
-use cursive::view::SizeConstraint;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
     ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{traits::*, utils::Counter};
+use cursive::{view::SizeConstraint};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
@@ -194,13 +194,15 @@ fn make_locale_list(locales: Vec<String>) -> SelectView {
     locale_view
 }
 
-fn make_zoneinfo_list(zoneinfo: Vec<String>) -> SelectView {
-    let continent_view = SelectView::new()
-        .popup()
-        .autojump()
-        .with_all_str(zoneinfo.iter());
+fn make_continent_list(zoneinfo: Vec<(String, Vec<String>)>) -> SelectView {
+    let view = SelectView::new().popup().autojump().with_all_str(
+        zoneinfo
+            .into_iter()
+            .map(|(con, _)| con)
+            .collect::<Vec<String>>(),
+    );
 
-    continent_view
+    view
 }
 
 fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
@@ -353,8 +355,10 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
     let hostname_copy = Rc::clone(&hostname);
     let locale = Rc::new(RefCell::new(String::new()));
     let locale_copy = Rc::clone(&locale);
-    let zone = Rc::new(RefCell::new(String::new()));
-    let zone_copy = Rc::clone(&zone);
+    let continent = Rc::new(RefCell::new(String::new()));
+    let continent_copy = Rc::clone(&continent);
+    let city = Rc::new(RefCell::new(String::new()));
+    let city_copy = Rc::clone(&city);
 
     let config_view = ListView::new()
         .child(
@@ -405,12 +409,36 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20),
         )
         .child(
-            "Zone",
-            make_zoneinfo_list(zoneinfo)
-            .on_select(move |_, c| {
-                zone_copy.replace(c.to_string());
-            })
-            .min_width(20),
+            "Set Timezone",
+            make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
+                let index = zoneinfo.iter().position(|(x, _)| x == c).unwrap();
+                let citys = &zoneinfo[index].1;
+                let city_clone = Rc::clone(&city_copy);
+                continent_copy.replace(c.to_string());
+                s.add_layer(
+                    wrap_in_dialog(
+                        LinearLayout::vertical().child(
+                            SelectView::new()
+                                .autojump()
+                                .popup()
+                                .with_all_str(citys.iter())
+                                .on_submit(move |_, c: &String| {
+                                    city_clone.replace(c.to_string());
+                                })
+                                .min_width(20),
+                        ),
+                        "Set Timezone",
+                        None,
+                    )
+                    .button("Ok", |s| {
+                        s.cb_sink()
+                            .send(Box::new(|s| {
+                                s.pop_layer();
+                            }))
+                            .unwrap()
+                    }),
+                )
+            }),
         );
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
@@ -419,7 +447,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             let name = name.as_ref().to_owned().into_inner();
             let hostname = hostname.as_ref().to_owned().into_inner();
             let locale = locale.as_ref().to_owned().into_inner();
-            let zone = zone.as_ref().to_owned().into_inner();
+            let continent = continent.as_ref().to_owned().into_inner();
+            let city = city.as_ref().to_owned().into_inner();
             if password.is_empty()
                 || password_confirm.is_empty()
                 || name.is_empty()
@@ -437,7 +466,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
             config.user = Some(Arc::new(name));
             config.hostname = Some(hostname);
             config.locale = Some(Arc::new(locale));
-            config.zone = Some(Arc::new(zone));
+            config.continent = Some(Arc::new(continent));
+            config.city = Some(Arc::new(city));
             show_summary(s, config);
         }),
     );
@@ -462,7 +492,8 @@ fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
                 password: None,
                 hostname: None,
                 locale: None,
-                zone: None,
+                continent: None,
+                city: None,
             };
             select_variant(s, new_config);
         })
@@ -611,7 +642,8 @@ pub fn tui_main() {
                         password: None,
                         hostname: None,
                         locale: None,
-                        zone: None,
+                        continent: None,
+                        city: None,
                     };
                     select_variant(s, config);
                 }
