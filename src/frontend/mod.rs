@@ -46,6 +46,7 @@ struct InstallConfig {
     locale: Option<Arc<String>>,
     continent: Option<Arc<String>>,
     city: Option<Arc<String>>,
+    tc: Option<Arc<String>>,
 }
 
 fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Result<()> {
@@ -235,6 +236,11 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     install::set_zoneinfo(
         format!("{}/{}", &config.continent.unwrap(), &config.city.unwrap()).as_str(),
     )?;
+    install::set_hwclock_tc(match config.tc.unwrap().as_str() {
+        "UTC" => true,
+        "RTC" => false,
+        _ => true,
+    })?;
     install::set_hostname(&config.hostname.unwrap())?;
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
     install::set_locale(&config.locale.as_ref().unwrap())?;
