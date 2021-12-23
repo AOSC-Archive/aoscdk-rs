@@ -3,12 +3,12 @@ use crate::{
     network::{self, Mirror, VariantEntry},
 };
 use anyhow::Result;
-use cursive::view::SizeConstraint;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
     ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{traits::*, utils::Counter};
+use cursive::{view::SizeConstraint, views::Button};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
@@ -344,7 +344,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
 fn select_user(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
     let locales = install::get_locale_list().unwrap();
-    let zoneinfo = install::get_zoneinfo_list().unwrap();
+    // let zoneinfo = install::get_zoneinfo_list().unwrap();
     let password = Rc::new(RefCell::new(String::new()));
     let password_copy = Rc::clone(&password);
     let password_confirm = Rc::new(RefCell::new(String::new()));
@@ -411,35 +411,45 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20),
         )
         .child(
-            "Set Timezone",
-            make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
-                let index = zoneinfo.iter().position(|(x, _)| x == c).unwrap();
-                let citys = &zoneinfo[index].1;
+            "",
+            Button::new_raw("< Set Timezone >", move |s| {
+                let zoneinfo = install::get_zoneinfo_list().unwrap();
                 let city_clone = Rc::clone(&city_copy);
-                continent_copy.replace(c.to_string());
-                s.add_layer(
-                    wrap_in_dialog(
-                        LinearLayout::vertical().child(
-                            SelectView::new()
-                                .autojump()
-                                .popup()
-                                .with_all_str(citys.iter())
-                                .on_submit(move |_, c: &String| {
-                                    city_clone.replace(c.to_string());
-                                })
-                                .min_width(20),
-                        ),
-                        "Set Timezone",
-                        None,
-                    )
-                    .button("Ok", |s| {
-                        s.cb_sink()
-                            .send(Box::new(|s| {
-                                s.pop_layer();
-                            }))
-                            .unwrap()
+                let continent_copy_copy = Rc::clone(&continent_copy);
+                s.add_layer(wrap_in_dialog(
+                    make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
+                        let index = zoneinfo.iter().position(|(x, _)| x == c).unwrap();
+                        let citys = &zoneinfo[index].1;
+                        let city_clone_clone = Rc::clone(&city_clone);
+                        continent_copy_copy.replace(c.to_string());
+                        s.pop_layer();
+                        s.add_layer(
+                            wrap_in_dialog(
+                                LinearLayout::vertical().child(
+                                    SelectView::new()
+                                        .autojump()
+                                        .popup()
+                                        .with_all_str(citys.iter())
+                                        .on_submit(move |_, c: &String| {
+                                            city_clone_clone.replace(c.to_string());
+                                        })
+                                        .min_width(20),
+                                ),
+                                "Set city",
+                                None,
+                            )
+                            .button("Ok", |s| {
+                                s.cb_sink()
+                                    .send(Box::new(|s| {
+                                        s.pop_layer();
+                                    }))
+                                    .unwrap()
+                            }),
+                        )
                     }),
-                )
+                    "Set continent",
+                    None,
+                ))
             }),
         )
         .child(
@@ -469,7 +479,6 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 || hostname.is_empty()
                 || continent.is_empty()
                 || city.is_empty()
-                || tc.is_empty()
             {
                 show_msg(s, "Please fill in all the fields.");
                 return;
