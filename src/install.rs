@@ -248,6 +248,9 @@ pub fn set_locale(locale: &str) -> Result<()> {
 /// Sets zoneinfo in the guest environment
 /// Must be used in a chroot context
 pub fn set_zoneinfo(zone: &str) -> Result<()> {
+    if Path::new("/etc/localtime").exists() {
+        std::fs::remove_file("/etc/localtime")?;
+    }
     std::os::unix::fs::symlink(format!("/usr/share/zoneinfo/{}", zone), "/etc/localtime")?;
 
     Ok(())
