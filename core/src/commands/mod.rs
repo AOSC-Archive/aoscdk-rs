@@ -28,6 +28,20 @@ pub struct InstallConfig {
     pub hostname: String,
 }
 
+pub enum ErrorKind {
+    InternalError,
+    NetworkError,
+    ConfigError,
+    Other,
+}
+
+pub struct Error {
+    kind: ErrorKind,
+    message: String,
+    retryable: bool,
+    ignorable: bool,
+}
+
 pub enum DKRequest {
     /// Request the tarball manifest from the server
     FetchManifest,
@@ -61,8 +75,8 @@ pub enum DKResponse {
     Warning(String),
     /// Finished notification
     Finished,
-    /// Error message: (message, retry-able)
-    Error(String, bool),
+    /// Error message: (error)
+    Error(Error),
     /// Request the client to shutdown
     Quit,
 }

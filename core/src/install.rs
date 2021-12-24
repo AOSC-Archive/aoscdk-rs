@@ -233,7 +233,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
         .output()?;
     if !command.status.success() {
         return Err(anyhow!(
-            "Failed to add a new user: {}",
+            "Failed to assign groups to the user: {}",
             String::from_utf8_lossy(&command.stderr)
         ));
     }
