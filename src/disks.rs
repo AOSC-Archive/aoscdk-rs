@@ -8,11 +8,15 @@ const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Partition {
+    pub name: Option<String>,
     pub path: Option<PathBuf>,
     pub parent_path: Option<PathBuf>,
     pub fs_type: Option<String>,
+    pub mounted: bool,
+    pub esp: bool,
+    pub mbr: bool,
     pub size: u64,
 }
 
@@ -91,6 +95,10 @@ pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition> {
                 return Ok(Partition {
                     path: Some(path.to_owned()),
                     parent_path: None,
+                    name: part.name(),
+                    mounted: part.is_busy(),
+                    esp: true,
+                    mbr: false,
                     size: 0,
                     fs_type,
                 });
@@ -127,6 +135,10 @@ pub fn list_partitions() -> Vec<Partition> {
                     path: part.get_path().map(|path| path.to_owned()),
                     parent_path: Some(device_path.clone()),
                     size: sector_size * part_length,
+                    mounted: part.is_busy(),
+                    name: part.name(),
+                    esp: part.get_flag(libparted::PartitionFlag::PED_PARTITION_ESP),
+                    mbr: part.get_flag(libparted::PartitionFlag::PED_PARTITION_BOOT),
                     fs_type,
                 });
             }

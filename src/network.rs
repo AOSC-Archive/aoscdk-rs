@@ -1,10 +1,11 @@
-use anyhow::{anyhow, Result};
-use reqwest;
+use anyhow::{anyhow, bail, Result};
+use reqwest::{self, header};
 use serde::Deserialize;
 use std::env::consts::ARCH;
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = cfg!(feature = "is_retro");
+const PORTAL_DETECTION_URL: &str = "http://detectportal.firefox.com/canonical.html";
 
 // mirror manifests
 #[derive(Deserialize, Clone, Debug)]
@@ -108,6 +109,26 @@ fn get_arch_name() -> Option<&'static str> {
         "aarch64" => Some("arm64"),
         "mips64" => Some("loongson3"),
         _ => None,
+    }
+}
+
+pub fn detect_network() -> Result<Option<String>> {
+    let client = reqwest::blocking::ClientBuilder::new()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let resp = client.head(PORTAL_DETECTION_URL).send()?;
+    let resp = resp.error_for_status()?;
+    let status = resp.status();
+
+    if status.is_success() {
+        Ok(None)
+    } else if status.is_redirection() {
+        Ok(resp
+            .headers()
+            .get(header::LOCATION)
+            .map(|x| x.to_str().unwrap_or_default().to_string()))
+    } else {
+        bail!("HTTP error {}", status.as_u16())
     }
 }
 
