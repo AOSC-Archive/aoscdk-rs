@@ -9,7 +9,7 @@ use std::{
     thread,
 };
 
-use crate::{disks, install, network};
+use core::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
 
@@ -144,4 +144,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     sender.send(InstallProgress::Finished)?;
 
     Ok(())
+}
+
+fn main() {
+    tui_main();
 }

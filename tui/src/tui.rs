@@ -116,15 +116,17 @@ fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallCon
             let cb_sink = s.cb_sink().clone();
             thread::spawn(move || {
                 Command::new("gparted").output().ok();
-                cb_sink.send(Box::new(|s| {
-                    let new_parts = disks::list_partitions();
-                    let (disk_list, disk_view) = make_partition_list(new_parts);
-                    s.set_user_data(disk_list);
-                    s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
-                        *view = disk_view;
-                    });
-                    s.pop_layer();
-                })).unwrap();
+                cb_sink
+                    .send(Box::new(|s| {
+                        let new_parts = disks::list_partitions();
+                        let (disk_list, disk_view) = make_partition_list(new_parts);
+                        s.set_user_data(disk_list);
+                        s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
+                            *view = disk_view;
+                        });
+                        s.pop_layer();
+                    }))
+                    .unwrap();
             });
         });
     }
@@ -168,13 +170,7 @@ fn make_partition_list(
         disk_view.add_child(radio);
     }
     if partitions.is_empty() {
-        let dummy_partition = disks::Partition {
-            path: None,
-            parent_path: None,
-            fs_type: None,
-            size: 0,
-        };
-        disk_view.add_child(disk_list.button(dummy_partition, "No partition selected"));
+        disk_view.add_child(disk_list.button(disks::Partition::default(), "No partition selected"));
     }
 
     (disk_list, disk_view.with_name("part_list"))
@@ -298,7 +294,11 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                             fs_type: None,
                             path: Some(PathBuf::from("/dev/loop0p1")),
                             parent_path: Some(PathBuf::from("/dev/loop0")),
+                            esp: false,
+                            mbr: false,
+                            mounted: false,
                             size: 3145728,
+                            name: None,
                         })
                     } else {
                         disk_list.selection()
