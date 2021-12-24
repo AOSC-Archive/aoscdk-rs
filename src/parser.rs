@@ -100,12 +100,8 @@ fn test_zone1970_single_line() {
 
 #[test]
 fn test_list_zoneinfo() {
-    use std::io::Read;
-    let mut f = std::fs::File::open("/usr/share/zoneinfo/zone1970.tab").unwrap();
-    let mut buf: Vec<u8> = vec![];
-    f.read_to_end(&mut buf).unwrap();
-    dbg!(std::str::from_utf8(&buf).unwrap());
-    dbg!(list_zoneinfo(&buf).unwrap().1.len());
+    let buf = &b"#commit1\tcommit2\t\na\tb\tc/c\nd\te\tf/f\tg\n#commit3\nh\ti\tj/j\n"[..];
+    assert_eq!(list_zoneinfo(&buf).unwrap().1, vec!["c/c", "f/f", "j/j"]);
 }
 
 #[test]
