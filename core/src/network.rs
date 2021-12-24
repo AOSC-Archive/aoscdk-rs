@@ -61,6 +61,7 @@ pub struct Recipe {
     mirrors: Vec<Mirror>,
 }
 
+/* reserved for future usage:
 #[derive(Deserialize, Debug)]
 struct DistroDownload {
     name: String,
@@ -81,6 +82,7 @@ struct VariantData {
     general: DistroList,
     retro: DistroList,
 }
+*/
 
 #[derive(Debug, Clone)]
 pub struct VariantEntry {

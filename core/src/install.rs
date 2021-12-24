@@ -207,6 +207,15 @@ pub fn set_locale(locale: &str) -> Result<()> {
     Ok(f.write_all(locale.as_bytes())?)
 }
 
+/// Sets RTC timezone in the guest environment (UTC or Local)
+/// Must be used in a chroot context
+pub fn adjust_rtc_time_type(utc: bool) -> Result<()> {
+    let mut f = File::create("/etc/adjtime")?;
+    f.write_all(b"0.000000 0 0.000000\n0\n")?;
+
+    Ok(f.write_all(if utc { b"UTC\n" } else { b"Local\n" })?)
+}
+
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
 pub fn add_new_user(name: &str, password: &str) -> Result<()> {

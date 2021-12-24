@@ -47,7 +47,6 @@ dependencies = [
  "libparted",
  "nix",
  "nom 7.1.0",
- "number_prefix",
  "reqwest",
  "serde",
  "serde_json",
