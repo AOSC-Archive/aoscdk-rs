@@ -480,7 +480,7 @@ fn set_timezone(
             let citys = &zoneinfo[index].1;
             let city_clone_clone = Rc::clone(&city_clone);
             let city_clone_3 = Rc::clone(&city_clone_clone);
-            let continent_clone_3 =  Rc::clone(&continent_copy_copy);
+            let continent_clone_3 = Rc::clone(&continent_copy_copy);
             continent_copy_copy.replace(c.to_string());
             s.pop_layer();
             s.add_layer(

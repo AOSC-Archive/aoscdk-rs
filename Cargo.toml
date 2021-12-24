@@ -23,6 +23,7 @@ sha2 = "0.10"
 hex = "0.4"
 tempfile = "3.2"
 cursive-async-view = "0.5"
+fs3 = "0.5"
 
 [features]
 is_retro = []
