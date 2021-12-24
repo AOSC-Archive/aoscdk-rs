@@ -242,6 +242,7 @@ fn build_variant_list(
 }
 
 fn select_variant(siv: &mut Cursive, config: InstallConfig) {
+    siv.pop_layer();
     let loader = AsyncView::new_with_bg_creator(
         siv,
         move || {
