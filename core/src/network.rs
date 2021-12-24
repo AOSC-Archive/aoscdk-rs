@@ -1,7 +1,9 @@
 use anyhow::{anyhow, bail, Result};
+use faster_hex::hex_string;
 use reqwest::{self, header};
 use serde::Deserialize;
-use std::env::consts::ARCH;
+use sha2::{Digest, Sha256};
+use std::{env::consts::ARCH, io::Read, io::Write};
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = cfg!(feature = "is_retro");
@@ -94,6 +96,42 @@ pub struct VariantEntry {
     pub url: String,
 }
 
+// A hashing writer implementation. Hashing as you write the data.
+pub struct HashedWriter<W: Write> {
+    inner: W,
+    hasher: Sha256,
+}
+
+impl<W: Write> HashedWriter<W> {
+    /// Create a new HashedReader
+    pub fn new(writer: W) -> HashedWriter<W> {
+        Self {
+            inner: writer,
+            hasher: Sha256::new(),
+        }
+    }
+
+    /// Consume the current writer and return the sha256 hash of the data
+    pub fn get_hash(mut self) -> std::io::Result<String> {
+        self.flush()?;
+
+        Ok(hex_string(&self.hasher.finalize()))
+    }
+}
+
+impl<W: Write> Write for HashedWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let size = self.inner.write(buf)?;
+        self.hasher.update(&buf[..size]);
+
+        Ok(size)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
 pub fn fetch_recipe() -> Result<Recipe> {
     Ok(reqwest::blocking::get(MANIFEST_URL)?.json()?)
 }
@@ -134,9 +172,15 @@ pub fn detect_network() -> Result<Option<String>> {
     }
 }
 
-pub fn download_file(url: &str) -> Result<reqwest::blocking::Response> {
+pub fn download_file(url: &str, start: Option<u64>) -> Result<reqwest::blocking::Response> {
     let client = reqwest::blocking::Client::new();
-    let resp = client.get(url).send()?;
+    let req = client.get(url);
+    let resp = if let Some(start) = start {
+        req.header(header::RANGE, format!("bytes={}-", start))
+            .send()?
+    } else {
+        req.send()?
+    };
     let resp = resp.error_for_status()?;
 
     Ok(resp)

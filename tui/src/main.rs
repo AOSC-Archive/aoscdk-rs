@@ -75,7 +75,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
         let mut output;
-        if let Ok(reader) = network::download_file(&url) {
+        if let Ok(reader) = network::download_file(&url, Some(0)) {
             let mut reader = ProgressReader::new(counter_clone.clone(), reader);
             output = std::fs::File::create(tarball_file.clone()).unwrap();
             std::io::copy(&mut reader, &mut output).unwrap();

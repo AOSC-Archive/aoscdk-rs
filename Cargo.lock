@@ -42,6 +42,7 @@ name = "aoscdk-rs-core"
 version = "0.2.1-alpha.0"
 dependencies = [
  "anyhow",
+ "faster-hex",
  "hex",
  "lazy_static",
  "libparted",
@@ -471,6 +472,12 @@ dependencies = [
  "regex",
  "termcolor",
 ]
+
+[[package]]
+name = "faster-hex"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51e2ce894d53b295cf97b05685aa077950ff3e8541af83217fc720a6437169f8"
 
 [[package]]
 name = "filetime"
