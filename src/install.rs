@@ -372,8 +372,3 @@ fn test_path_strip() {
         println!("{}", &mount[1..]);
     }
 }
-
-#[test]
-fn test_get_zoneinfo_list() {
-    dbg!(get_zoneinfo_list().unwrap());
-}
