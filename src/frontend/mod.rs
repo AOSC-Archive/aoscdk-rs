@@ -10,13 +10,11 @@ use std::{
     thread,
 };
 
-use std::os::unix::io::AsRawFd;
 
 use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
 use fs3::FileExt;
-use nix::fcntl::FallocateFlags;
 use serde::{Deserialize, Serialize};
 
 mod tui;

@@ -260,9 +260,7 @@ fn select_variant(siv: &mut Cursive, config: InstallConfig) {
 fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig) {
     siv.pop_layer();
     let (config_view, repo_list) = select_mirror_view_base(&mirrors);
-    siv.add_layer(
-        select_mirrors_view(config_view, config, repo_list, mirrors)
-    );
+    siv.add_layer(select_mirrors_view(config_view, config, repo_list, mirrors));
 }
 
 fn select_mirror_view_base(mirrors: &Vec<Mirror>) -> (LinearLayout, RadioGroup<Mirror>) {
@@ -285,35 +283,42 @@ fn select_mirror_view_base(mirrors: &Vec<Mirror>) -> (LinearLayout, RadioGroup<M
     (config_view, repo_list)
 }
 
-fn select_mirrors_view(config_view: LinearLayout, config: InstallConfig, repo_list: RadioGroup<Mirror>, mirrors: Vec<Mirror>) -> Dialog {
+fn select_mirrors_view(
+    config_view: LinearLayout,
+    config: InstallConfig,
+    repo_list: RadioGroup<Mirror>,
+    mirrors: Vec<Mirror>,
+) -> Dialog {
     let config_clone = config.clone();
     let mirrors_clone = mirrors.clone();
-    wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
-        let mut config = config.clone();
-        let mirror = repo_list.selection();
-        config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
-        if config.partition.is_some() {
-            select_user(s, config);
-        } else {
-            select_partition(s, config);
-        }
-    }).button("Speedtest", move |s| {
-        let mirrors_clone_2 = mirrors_clone.clone();
-        let config_clone_2 = config_clone.clone();
-        let loader = AsyncView::new_with_bg_creator(
-            s,
-            move || {
-                let new_mirrors = network::speedtest_mirrors(mirrors_clone_2.clone());
-                Ok(new_mirrors)
-            },
-            move |mirrors| {
-                let (config_view, repo_list) = select_mirror_view_base(&mirrors);
-                select_mirrors_view(config_view, config_clone_2.clone(), repo_list, mirrors)
-            },
-        );
-        s.pop_layer();
-        s.add_layer(loader);
-    })
+    wrap_in_dialog(config_view, "AOSC OS Installation", None)
+        .button("Continue", move |s| {
+            let mut config = config.clone();
+            let mirror = repo_list.selection();
+            config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
+            if config.partition.is_some() {
+                select_user(s, config);
+            } else {
+                select_partition(s, config);
+            }
+        })
+        .button("Speedtest", move |s| {
+            let mirrors_clone_2 = mirrors_clone.clone();
+            let config_clone_2 = config_clone.clone();
+            let loader = AsyncView::new_with_bg_creator(
+                s,
+                move || {
+                    let new_mirrors = network::speedtest_mirrors(mirrors_clone_2.clone());
+                    Ok(new_mirrors)
+                },
+                move |mirrors| {
+                    let (config_view, repo_list) = select_mirror_view_base(&mirrors);
+                    select_mirrors_view(config_view, config_clone_2.clone(), repo_list, mirrors)
+                },
+            );
+            s.pop_layer();
+            s.add_layer(loader);
+        })
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
@@ -373,7 +378,6 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
 fn select_user(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
     let locales = install::get_locale_list().unwrap();
-    // let zoneinfo = install::get_zoneinfo_list().unwrap();
     let password = Rc::new(RefCell::new(String::new()));
     let password_copy = Rc::clone(&password);
     let password_confirm = Rc::new(RefCell::new(String::new()));
