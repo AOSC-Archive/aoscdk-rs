@@ -438,7 +438,7 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
         .child(
             "Locale",
             make_locale_list(locales)
-                .on_select(move |_, c| {
+                .on_submit(move |_, c: &String| {
                     locale_copy.replace(c.to_owned());
                 })
                 .min_width(20),
