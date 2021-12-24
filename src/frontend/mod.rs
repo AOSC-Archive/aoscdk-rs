@@ -15,6 +15,7 @@ use std::os::unix::io::AsRawFd;
 use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
+use fs3::FileExt;
 use nix::fcntl::FallocateFlags;
 use serde::{Deserialize, Serialize};
 
@@ -105,12 +106,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             }
         }
         if let Ok(mut reader) = network::download_file(&url) {
-            if let Err(e) = nix::fcntl::fallocate(
-                output.as_raw_fd(),
-                FallocateFlags::empty(),
-                0,
-                file_size.try_into().unwrap(),
-            ) {
+            if let Err(e) = output.allocate(file_size.try_into().unwrap()) {
                 send_error!(error_channel_tx_copy, e);
             }
             if let Err(e) = output.flush() {
