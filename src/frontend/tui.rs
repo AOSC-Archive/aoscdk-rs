@@ -63,6 +63,12 @@ In the following pages, the installer will guide you through selection of distri
     };
 }
 
+macro_rules! VARIANT_TEXT {
+    () => {
+        "Shown below is a list of available distributions for your computer."
+    };
+}
+
 macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $e:tt, $f:block) => {{
         $siv.pop_layer();
@@ -231,9 +237,9 @@ fn build_variant_list(
     let mut config_view = LinearLayout::vertical();
 
     let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
-        .column(VariantColumn::Name, "Name", |c| c.width(60))
-        .column(VariantColumn::Date, "Date", |c| c.width(20))
-        .column(VariantColumn::Size, "Size", |c| c.width(20))
+        .column(VariantColumn::Name, "Available Distribution", |c| c.width(60))
+        .column(VariantColumn::Date, "Last Updated", |c| c.width(20))
+        .column(VariantColumn::Size, "Download Size", |c| c.width(20))
         .items(variants.clone())
         .on_submit(move |siv, _row, index| {
             let mut config = config.clone();
@@ -243,6 +249,7 @@ fn build_variant_list(
         .min_width(106)
         .min_height(30);
     let variant_view = Panel::new(variant_view).title("Variant");
+    config_view.add_child(TextView::new(VARIANT_TEXT!()));
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
 
