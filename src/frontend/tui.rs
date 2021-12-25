@@ -55,6 +55,14 @@ macro_rules! SUMMARY_TEXT {
     };
 }
 
+macro_rules! WELCONE_TEXT {
+    () => {
+        r#"Welcome to the AOSC OS installer!
+
+In the following pages, the installer will guide you through selection of distribution, download sources, partitioning, and other system configurations. The installation process should only take a few minutes, but will require more time on slower hardware."#
+    };
+}
+
 macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $e:tt, $f:block) => {{
         $siv.pop_layer();
@@ -708,9 +716,9 @@ fn show_finished(siv: &mut Cursive) {
 pub fn tui_main() {
     let mut siv = cursive::default();
     siv.add_layer(
-        Dialog::around(TextView::new("Welcome to AOSC OS installer!"))
+        Dialog::around(TextView::new(WELCONE_TEXT!()))
             .title("Welcome")
-            .button("Start", |s| {
+            .button("Let's Go", |s| {
                 if let Ok(config) = read_user_config_on_file() {
                     select_partition(s, config);
                 } else {
@@ -729,7 +737,8 @@ pub fn tui_main() {
                     select_variant(s, config);
                 }
             })
-            .padding_lrtb(2, 2, 1, 1),
+            .padding_lrtb(2, 2, 1, 1)
+            .max_width(80)
     );
     siv.run();
     loop {
