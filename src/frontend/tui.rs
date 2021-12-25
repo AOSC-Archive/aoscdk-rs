@@ -237,7 +237,9 @@ fn build_variant_list(
     let mut config_view = LinearLayout::vertical();
 
     let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
-        .column(VariantColumn::Name, "Available Distribution", |c| c.width(60))
+        .column(VariantColumn::Name, "Available Distribution", |c| {
+            c.width(60)
+        })
         .column(VariantColumn::Date, "Last Updated", |c| c.width(20))
         .column(VariantColumn::Size, "Download Size", |c| c.width(20))
         .items(variants.clone())
@@ -307,17 +309,7 @@ fn select_mirrors_view(
     let config_clone = config.clone();
     let mirrors_clone = mirrors.clone();
     wrap_in_dialog(config_view, "AOSC OS Installation", None)
-        .button("Continue", move |s| {
-            let mut config = config.clone();
-            let mirror = repo_list.selection();
-            config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
-            if config.partition.is_some() {
-                select_user(s, config);
-            } else {
-                select_partition(s, config);
-            }
-        })
-        .button("Speedtest", move |s| {
+        .button("Benchmark Mirrors", move |s| {
             let mirrors_clone_2 = mirrors_clone.clone();
             let config_clone_2 = config_clone.clone();
             let loader = AsyncView::new_with_bg_creator(
@@ -333,6 +325,16 @@ fn select_mirrors_view(
             );
             s.pop_layer();
             s.add_layer(loader);
+        })
+        .button("Continue", move |s| {
+            let mut config = config.clone();
+            let mirror = repo_list.selection();
+            config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
+            if config.partition.is_some() {
+                select_user(s, config);
+            } else {
+                select_partition(s, config);
+            }
         })
 }
 
@@ -745,7 +747,7 @@ pub fn tui_main() {
                 }
             })
             .padding_lrtb(2, 2, 1, 1)
-            .max_width(80)
+            .max_width(80),
     );
     siv.run();
     loop {
