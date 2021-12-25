@@ -278,7 +278,7 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
         if !status_is_rtc {
             return Ok(());
         } else {
-            let command = Command::new("hwoclock").arg("-u").output()?;
+            let command = Command::new("hwclock").arg("-wu").output()?;
             if !command.status.success() {
                 return Err(anyhow!(
                     "Failed to set UTC: {}",
@@ -290,7 +290,7 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
         if status_is_rtc {
             return Ok(());
         } else {
-            let command = Command::new("hwoclock").arg("-l").output()?;
+            let command = Command::new("hwclock").arg("-wl").output()?;
             if !command.status.success() {
                 return Err(anyhow!(
                     "Failed to set RTC: {}",
