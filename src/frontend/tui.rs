@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
-    ResizedView, ScrollView, SelectView, TextView,
+    ResizedView, ScrollView, SelectView, TextView, TextContent, TextContentRef,
 };
 use cursive::{traits::*, utils::Counter};
 use cursive::{view::SizeConstraint, views::Button};
@@ -66,6 +66,25 @@ In the following pages, the installer will guide you through selection of distri
 macro_rules! VARIANT_TEXT {
     () => {
         "Shown below is a list of available distributions for your computer."
+    };
+}
+
+macro_rules! ENTER_USER_PASSWORD_TEXT {
+    () => {
+        r#"Please enter and confirm your desired username and password. Please note that your username must start with a lower-cased alphabetical letter (a-z), and contain only lower-cased letters a-z, numbers 0-0, and dash ("-").
+"#
+    };
+}
+
+macro_rules! ENTER_HOSTNAME_TEXT {
+    () => {
+        r#"Now, please input your desired hostname. A hostname may only consist letters a-z, numbers 0-9, and dash ("-")"#
+    };
+}
+
+macro_rules! ENTER_TIMEZONE_TEXT {
+    () => {
+        r#"Finally, please select your locale, timezone, and your clock preferences. Your locale setting will affect your installation's display language. UTC system time is the default setting for Linux systems, but may result in time discrepancy with your other operating systems, such as Windows. If you wish to prevent this from happening, please select local time as system time."#
     };
 }
 
@@ -412,7 +431,8 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
     let tc = Rc::new(RefCell::new(String::new()));
     let tc_copy = Rc::clone(&tc);
 
-    let config_view = ListView::new()
+    let user_password_textview = TextView::new(ENTER_USER_PASSWORD_TEXT!()).max_width(80);
+    let user_password_view = ListView::new()
         .child(
             "Username",
             EditView::new()
@@ -442,7 +462,9 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20)
                 .with_name("pwd2"),
         )
-        .delimiter()
+        .delimiter();
+    let hostname_textview = TextView::new(ENTER_HOSTNAME_TEXT!());
+    let hostname_view = ListView::new()
         .child(
             "Hostname",
             EditView::new()
@@ -452,14 +474,11 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20)
                 .with_name("hostname"),
         )
-        .child(
-            "Locale",
-            make_locale_list(locales)
-                .on_submit(move |_, c: &String| {
-                    locale_copy.replace(c.to_owned());
-                })
-                .min_width(20),
-        )
+        .delimiter();
+    let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT!());
+    let mut selected_timezone_content = TextContent::new("");
+    let selected_timezone_view = TextView::new_with_content(selected_timezone_content.clone());
+    let timezone_view = ListView::new()
         .child(
             "Timezone",
             Button::new_raw("< set >", move |s| {
@@ -468,6 +487,14 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 let continent_copy_copy = Rc::clone(&continent_copy);
                 s.add_layer(set_timezone(zoneinfo, city_clone, continent_copy_copy))
             }),
+        )
+        .child(
+            "Locale",
+            make_locale_list(locales)
+                .on_submit(move |_, c: &String| {
+                    locale_copy.replace(c.to_owned());
+                })
+                .min_width(20),
         )
         .child(
             "Set UTC/RTC",
@@ -480,6 +507,17 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 })
                 .min_width(20),
         );
+    let config_view = LinearLayout::vertical()
+        .child(user_password_textview)
+        .child(DummyView {})
+        .child(user_password_view)
+        .child(DummyView {})
+        .child(hostname_textview)
+        .child(DummyView {})
+        .child(hostname_view)
+        .child(timezone_textview)
+        .child(DummyView {})
+        .child(timezone_view);
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
             let password = password.as_ref().to_owned().into_inner();
