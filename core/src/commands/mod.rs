@@ -1,6 +1,7 @@
 //! Communication and command backend
 
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 
 pub use crate::disks::Partition;
 
@@ -17,12 +18,15 @@ pub struct ConfigSummary {
     pub variant: String,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct InstallConfig {
     pub variant_id: usize,
     pub root_partition_id: usize,
     pub boot_partition_id: usize,
     pub mirror_id: usize,
     pub locale_id: usize,
+    pub rtc_is_utc: bool,
+    pub timezone_id: usize,
     pub username: String,
     pub password: String,
     pub hostname: String,
