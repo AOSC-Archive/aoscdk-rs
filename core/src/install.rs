@@ -1,20 +1,26 @@
 use anyhow::{anyhow, Result};
-use hex;
-use nix::dir::Dir;
-use nix::fcntl::OFlag;
-use nix::mount;
+use libc::c_char;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
+use nix::{dir::Dir, fcntl::OFlag, mount};
+use rand::{thread_rng, Rng};
 use sha2::{Digest, Sha256};
+use std::ffi::{CStr, CString};
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::{fs::File, path::Path};
-use tar;
 use tempfile::TempDir;
-use xz2;
+
+const CRYPT_DATA_SIZE: usize = 32768; // only applicapable to glibc
+
+#[link(name = "crypt")]
+extern "C" {
+    /// Reference: https://man7.org/linux/man-pages/man3/crypt.3.html
+    fn crypt_r(phrase: *const c_char, salt: *const u8, data: *mut u8) -> *mut c_char;
+}
 
 use crate::disks::Partition;
 use crate::parser::locale_names;
@@ -22,6 +28,36 @@ use crate::parser::locale_names;
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
 const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
 const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
+const SALT_LOOKUP: &[u8] = &[
+    0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44,
+    0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54,
+    0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a,
+    0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a,
+];
+
+fn encrypt_password(password: &str) -> Result<String> {
+    let mut buffer = [0u8; CRYPT_DATA_SIZE];
+    let mut salt = [0u8; 16];
+    thread_rng().fill(&mut salt);
+    let salt_value = salt
+        .as_ref()
+        .iter()
+        .map(|s| SALT_LOOKUP[(s % 64) as usize])
+        .collect::<Vec<_>>();
+    let mut salt = Vec::from(&b"$6$"[..]);
+    salt.extend(salt_value);
+    let password = CString::new(password)?;
+    let result = unsafe { crypt_r(password.as_ptr(), salt.as_ptr(), buffer.as_mut_ptr()) };
+
+    if result.is_null() {
+        Err(anyhow!("Password hashing failed."))
+    } else {
+        let encrypted = unsafe { CStr::from_ptr(result) }
+            .to_str()
+            .and_then(|s| Ok(s.to_string()))?;
+        Ok(encrypted)
+    }
+}
 
 fn read_system_locale_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
@@ -219,8 +255,9 @@ pub fn adjust_rtc_time_type(utc: bool) -> Result<()> {
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
 pub fn add_new_user(name: &str, password: &str) -> Result<()> {
+    let password_hash = encrypt_password(password)?;
     let command = Command::new("useradd")
-        .args(&["-m", "-s", "/bin/bash", name])
+        .args(&["-m", "-s", "/bin/bash", name, "-p", &password_hash])
         .output()?;
     if !command.status.success() {
         return Err(anyhow!(
@@ -237,10 +274,6 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
             String::from_utf8_lossy(&command.stderr)
         ));
     }
-    let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
-    let mut stdin = command.stdin.unwrap();
-    stdin.write_all(format!("{}:{}\n", name, password).as_bytes())?;
-    stdin.flush()?;
 
     Ok(())
 }
@@ -282,6 +315,14 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
 #[test]
 fn test_path_strip() {
     for mount in BIND_MOUNTS {
-        println!("{}", &mount[1..]);
+        dbg!("{}", &mount[1..]);
     }
+}
+
+#[test]
+fn test_password() {
+    let encrypted = encrypt_password("password").unwrap();
+    assert_eq!(&encrypted[0..3], "$6$");
+    assert_eq!(&encrypted[19..20], "$");
+    assert_eq!(encrypted.len(), 3 + 16 + 1 + 86);
 }
