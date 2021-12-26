@@ -3,3 +3,4 @@ pub mod install;
 pub mod network;
 pub mod parser;
 pub mod commands;
+pub mod tasks;
