@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
-    ResizedView, ScrollView, SelectView, TextView, TextContent, TextContentRef,
+    ResizedView, ScrollView, SelectView, TextView,
 };
 use cursive::{traits::*, utils::Counter};
 use cursive::{view::SizeConstraint, views::Button};
@@ -350,7 +350,7 @@ fn select_mirrors_view(
             let mirror = repo_list.selection();
             config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
             if config.partition.is_some() {
-                select_user(s, config);
+                select_user_password(s, config);
             } else {
                 select_partition(s, config);
             }
@@ -404,32 +404,21 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     if config.user.is_some() {
                         is_use_last_config(s, config);
                     } else {
-                        select_user(s, config);
+                        select_user_password(s, config);
                     }
                 }
             }),
     );
 }
 
-fn select_user(siv: &mut Cursive, config: InstallConfig) {
+fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
-    let locales = install::get_locale_list().unwrap();
     let password = Rc::new(RefCell::new(String::new()));
     let password_copy = Rc::clone(&password);
     let password_confirm = Rc::new(RefCell::new(String::new()));
     let password_confirm_copy = Rc::clone(&password_confirm);
     let name = Rc::new(RefCell::new(String::new()));
     let name_copy = Rc::clone(&name);
-    let hostname = Rc::new(RefCell::new(String::new()));
-    let hostname_copy = Rc::clone(&hostname);
-    let locale = Rc::new(RefCell::new(String::new()));
-    let locale_copy = Rc::clone(&locale);
-    let continent = Rc::new(RefCell::new(String::new()));
-    let continent_copy = Rc::clone(&continent);
-    let city = Rc::new(RefCell::new(String::new()));
-    let city_copy = Rc::clone(&city);
-    let tc = Rc::new(RefCell::new(String::new()));
-    let tc_copy = Rc::clone(&tc);
 
     let user_password_textview = TextView::new(ENTER_USER_PASSWORD_TEXT!()).max_width(80);
     let user_password_view = ListView::new()
@@ -461,8 +450,40 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 })
                 .min_width(20)
                 .with_name("pwd2"),
-        )
-        .delimiter();
+        );
+    let user_password_dialog = wrap_in_dialog(
+        LinearLayout::vertical()
+            .child(user_password_textview)
+            .child(DummyView {})
+            .child(user_password_view),
+        "AOSC OS Installer",
+        None,
+    )
+    .button("Continue", move |s| {
+        let password = password.as_ref().to_owned().into_inner();
+        let password_confirm = password_confirm.as_ref().to_owned().into_inner();
+        let name = name.as_ref().to_owned().into_inner();
+        if password.is_empty() || password_confirm.is_empty() || name.is_empty() {
+            show_msg(s, "Please fill in all the fields.");
+            return;
+        }
+        if password != password_confirm {
+            show_msg(s, "Password and confirm password do not match.");
+            return;
+        }
+        let mut config = config.clone();
+        config.password = Some(Arc::new(password));
+        config.user = Some(Arc::new(name));
+        select_hostname(s, config);
+    });
+
+    siv.add_layer(user_password_dialog);
+}
+
+fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
+    siv.pop_layer();
+    let hostname = Rc::new(RefCell::new(String::new()));
+    let hostname_copy = Rc::clone(&hostname);
     let hostname_textview = TextView::new(ENTER_HOSTNAME_TEXT!());
     let hostname_view = ListView::new()
         .child(
@@ -475,13 +496,44 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 .with_name("hostname"),
         )
         .delimiter();
+    let hostname_dialog = wrap_in_dialog(
+        LinearLayout::vertical()
+            .child(hostname_textview)
+            .child(DummyView {})
+            .child(hostname_view),
+        "AOSC OS Installer",
+        None,
+    )
+    .button("Continue", move |s| {
+        let hostname = hostname.as_ref().to_owned().into_inner();
+        if hostname.is_empty() {
+            show_msg(s, "Please fill in all the fields.");
+            return;
+        }
+        let mut config = config.clone();
+        config.hostname = Some(hostname);
+        select_timezone(s, config);
+    });
+
+    siv.add_layer(hostname_dialog);
+}
+
+fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
+    siv.pop_layer();    
+    let locale = Rc::new(RefCell::new(String::new()));
+    let locale_copy = Rc::clone(&locale);
+    let continent = Rc::new(RefCell::new(String::new()));
+    let continent_copy = Rc::clone(&continent);
+    let city = Rc::new(RefCell::new(String::new()));
+    let city_copy = Rc::clone(&city);
+    let tc = Rc::new(RefCell::new(String::new()));
+    let tc_copy = Rc::clone(&tc);
+    let locales = install::get_locale_list().unwrap();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT!());
-    let mut selected_timezone_content = TextContent::new("");
-    let selected_timezone_view = TextView::new_with_content(selected_timezone_content.clone());
     let timezone_view = ListView::new()
         .child(
             "Timezone",
-            Button::new_raw("< set >", move |s| {
+            Button::new("set", move |s| {
                 let zoneinfo = install::get_zoneinfo_list().unwrap();
                 let city_clone = Rc::clone(&city_copy);
                 let continent_copy_copy = Rc::clone(&continent_copy);
@@ -507,52 +559,31 @@ fn select_user(siv: &mut Cursive, config: InstallConfig) {
                 })
                 .min_width(20),
         );
-    let config_view = LinearLayout::vertical()
-        .child(user_password_textview)
-        .child(DummyView {})
-        .child(user_password_view)
-        .child(DummyView {})
-        .child(hostname_textview)
-        .child(DummyView {})
-        .child(hostname_view)
-        .child(timezone_textview)
-        .child(DummyView {})
-        .child(timezone_view);
-    siv.add_layer(
-        wrap_in_dialog(config_view, "AOSC OS Installation", None).button("Continue", move |s| {
-            let password = password.as_ref().to_owned().into_inner();
-            let password_confirm = password_confirm.as_ref().to_owned().into_inner();
-            let name = name.as_ref().to_owned().into_inner();
-            let hostname = hostname.as_ref().to_owned().into_inner();
-            let locale = locale.as_ref().to_owned().into_inner();
-            let continent = continent.as_ref().to_owned().into_inner();
-            let city = city.as_ref().to_owned().into_inner();
-            let tc = tc.as_ref().to_owned().into_inner();
-            if password.is_empty()
-                || password_confirm.is_empty()
-                || name.is_empty()
-                || hostname.is_empty()
-                || continent.is_empty()
-                || city.is_empty()
-            {
-                show_msg(s, "Please fill in all the fields.");
-                return;
-            }
-            if password != password_confirm {
-                show_msg(s, "Password and confirm password do not match.");
-                return;
-            }
-            let mut config = config.clone();
-            config.password = Some(Arc::new(password));
-            config.user = Some(Arc::new(name));
-            config.hostname = Some(hostname);
-            config.locale = Some(Arc::new(locale));
-            config.continent = Some(Arc::new(continent));
-            config.city = Some(Arc::new(city));
-            config.tc = Some(Arc::new(tc));
-            show_summary(s, config);
-        }),
-    );
+    let timezone_dialog = wrap_in_dialog(
+        LinearLayout::vertical()
+            .child(timezone_textview)
+            .child(DummyView {})
+            .child(timezone_view),
+        "AOSC OS Installer",
+        None,
+    ).button("Continue", move |s| {
+        let locale = locale.as_ref().to_owned().into_inner();
+        let continent = continent.as_ref().to_owned().into_inner();
+        let city = city.as_ref().to_owned().into_inner();
+        let tc = tc.as_ref().to_owned().into_inner();
+        if locale.is_empty() || continent.is_empty() || city.is_empty() || tc.is_empty() {
+            show_msg(s, "Please fill in all the fields.");
+            return;
+        }
+        let mut config = config.clone();
+        config.locale = Some(Arc::new(locale));
+        config.continent = Some(Arc::new(continent));
+        config.city = Some(Arc::new(city));
+        config.tc = Some(Arc::new(tc));
+        show_summary(s, config);
+    });
+
+    siv.add_layer(timezone_dialog);
 }
 
 fn set_timezone(
