@@ -281,7 +281,7 @@ fn build_variant_list(
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
 
-    wrap_in_dialog(config_view, "AOSC OS Installation", Some(128))
+    wrap_in_dialog(config_view, "AOSC OS Installation", Some(128)).button("Exit", |s| s.quit())
 }
 
 fn select_variant(siv: &mut Cursive, config: InstallConfig) {
@@ -333,8 +333,14 @@ fn select_mirrors_view(
     mirrors: Vec<Mirror>,
 ) -> Dialog {
     let config_clone = config.clone();
+    let config_clone_2 = config.clone();
     let mirrors_clone = mirrors.clone();
     wrap_in_dialog(config_view, "AOSC OS Installation", None)
+        .button("Back", move |s| {
+            s.pop_layer();
+            select_variant(s, config_clone_2.clone());
+        })
+        .button("Exit", |s| s.quit())
         .button("Benchmark Mirrors", move |s| {
             let mirrors_clone_2 = mirrors_clone.clone();
             let config_clone_2 = config_clone.clone();
@@ -379,8 +385,14 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
         .child(DummyView {});
     let (btn_label, btn_cb) = partition_button();
     let config_copy = config.clone();
+    let config_copy_2 = config.clone();
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
+            .button("Back", move |s| {
+                s.pop_layer();
+                select_variant(s, config_copy_2.clone());
+            })
+            .button("Exit", |s| s.quit())
             .button(btn_label, move |s| {
                 btn_cb(s, config_copy.clone());
             })
@@ -458,6 +470,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20)
                 .with_name("pwd2"),
         );
+    let config_clone = config.clone();
     let user_password_dialog = wrap_in_dialog(
         LinearLayout::vertical()
             .child(user_password_textview)
@@ -466,6 +479,11 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         "AOSC OS Installer",
         None,
     )
+    .button("Back", move |s| {
+        s.pop_layer();
+        select_partition(s, config_clone.clone());
+    })
+    .button("Exit", |s| s.quit())
     .button("Continue", move |s| {
         let password = password.as_ref().to_owned().into_inner();
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
@@ -502,6 +520,7 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
                 .with_name("hostname"),
         )
         .delimiter();
+    let config_clone = config.clone();
     let hostname_dialog = wrap_in_dialog(
         LinearLayout::vertical()
             .child(hostname_textview)
@@ -510,6 +529,11 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
         "AOSC OS Installer",
         None,
     )
+    .button("Back", move |s| {
+        s.pop_layer();
+        select_user_password(s, config_clone.clone());
+    })
+    .button("Exit", |s| s.quit())
     .button("Continue", move |s| {
         let hostname = hostname.as_ref().to_owned().into_inner();
         if hostname.is_empty() {
@@ -564,6 +588,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
                 })
                 .min_width(20),
         );
+    let config_clone = config.clone();
     let timezone_dialog = wrap_in_dialog(
         LinearLayout::vertical()
             .child(timezone_textview)
@@ -572,6 +597,11 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         "AOSC OS Installer",
         None,
     )
+    .button("Back", move |s| {
+        s.pop_layer();
+        select_hostname(s, config_clone.clone());
+    })
+    .button("Exit", |s| s.quit())
     .button("Continue", move |s| {
         let locale = locale.as_ref().to_owned().into_inner();
         let continent = continent.as_ref().to_owned().into_inner();
