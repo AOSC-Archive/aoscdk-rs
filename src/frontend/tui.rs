@@ -51,7 +51,7 @@ impl TableViewItem<VariantColumn> for network::VariantEntry {
 }
 macro_rules! SUMMARY_TEXT {
     () => {
-        "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {} mirror server.\n- User {} will be created."
+        "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as system time."
     };
 }
 
@@ -519,7 +519,7 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
-    siv.pop_layer();    
+    siv.pop_layer();
     let locale = Rc::new(RefCell::new(String::new()));
     let locale_copy = Rc::clone(&locale);
     let continent = Rc::new(RefCell::new(String::new()));
@@ -566,7 +566,8 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
             .child(timezone_view),
         "AOSC OS Installer",
         None,
-    ).button("Continue", move |s| {
+    )
+    .button("Continue", move |s| {
         let locale = locale.as_ref().to_owned().into_inner();
         let continent = continent.as_ref().to_owned().into_inner();
         let city = city.as_ref().to_owned().into_inner();
@@ -688,7 +689,10 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                 fs,
                 config.variant.unwrap().name,
                 config.mirror.unwrap().name,
-                config.user.unwrap()
+                config.user.unwrap(),
+                config.locale.unwrap(),
+                format!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
+                config.tc.unwrap()
             )),
             "Confirmation",
             None,
