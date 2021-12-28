@@ -549,13 +549,15 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
 
 fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
-    let locale = Rc::new(RefCell::new(String::new()));
+    // locale default is C.UTF-8
+    let locale = Rc::new(RefCell::new(String::from("C.UTF-8")));
     let locale_copy = Rc::clone(&locale);
     let continent = Rc::new(RefCell::new(String::new()));
     let continent_copy = Rc::clone(&continent);
     let city = Rc::new(RefCell::new(String::new()));
     let city_copy = Rc::clone(&city);
-    let tc = Rc::new(RefCell::new(String::new()));
+    // RTC/UTC default is UTC
+    let tc = Rc::new(RefCell::new(String::from("UTC")));
     let tc_copy = Rc::clone(&tc);
     let locales = install::get_locale_list().unwrap();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT!());
