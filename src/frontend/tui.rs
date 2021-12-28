@@ -88,6 +88,13 @@ macro_rules! ENTER_TIMEZONE_TEXT {
     };
 }
 
+macro_rules! fill_in_all_the_fields {
+    ($s:ident) => {
+        show_msg($s, "Please fill in all the fields.");
+        return;
+    };
+}
+
 macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $e:tt, $f:block) => {{
         $siv.pop_layer();
@@ -464,8 +471,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
         let name = name.as_ref().to_owned().into_inner();
         if password.is_empty() || password_confirm.is_empty() || name.is_empty() {
-            show_msg(s, "Please fill in all the fields.");
-            return;
+            fill_in_all_the_fields!(s);
         }
         if password != password_confirm {
             show_msg(s, "Password and confirm password do not match.");
@@ -507,8 +513,7 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
     .button("Continue", move |s| {
         let hostname = hostname.as_ref().to_owned().into_inner();
         if hostname.is_empty() {
-            show_msg(s, "Please fill in all the fields.");
-            return;
+            fill_in_all_the_fields!(s);
         }
         let mut config = config.clone();
         config.hostname = Some(hostname);
@@ -573,8 +578,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         let city = city.as_ref().to_owned().into_inner();
         let tc = tc.as_ref().to_owned().into_inner();
         if locale.is_empty() || continent.is_empty() || city.is_empty() || tc.is_empty() {
-            show_msg(s, "Please fill in all the fields.");
-            return;
+            fill_in_all_the_fields!(s);
         }
         let mut config = config.clone();
         config.locale = Some(Arc::new(locale));
