@@ -775,7 +775,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
-    let install_thread = thread::spawn(move || begin_install(tx, config));
+    let config_clone = config.clone();
+    let config_clone_2 = config.clone();
+    let install_thread = thread::spawn(move || begin_install(tx, config_clone));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
@@ -787,6 +789,11 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
+            if let Some(partition) = config_clone_2.partition {
+                if let Some(path) = partition.path.as_ref() {
+                    install::umount_all(path);
+                }
+            }
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(s, &err.to_string());
