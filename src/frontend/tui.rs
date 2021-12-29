@@ -384,6 +384,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     let (btn_label, btn_cb) = partition_button();
     let config_copy = config.clone();
     let config_copy_2 = config.clone();
+    let config_clone_3 = config.clone();
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
             .button("Back", move |s| {
@@ -413,6 +414,11 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     if current_partition.parent_path.is_none() && current_partition.size == 0 {
                         show_msg(s, "Please specify a partition.");
                         // s.refresh();
+                        return;
+                    }
+                    let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
+                    if current_partition.size < required_size {
+                        show_msg(s, &format!("The selected partition is not enough to install this tarball!\nCurrent disk size: {}\n Disk size required: {}", current_partition.size, required_size));
                         return;
                     }
                     let mut config = config.clone();
