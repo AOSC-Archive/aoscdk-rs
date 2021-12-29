@@ -235,14 +235,12 @@ fn make_locale_list(locales: Vec<String>) -> SelectView {
 }
 
 fn make_continent_list(zoneinfo: Vec<(String, Vec<String>)>) -> SelectView {
-    let view = SelectView::new().popup().autojump().with_all_str(
+    SelectView::new().popup().autojump().with_all_str(
         zoneinfo
             .into_iter()
             .map(|(con, _)| con)
             .collect::<Vec<String>>(),
-    );
-
-    view
+    )
 }
 
 fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
@@ -306,7 +304,7 @@ fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig
     siv.add_layer(select_mirrors_view(config_view, config, repo_list, mirrors));
 }
 
-fn select_mirror_view_base(mirrors: &Vec<Mirror>) -> (LinearLayout, RadioGroup<Mirror>) {
+fn select_mirror_view_base(mirrors: &[Mirror]) -> (LinearLayout, RadioGroup<Mirror>) {
     let mut config_view = LinearLayout::vertical();
     let mut repo_list = RadioGroup::new();
     let mirror_list = &*mirrors;
@@ -334,7 +332,7 @@ fn select_mirrors_view(
 ) -> Dialog {
     let config_clone = config.clone();
     let config_clone_2 = config.clone();
-    let mirrors_clone = mirrors.clone();
+    let mirrors_clone = mirrors;
     wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Back", move |s| {
             s.pop_layer();
@@ -347,7 +345,7 @@ fn select_mirrors_view(
             let loader = AsyncView::new_with_bg_creator(
                 s,
                 move || {
-                    let new_mirrors = network::speedtest_mirrors(mirrors_clone_2.clone());
+                    let new_mirrors = network::speedtest_mirrors(mirrors_clone_2);
                     Ok(new_mirrors)
                 },
                 move |mirrors| {
@@ -776,7 +774,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
     let config_clone = config.clone();
-    let config_clone_2 = config.clone();
+    let config_clone_2 = config;
     let install_thread = thread::spawn(move || begin_install(tx, config_clone));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
@@ -805,7 +803,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn save_user_config_to_file(config: InstallConfig, path: &str) -> Result<()> {
-    let mut config_copy = config.clone();
+    let mut config_copy = config;
     config_copy.partition = None;
     let file_str = serde_json::to_string(&config_copy)?;
     fs::File::create(LAST_USER_CONFIG_FILE)?;

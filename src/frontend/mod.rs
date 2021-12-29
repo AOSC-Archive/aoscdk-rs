@@ -10,7 +10,6 @@ use std::{
     thread,
 };
 
-
 use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
@@ -92,7 +91,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
-    let error_channel_tx_copy_2 = error_channel_tx.clone();
+    let error_channel_tx_copy_2 = error_channel_tx;
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -166,8 +165,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 download_done_copy.fetch_or(true, Ordering::SeqCst);
                 return;
             }
-            let (mut buf, reader_size) = rx;
-            if let Err(e) = hasher.write_all(&mut buf[..reader_size]) {
+            let (buf, reader_size) = rx;
+            if let Err(e) = hasher.write_all(&buf[..reader_size]) {
                 error_channel_tx_copy_2.send(e.to_string()).unwrap();
                 return;
             }
@@ -181,7 +180,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
-        if let Some(err) = error_channel_rx.try_recv().ok() {
+        if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
         if let Ok(hasher) = get_sha256_rx.try_recv() {
@@ -237,7 +236,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     })?;
     install::set_hostname(&config.hostname.unwrap())?;
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
-    install::set_locale(&config.locale.as_ref().unwrap())?;
+    install::set_locale(config.locale.as_ref().unwrap())?;
     install::escape_chroot(escape_vector)?;
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path)?;

@@ -1,7 +1,7 @@
 use nom::{
-    bytes::complete::{tag, take_until, take_while_m_n},
+    bytes::complete::take_until,
     character::complete::{char, space1},
-    combinator::{map, map_res},
+    combinator::map,
     sequence::{separated_pair, tuple},
     IResult,
 };
@@ -30,15 +30,15 @@ fn key_value(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8])> {
 #[test]
 fn test_key_name() {
     let test = &b"name: value"[..];
-    assert_eq!(key_name(&test), Ok((&b": value"[..], &b"name"[..])));
+    assert_eq!(key_name(test), Ok((&b": value"[..], &b"name"[..])));
 }
 
 #[test]
 fn test_seperator() {
     let test = &b": value"[..];
     let test_2 = &b": \tvalue"[..];
-    assert_eq!(separator(&test), Ok((&b"value"[..], ())));
-    assert_eq!(separator(&test_2), Ok((&b"value"[..], ())));
+    assert_eq!(separator(test), Ok((&b"value"[..], ())));
+    assert_eq!(separator(test_2), Ok((&b"value"[..], ())));
 }
 
 #[test]
@@ -46,10 +46,10 @@ fn test_single_line() {
     let test = &b"value\n"[..];
     let test_2 = &b"value\t\r\n"[..];
     let test_3 = &b"value \x23\xff\n"[..];
-    assert_eq!(single_line(&test), Ok((&b"\n"[..], &b"value"[..])));
-    assert_eq!(single_line(&test_2), Ok((&b"\n"[..], &b"value\t\r"[..])));
+    assert_eq!(single_line(test), Ok((&b"\n"[..], &b"value"[..])));
+    assert_eq!(single_line(test_2), Ok((&b"\n"[..], &b"value\t\r"[..])));
     assert_eq!(
-        single_line(&test_3),
+        single_line(test_3),
         Ok((&b"\n"[..], &b"value \x23\xff"[..]))
     );
 }
@@ -60,15 +60,15 @@ fn test_key_value() {
     let test_2 = &b"name2: value\t\r\n"[..];
     let test_3 = &b"name3: value \x23\xff\n"[..];
     assert_eq!(
-        key_value(&test),
+        key_value(test),
         Ok((&b"\n"[..], (&b"name1"[..], &b"value"[..])))
     );
     assert_eq!(
-        key_value(&test_2),
+        key_value(test_2),
         Ok((&b"\n"[..], (&b"name2"[..], &b"value\t\r"[..])))
     );
     assert_eq!(
-        key_value(&test_3),
+        key_value(test_3),
         Ok((&b"\n"[..], (&b"name3"[..], &b"value \x23\xff"[..])))
     );
 }

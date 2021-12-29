@@ -40,10 +40,7 @@ fn hr(input: &[u8]) -> IResult<&[u8], ()> {
 
 #[inline]
 pub fn locale_names(input: &[u8]) -> IResult<&[u8], Vec<&str>> {
-    many0(preceded(
-        hr,
-        map_res(single_line, |s| std::str::from_utf8(s)),
-    ))(input)
+    many0(preceded(hr, map_res(single_line, std::str::from_utf8)))(input)
 }
 
 #[inline]
@@ -65,7 +62,7 @@ fn zone1970_single_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
 pub fn list_zoneinfo(input: &[u8]) -> IResult<&[u8], Vec<String>> {
     let (input, result) = many0(preceded(
         hr,
-        map_res(zone1970_single_line, |s| std::str::from_utf8(s)),
+        map_res(zone1970_single_line, std::str::from_utf8),
     ))(input)?;
 
     Ok((input, result.into_iter().map(|x| x.into()).collect()))
@@ -101,7 +98,7 @@ fn test_zone1970_single_line() {
 #[test]
 fn test_list_zoneinfo() {
     let buf = &b"#commit1\tcommit2\t\na\tb\tc/c\nd\te\tf/f\tg\n#commit3\nh\ti\tj/j\n"[..];
-    assert_eq!(list_zoneinfo(&buf).unwrap().1, vec!["c/c", "f/f", "j/j"]);
+    assert_eq!(list_zoneinfo(buf).unwrap().1, vec!["c/c", "f/f", "j/j"]);
 }
 
 #[test]

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use libparted;
+
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::path::PathBuf;
@@ -46,7 +46,12 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
         cmd = command.arg("-f");
     }
     output = cmd
-        .arg(partition.path.as_ref().ok_or(anyhow!("Path not found"))?)
+        .arg(
+            partition
+                .path
+                .as_ref()
+                .ok_or_else(|| anyhow!("Path not found"))?,
+        )
         .output()?;
     if !output.status.success() {
         return Err(anyhow!(
@@ -72,7 +77,7 @@ pub fn fill_fs_type(part: &Partition) -> Partition {
     new_part
 }
 
-pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition> {
+pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
     let mut device = libparted::Device::get(device_path)?;
     if let Ok(disk) = libparted::Disk::new(&mut device) {
         for mut part in disk.parts() {
@@ -88,7 +93,7 @@ pub fn find_esp_partition(device_path: &PathBuf) -> Result<Partition> {
                 }
                 let path = part
                     .get_path()
-                    .ok_or(anyhow!("Unable to get the device file for ESP partition"))?;
+                    .ok_or_else(|| anyhow!("Unable to get the device file for ESP partition"))?;
                 return Ok(Partition {
                     path: Some(path.to_owned()),
                     parent_path: None,
