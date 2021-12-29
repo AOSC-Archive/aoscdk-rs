@@ -1,16 +1,19 @@
 use anyhow::{anyhow, Result};
-use reqwest::{self, Url};
+use reqwest::{self, Client, Url};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     env::consts::ARCH,
+    io::Write,
     time::{Duration, Instant},
 };
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = cfg!(feature = "is_retro");
-const SPEEDTEST_FILE_CHECKSUM: &str = "98900564fb4d9c7d3b63f44686c5b8a120af94a51fc6ca595e1406d5d8cc0416";
-const USER_AGENT: &str = "Mozilla/5.0 (X11; AOSC OS; Linux x86_64; rv:93.0) Gecko/20100101 Firefox/93.0";
+const SPEEDTEST_FILE_CHECKSUM: &str =
+    "98900564fb4d9c7d3b63f44686c5b8a120af94a51fc6ca595e1406d5d8cc0416";
+const USER_AGENT: &str =
+    "Mozilla/5.0 (X11; AOSC OS; Linux x86_64; rv:93.0) Gecko/20100101 Firefox/93.0";
 
 // mirror manifests
 #[derive(Deserialize, Clone, Debug, Serialize)]
@@ -66,27 +69,6 @@ pub struct Recipe {
     mirrors: Vec<Mirror>,
 }
 
-#[derive(Deserialize, Debug)]
-struct DistroDownload {
-    name: String,
-    url: String,
-}
-#[derive(Deserialize, Debug)]
-struct DistroData {
-    name: String,
-    description: String,
-    downloads: Vec<DistroDownload>,
-}
-#[derive(Deserialize, Debug)]
-struct DistroList {
-    list: Vec<DistroData>,
-}
-#[derive(Deserialize, Debug)]
-struct VariantData {
-    general: DistroList,
-    retro: DistroList,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VariantEntry {
     pub name: String,
@@ -129,39 +111,47 @@ pub fn download_file(url: &str) -> Result<reqwest::blocking::Response> {
 
 pub fn speedtest_mirrors(mirrors: Vec<Mirror>) -> Vec<Mirror> {
     let mut speedtest_mirror = vec![];
-    for mirror in &mirrors {
-        let score;
-        match get_mirror_speed_score(&mirror.url) {
-            Ok(s) => score = s,
-            Err(_) => {
-                continue
-            },
-        }
-        let name = &mirror.loc_tr;
-        speedtest_mirror.push((name, score));
-    }
-    speedtest_mirror.sort_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
-    let mut new_mirrors = vec![];
-    for (name, _) in speedtest_mirror {
-        let index = mirrors.iter().position(|x| &x.loc_tr == name).unwrap();
-        new_mirrors.push(mirrors[index].to_owned());
-    }
-
-    new_mirrors
-}
-
-fn get_mirror_speed_score(mirror_url: &str) -> Result<f32> {
-    let download_url = Url::parse(mirror_url)?.join("../misc/u-boot-sunxi-with-spl.bin")?;
-    let client = reqwest::blocking::ClientBuilder::new()
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(2)
+        .build()
+        .unwrap();
+    let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .timeout(Duration::from_secs(10))
-        .build()?;
+        .build()
+        .unwrap();
+
+    runtime.block_on(async move {
+        let mut task = vec![];
+        for mirror in &mirrors {
+            task.push(get_mirror_speed_score(&mirror.url, &client))
+        }
+        let results = futures::future::join_all(task).await;
+        for (index, result) in results.into_iter().enumerate() {
+            if let Ok(score) = result {
+                speedtest_mirror.push((mirrors[index].loc_tr.to_owned(), score));
+            }
+        }
+        speedtest_mirror.sort_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
+        let mut new_mirrors = vec![];
+        for (name, _) in speedtest_mirror {
+            let index = mirrors.iter().position(|x| x.loc_tr == name).unwrap();
+            new_mirrors.push(mirrors[index].to_owned());
+        }
+
+        new_mirrors
+    })
+}
+
+async fn get_mirror_speed_score(mirror_url: &str, client: &Client) -> Result<f32> {
+    let download_url = Url::parse(mirror_url)?.join("../misc/u-boot-sunxi-with-spl.bin")?;
     let timer = Instant::now();
-    let mut file = client.get(download_url).send()?;
+    let file = client.get(download_url).send().await?.bytes().await?;
     let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher)?;
-    let result_time = timer.elapsed().as_secs_f32();
+    hasher.write_all(&file)?;
     if hex::encode(hasher.finalize()) == SPEEDTEST_FILE_CHECKSUM {
+        let result_time = timer.elapsed().as_secs_f32();
         return Ok(result_time);
     }
 

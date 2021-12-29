@@ -24,6 +24,8 @@ hex = "0.4"
 tempfile = "3.2"
 cursive-async-view = "0.5"
 fs3 = "0.5"
+tokio = { version = "1.15", features = ["rt", "rt-multi-thread"]}
+futures = "0.3"
 
 [features]
 is_retro = []

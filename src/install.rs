@@ -1,12 +1,10 @@
 use anyhow::{anyhow, Result};
-use hex;
 use nix::dir::Dir;
 use nix::fcntl::OFlag;
 use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
-use sha2::{Digest, Sha256};
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
@@ -88,14 +86,6 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
     tar_processor.unpack(path)?;
 
     Ok(())
-}
-
-/// Calculate the Sha256 checksum of the given stream
-pub fn sha256sum<R: Read>(mut reader: R) -> Result<String> {
-    let mut hasher = Sha256::new();
-    std::io::copy(&mut reader, &mut hasher)?;
-
-    Ok(hex::encode(hasher.finalize()))
 }
 
 /// Mount the filesystem to a temporary directory
