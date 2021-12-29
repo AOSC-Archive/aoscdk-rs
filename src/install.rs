@@ -10,9 +10,8 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
-use tar;
+
 use tempfile::TempDir;
-use xz2;
 
 use crate::disks::Partition;
 use crate::parser::{list_zoneinfo, locale_names};
@@ -35,8 +34,7 @@ fn read_system_locale_list() -> Result<Vec<u8>> {
 /// Get the list of available locales
 pub fn get_locale_list() -> Result<Vec<String>> {
     let data = read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec());
-    let names =
-        locale_names(&data).or_else(|_| Err(anyhow!("Could not parse system locale list")))?;
+    let names = locale_names(&data).map_err(|_| anyhow!("Could not parse system locale list"))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
     Ok(names)
 }
@@ -53,7 +51,7 @@ fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
 pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
     let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
     let mut zoneinfo_list = list_zoneinfo(&data)
-        .or_else(|_| Err(anyhow!("Could not parse zoneinfo list")))?
+        .map_err(|_| anyhow!("Could not parse zoneinfo list"))?
         .1;
     if zoneinfo_list.is_empty() {
         return Err(anyhow!("zoneinfo list is empty!"));
@@ -106,7 +104,7 @@ pub fn sync_and_reboot() -> Result<()> {
 }
 
 /// Mount the filesystem
-pub fn mount_root_path(partition: &Partition, target: &PathBuf) -> Result<()> {
+pub fn mount_root_path(partition: &Partition, target: &Path) -> Result<()> {
     if partition.fs_type.is_none() || partition.path.is_none() {
         return Err(anyhow!("Path not specified."));
     }
@@ -253,13 +251,11 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
     let status_is_rtc = if let Ok(mut adjtime_file) = adjtime_file {
         let mut buf = String::new();
         adjtime_file.read_to_string(&mut buf)?;
-        let line: Vec<&str> = buf.split("\n").collect();
+        let line: Vec<&str> = buf.split('\n').collect();
         if line.len() < 3 || line[2] == "UTC" {
             false
-        } else if line[2] == "LOCAL" {
-            true
         } else {
-            false
+            line[2] == "LOCAL"
         }
     } else {
         false
@@ -276,17 +272,15 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
                 ));
             }
         }
+    } else if status_is_rtc {
+        return Ok(());
     } else {
-        if status_is_rtc {
-            return Ok(());
-        } else {
-            let command = Command::new("hwclock").arg("-wl").output()?;
-            if !command.status.success() {
-                return Err(anyhow!(
-                    "Failed to set RTC: {}",
-                    String::from_utf8_lossy(&command.stderr)
-                ));
-            }
+        let command = Command::new("hwclock").arg("-wl").output()?;
+        if !command.status.success() {
+            return Err(anyhow!(
+                "Failed to set RTC: {}",
+                String::from_utf8_lossy(&command.stderr)
+            ));
         }
     }
 
@@ -357,7 +351,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
 }
 
 /// Run umount -R
-pub fn umount_all(path: &PathBuf) {
+pub fn umount_all(path: &Path) {
     Command::new("umount")
         .args(vec!["-R", &path.to_string_lossy()])
         .output()
