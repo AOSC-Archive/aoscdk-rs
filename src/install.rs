@@ -366,6 +366,14 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     Ok(())
 }
 
+/// Run umount -R
+pub fn umount_all(path: &PathBuf) {
+    Command::new("umount")
+        .args(vec!["-R", &path.to_string_lossy()])
+        .output()
+        .ok();
+}
+
 #[test]
 fn test_path_strip() {
     for mount in BIND_MOUNTS {
