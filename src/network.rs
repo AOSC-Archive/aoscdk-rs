@@ -194,11 +194,3 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
 
     Ok(results)
 }
-
-#[test]
-fn test_speedtest_mirrors() {
-    let manifest = fetch_recipe().map_err(|e| e.to_string()).unwrap();
-    let mirrors = fetch_mirrors(&manifest);
-    let new_mirrors = speedtest_mirrors(mirrors);
-    dbg!(new_mirrors);
-}
