@@ -1,13 +1,14 @@
 use std::{
     convert::TryInto,
     io::{Read, Write},
+    os::unix::prelude::AsRawFd,
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Sender},
         Arc,
     },
-    thread, os::unix::prelude::AsRawFd,
+    thread,
 };
 
 use crate::{disks, install, network};
@@ -109,6 +110,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 0,
                 file_size.try_into().unwrap(),
             ) {
+                let e = anyhow!(
+                    "Failed to create a file using fallocate! {}",
+                    e
+                );
                 send_error!(error_channel_tx_copy, e);
             }
             if let Err(e) = output.flush() {
