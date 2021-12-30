@@ -12,8 +12,12 @@ const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = cfg!(feature = "is_retro");
 const SPEEDTEST_FILE_CHECKSUM: &str =
     "98900564fb4d9c7d3b63f44686c5b8a120af94a51fc6ca595e1406d5d8cc0416";
-const USER_AGENT: &str =
-    "Mozilla/5.0 (X11; AOSC OS; Linux x86_64; rv:93.0) Gecko/20100101 Firefox/93.0";
+
+macro_rules! DEPLOYKIT_USER_AGENT {
+    () => {
+        format!("AOSC DeployKit/{}", env!("CARGO_PKG_VERSION"))
+    };
+}
 
 // mirror manifests
 #[derive(Deserialize, Clone, Debug, Serialize)]
@@ -101,7 +105,7 @@ fn get_arch_name() -> Option<&'static str> {
 
 pub fn download_file(url: &str) -> Result<reqwest::blocking::Response> {
     let client = reqwest::blocking::ClientBuilder::new()
-        .user_agent(USER_AGENT)
+        .user_agent(DEPLOYKIT_USER_AGENT!())
         .build()?;
     let resp = client.get(url).send()?;
     let resp = resp.error_for_status()?;
@@ -117,7 +121,7 @@ pub fn speedtest_mirrors(mirrors: Vec<Mirror>) -> Vec<Mirror> {
         .build()
         .unwrap();
     let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
+        .user_agent(DEPLOYKIT_USER_AGENT!())
         .timeout(Duration::from_secs(10))
         .build()
         .unwrap();
