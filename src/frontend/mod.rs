@@ -172,7 +172,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 rx = result;
             } else {
                 // dbg!("sha256sum complete");
-                get_sha256_tx.send(hasher.clone()).unwrap();
+                get_sha256_tx.send(hasher).unwrap();
                 download_done_copy.fetch_or(true, Ordering::SeqCst);
                 return;
             }
