@@ -388,7 +388,6 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Continue", move |s| {
-            s.pop_layer();
             let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
             if let Some(disk_list) = disk_list {
                 let disk_list = disk_list.clone();
@@ -398,7 +397,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         fs_type: None,
                         path: Some(PathBuf::from("/dev/loop0p1")),
                         parent_path: Some(PathBuf::from("/dev/loop0")),
-                        size: 3145728,
+                        size: 4284067840,
                     })
                 } else {
                     disk_list.selection()
@@ -410,7 +409,13 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 }
                 let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
                 if current_partition.size < required_size {
-                    show_msg(s, &format!("The selected partition is not enough to install this tarball!\nCurrent disk size: {}\n Disk size required: {}", current_partition.size, required_size));
+                    show_msg(
+                        s, 
+                        &format!(
+                            "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
+                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0, 
+                            required_size as f32 / 1024.0 / 1024.0 / 1024.0
+                        ));
                     return;
                 }
                 let mut config = config.clone();
@@ -680,6 +685,7 @@ fn set_timezone(
 }
 
 fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
+    siv.pop_layer();
     let config_copy = config.clone();
     siv.add_layer(
         wrap_in_dialog(
