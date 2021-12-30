@@ -88,6 +88,12 @@ macro_rules! ENTER_TIMEZONE_TEXT {
     };
 }
 
+macro_rules! BENCHMARK_TEXT {
+    () => {
+        "DeployKit will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes."
+    };
+}
+
 macro_rules! fill_in_all_the_fields {
     ($s:ident) => {
         show_msg($s, "Please fill in all the fields.");
@@ -332,7 +338,6 @@ fn select_mirrors_view(
 ) -> Dialog {
     let config_clone = config.clone();
     let config_clone_2 = config.clone();
-    let mirrors_clone = mirrors;
     wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Continue", move |s| {
             let mut config = config.clone();
@@ -345,21 +350,45 @@ fn select_mirrors_view(
             }
         })
         .button("Benchmark Mirrors", move |s| {
-            let mirrors_clone_2 = mirrors_clone.clone();
             let config_clone_2 = config_clone.clone();
-            let loader = AsyncView::new_with_bg_creator(
-                s,
-                move || {
-                    let new_mirrors = network::speedtest_mirrors(mirrors_clone_2);
-                    Ok(new_mirrors)
-                },
-                move |mirrors| {
-                    let (config_view, repo_list) = select_mirror_view_base(&mirrors);
-                    select_mirrors_view(config_view, config_clone_2.clone(), repo_list, mirrors)
-                },
-            );
+            let config_clone_3 = config_clone.clone();
+            let mirrors_clone = mirrors.clone();
+            let mirrors_clone_2 = mirrors.clone();
             s.pop_layer();
-            s.add_layer(loader);
+            s.add_layer(
+                Dialog::around(TextView::new(BENCHMARK_TEXT!()).max_width(80))
+                    .title("Message")
+                    .button("OK", move |s| {
+                        let config_clone_3 = config_clone_2.clone();
+                        let mirrors_clone_2 = mirrors_clone.clone();
+                        let loader = AsyncView::new_with_bg_creator(
+                            s,
+                            move || {
+                                let new_mirrors =
+                                    network::speedtest_mirrors(mirrors_clone_2.clone());
+                                Ok(new_mirrors)
+                            },
+                            move |mirrors| {
+                                let (config_view, repo_list) = select_mirror_view_base(&mirrors);
+                                select_mirrors_view(
+                                    config_view,
+                                    config_clone_3.clone(),
+                                    repo_list,
+                                    mirrors,
+                                )
+                            },
+                        );
+                        s.pop_layer();
+                        s.add_layer(loader);
+                    })
+                    .button("Cancel", move |s| {
+                        let mirrors_clone_3 = mirrors_clone_2.clone();
+                        let config_clone_4 = config_clone_3.clone();
+                        s.pop_layer();
+                        select_mirrors(s, mirrors_clone_3, config_clone_4);
+                    })
+                    .padding_lrtb(2, 2, 1, 1),
+            );
         })
         .button("Back", move |s| {
             s.pop_layer();
@@ -410,10 +439,10 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
                 if current_partition.size < required_size {
                     show_msg(
-                        s, 
+                        s,
                         &format!(
                             "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
-                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0, 
+                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0,
                             required_size as f32 / 1024.0 / 1024.0 / 1024.0
                         ));
                     return;
