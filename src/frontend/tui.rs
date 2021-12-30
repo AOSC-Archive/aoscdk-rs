@@ -334,11 +334,16 @@ fn select_mirrors_view(
     let config_clone_2 = config.clone();
     let mirrors_clone = mirrors;
     wrap_in_dialog(config_view, "AOSC OS Installation", None)
-        .button("Back", move |s| {
-            s.pop_layer();
-            select_variant(s, config_clone_2.clone());
+        .button("Continue", move |s| {
+            let mut config = config.clone();
+            let mirror = repo_list.selection();
+            config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
+            if config.partition.is_some() {
+                select_user_password(s, config);
+            } else {
+                select_partition(s, config);
+            }
         })
-        .button("Exit", |s| s.quit())
         .button("Benchmark Mirrors", move |s| {
             let mirrors_clone_2 = mirrors_clone.clone();
             let config_clone_2 = config_clone.clone();
@@ -356,16 +361,11 @@ fn select_mirrors_view(
             s.pop_layer();
             s.add_layer(loader);
         })
-        .button("Continue", move |s| {
-            let mut config = config.clone();
-            let mirror = repo_list.selection();
-            config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
-            if config.partition.is_some() {
-                select_user_password(s, config);
-            } else {
-                select_partition(s, config);
-            }
+        .button("Back", move |s| {
+            s.pop_layer();
+            select_variant(s, config_clone_2.clone());
         })
+        .button("Exit", |s| s.quit())
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
@@ -387,50 +387,50 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     let config_clone_3 = config.clone();
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
-            .button("Back", move |s| {
-                s.pop_layer();
-                select_variant(s, config_copy_2.clone());
-            })
-            .button("Exit", |s| s.quit())
-            .button(btn_label, move |s| {
-                btn_cb(s, config_copy.clone());
-            })
-            .button("Continue", move |s| {
-                s.pop_layer();
-                let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
-                if let Some(disk_list) = disk_list {
-                    let disk_list = disk_list.clone();
-                    let current_partition = if cfg!(debug_assertions) {
-                        // prevent developer/tester accidentally delete their partitions
-                        Rc::new(disks::Partition {
-                            fs_type: None,
-                            path: Some(PathBuf::from("/dev/loop0p1")),
-                            parent_path: Some(PathBuf::from("/dev/loop0")),
-                            size: 3145728,
-                        })
-                    } else {
-                        disk_list.selection()
-                    };
-                    if current_partition.parent_path.is_none() && current_partition.size == 0 {
-                        show_msg(s, "Please specify a partition.");
-                        // s.refresh();
-                        return;
-                    }
-                    let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
-                    if current_partition.size < required_size {
-                        show_msg(s, &format!("The selected partition is not enough to install this tarball!\nCurrent disk size: {}\n Disk size required: {}", current_partition.size, required_size));
-                        return;
-                    }
-                    let mut config = config.clone();
-                    let new_part = disks::fill_fs_type(current_partition.as_ref());
-                    config.partition = Some(Arc::new(new_part));
-                    if config.user.is_some() {
-                        is_use_last_config(s, config);
-                    } else {
-                        select_user_password(s, config);
-                    }
+        .button("Continue", move |s| {
+            s.pop_layer();
+            let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
+            if let Some(disk_list) = disk_list {
+                let disk_list = disk_list.clone();
+                let current_partition = if cfg!(debug_assertions) {
+                    // prevent developer/tester accidentally delete their partitions
+                    Rc::new(disks::Partition {
+                        fs_type: None,
+                        path: Some(PathBuf::from("/dev/loop0p1")),
+                        parent_path: Some(PathBuf::from("/dev/loop0")),
+                        size: 3145728,
+                    })
+                } else {
+                    disk_list.selection()
+                };
+                if current_partition.parent_path.is_none() && current_partition.size == 0 {
+                    show_msg(s, "Please specify a partition.");
+                    // s.refresh();
+                    return;
                 }
-            }),
+                let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
+                if current_partition.size < required_size {
+                    show_msg(s, &format!("The selected partition is not enough to install this tarball!\nCurrent disk size: {}\n Disk size required: {}", current_partition.size, required_size));
+                    return;
+                }
+                let mut config = config.clone();
+                let new_part = disks::fill_fs_type(current_partition.as_ref());
+                config.partition = Some(Arc::new(new_part));
+                if config.user.is_some() {
+                    is_use_last_config(s, config);
+                } else {
+                    select_user_password(s, config);
+                }
+            }
+        })
+        .button(btn_label, move |s| {
+            btn_cb(s, config_copy.clone());
+        })
+        .button("Back", move |s| {
+            s.pop_layer();
+            select_variant(s, config_copy_2.clone());
+        })
+        .button("Exit", |s| s.quit())
     );
 }
 
@@ -483,11 +483,6 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         "AOSC OS Installer",
         None,
     )
-    .button("Back", move |s| {
-        s.pop_layer();
-        select_partition(s, config_clone.clone());
-    })
-    .button("Exit", |s| s.quit())
     .button("Continue", move |s| {
         let password = password.as_ref().to_owned().into_inner();
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
@@ -503,7 +498,12 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         config.password = Some(Arc::new(password));
         config.user = Some(Arc::new(name));
         select_hostname(s, config);
-    });
+    })
+    .button("Back", move |s| {
+        s.pop_layer();
+        select_partition(s, config_clone.clone());
+    })
+    .button("Exit", |s| s.quit());
 
     siv.add_layer(user_password_dialog);
 }
@@ -533,11 +533,6 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
         "AOSC OS Installer",
         None,
     )
-    .button("Back", move |s| {
-        s.pop_layer();
-        select_user_password(s, config_clone.clone());
-    })
-    .button("Exit", |s| s.quit())
     .button("Continue", move |s| {
         let hostname = hostname.as_ref().to_owned().into_inner();
         if hostname.is_empty() {
@@ -546,7 +541,12 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
         let mut config = config.clone();
         config.hostname = Some(hostname);
         select_timezone(s, config);
-    });
+    })
+    .button("Back", move |s| {
+        s.pop_layer();
+        select_user_password(s, config_clone.clone());
+    })
+    .button("Exit", |s| s.quit());
 
     siv.add_layer(hostname_dialog);
 }
@@ -603,11 +603,6 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         "AOSC OS Installer",
         None,
     )
-    .button("Back", move |s| {
-        s.pop_layer();
-        select_hostname(s, config_clone.clone());
-    })
-    .button("Exit", |s| s.quit())
     .button("Continue", move |s| {
         let locale = locale.as_ref().to_owned().into_inner();
         let continent = continent.as_ref().to_owned().into_inner();
@@ -622,7 +617,12 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         config.city = Some(Arc::new(city));
         config.tc = Some(Arc::new(tc));
         show_summary(s, config);
-    });
+    })
+    .button("Back", move |s| {
+        s.pop_layer();
+        select_hostname(s, config_clone.clone());
+    })
+    .button("Exit", |s| s.quit());
 
     siv.add_layer(timezone_dialog);
 }
@@ -737,9 +737,6 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             "Confirmation",
             None,
         )
-        .button("Cancel", |s| {
-            s.pop_layer();
-        })
         .button("Install", move |s| {
             s.pop_layer();
             start_install(s, config_copy.clone());
@@ -753,6 +750,9 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                     &format!("Success saved, path: {}!", SAVE_USER_CONFIG_FILE),
                 )
             }
+        })
+        .button("Cancel", |s| {
+            s.pop_layer();
         }),
     );
 }
