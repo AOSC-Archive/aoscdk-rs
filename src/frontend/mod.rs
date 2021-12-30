@@ -110,13 +110,11 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 0,
                 file_size.try_into().unwrap(),
             ) {
-                let e = anyhow!(
-                    "Failed to create a file using fallocate! {}",
-                    e
-                );
+                let e = anyhow!("Failed to create a file using fallocate! {}", e);
                 send_error!(error_channel_tx_copy, e);
             }
             if let Err(e) = output.flush() {
+                let e = anyhow!("Failed to fallocate flush! {}", e);
                 send_error!(error_channel_tx_copy, e);
             }
             let mut tarball_size = 0;
@@ -131,6 +129,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 };
                 tarball_size += reader_size;
                 if let Err(e) = output.write_all(&buf[..reader_size]) {
+                    let e = anyhow!("Failed to write file! {}", e);
                     send_error!(error_channel_tx_copy, e);
                 }
                 sha256_work_tx.send((buf, reader_size)).unwrap();
@@ -153,11 +152,13 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         match std::fs::File::open(tarball_file.clone()) {
             Ok(file) => output = file,
             Err(e) => {
+                let e = anyhow!("Failed to open tarball! {}", e);
                 send_error!(error_channel_tx_copy, e);
             }
         }
         let reader = ProgressReader::new(counter_clone, output);
         if let Err(e) = install::extract_tar_xz(reader, &mount_path) {
+            let e = anyhow!("Failed to extract tarball! {}", e);
             send_error!(error_channel_tx_copy, e);
         }
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
@@ -177,8 +178,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             }
             let (buf, reader_size) = rx;
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
-                error_channel_tx_copy_2.send(e.to_string()).unwrap();
-                return;
+                let e = anyhow!("Failed to write hasher! {}", e);
+                send_error!(error_channel_tx_copy_2, e);
             }
         }
     });
