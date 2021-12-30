@@ -55,44 +55,15 @@ macro_rules! SUMMARY_TEXT {
     };
 }
 
-macro_rules! WELCONE_TEXT {
-    () => {
-        r#"Welcome to the AOSC OS installer!
+const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS installer!
 
-In the following pages, the installer will guide you through selection of distribution, download sources, partitioning, and other system configurations. The installation process should only take a few minutes, but will require more time on slower hardware."#
-    };
-}
-
-macro_rules! VARIANT_TEXT {
-    () => {
-        "Shown below is a list of available distributions for your computer."
-    };
-}
-
-macro_rules! ENTER_USER_PASSWORD_TEXT {
-    () => {
-        r#"Please enter and confirm your desired username and password. Please note that your username must start with a lower-cased alphabetical letter (a-z), and contain only lower-cased letters a-z, numbers 0-0, and dash ("-").
-"#
-    };
-}
-
-macro_rules! ENTER_HOSTNAME_TEXT {
-    () => {
-        r#"Now, please input your desired hostname. A hostname may only consist letters a-z, numbers 0-9, and dash ("-")"#
-    };
-}
-
-macro_rules! ENTER_TIMEZONE_TEXT {
-    () => {
-        r#"Finally, please select your locale, timezone, and your clock preferences. Your locale setting will affect your installation's display language. UTC system time is the default setting for Linux systems, but may result in time discrepancy with your other operating systems, such as Windows. If you wish to prevent this from happening, please select local time as system time."#
-    };
-}
-
-macro_rules! BENCHMARK_TEXT {
-    () => {
-        "DeployKit will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes."
-    };
-}
+In the following pages, the installer will guide you through selection of distribution, download sources, partitioning, and other system configurations. The installation process should only take a few minutes, but will require more time on slower hardware."#;
+const VARIANT_TEXT: &str = "Shown below is a list of available distributions for your computer.";
+const ENTER_USER_PASSWORD_TEXT: &str = r#"Please enter and confirm your desired username and password. Please note that your username must start with a lower-cased alphabetical letter (a-z), and contain only lower-cased letters a-z, numbers 0-0, and dash ("-").
+"#;
+const ENTER_HOSTNAME_TEXT: &str = r#"Now, please input your desired hostname. A hostname may only consist letters a-z, numbers 0-9, and dash ("-")"#;
+const ENTER_TIMEZONE_TEXT: &str = r#"Finally, please select your locale, timezone, and your clock preferences. Your locale setting will affect your installation's display language. UTC system time is the default setting for Linux systems, but may result in time discrepancy with your other operating systems, such as Windows. If you wish to prevent this from happening, please select local time as system time."#;
+const BENCHMARK_TEXT: &str = "DeployKit will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes.";
 
 macro_rules! fill_in_all_the_fields {
     ($s:ident) => {
@@ -281,7 +252,7 @@ fn build_variant_list(
         .min_width(106)
         .min_height(30);
     let variant_view = Panel::new(variant_view).title("Variant");
-    config_view.add_child(TextView::new(VARIANT_TEXT!()));
+    config_view.add_child(TextView::new(VARIANT_TEXT));
     config_view.add_child(variant_view);
     config_view.add_child(DummyView {});
 
@@ -356,7 +327,7 @@ fn select_mirrors_view(
             let mirrors_clone_2 = mirrors.clone();
             s.pop_layer();
             s.add_layer(
-                Dialog::around(TextView::new(BENCHMARK_TEXT!()).max_width(80))
+                Dialog::around(TextView::new(BENCHMARK_TEXT).max_width(80))
                     .title("Message")
                     .button("OK", move |s| {
                         let config_clone_3 = config_clone_2.clone();
@@ -477,7 +448,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
     let name = Rc::new(RefCell::new(String::new()));
     let name_copy = Rc::clone(&name);
 
-    let user_password_textview = TextView::new(ENTER_USER_PASSWORD_TEXT!()).max_width(80);
+    let user_password_textview = TextView::new(ENTER_USER_PASSWORD_TEXT).max_width(80);
     let user_password_view = ListView::new()
         .child(
             "Username",
@@ -546,7 +517,7 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
     let hostname = Rc::new(RefCell::new(String::new()));
     let hostname_copy = Rc::clone(&hostname);
-    let hostname_textview = TextView::new(ENTER_HOSTNAME_TEXT!());
+    let hostname_textview = TextView::new(ENTER_HOSTNAME_TEXT);
     let hostname_view = ListView::new()
         .child(
             "Hostname",
@@ -598,7 +569,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     let tc = Rc::new(RefCell::new(String::from("UTC")));
     let tc_copy = Rc::clone(&tc);
     let locales = install::get_locale_list().unwrap();
-    let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT!());
+    let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
     let timezone_view = ListView::new()
         .child(
             "Timezone",
@@ -880,7 +851,7 @@ fn show_finished(siv: &mut Cursive) {
 pub fn tui_main() {
     let mut siv = cursive::default();
     siv.add_layer(
-        Dialog::around(TextView::new(WELCONE_TEXT!()))
+        Dialog::around(TextView::new(WELCOME_TEXT))
             .title("Welcome")
             .button("Let's Go", |s| {
                 if let Ok(config) = read_user_config_on_file() {
