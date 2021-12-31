@@ -57,8 +57,9 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let right_sha256;
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    let hasher_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     sender.send(InstallProgress::Pending(
-        "Step 1 of 5: Formatting partitions ...".to_string(),
+        "Step 1 of 6: Formatting partitions ...".to_string(),
         0,
     ))?;
 
@@ -88,6 +89,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     let extract_done_copy = extract_done.clone();
     let download_done_copy = download_done.clone();
+    let hasher_done_copy = hasher_done.clone();
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
@@ -135,13 +137,14 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 sha256_work_tx.send((buf, reader_size)).unwrap();
                 counter_clone.set(tarball_size);
                 if tarball_size == file_size {
+                    download_done_copy.fetch_or(true, Ordering::SeqCst);
                     // dbg!("download complete");
                     break;
                 }
             }
             drop(sha256_work_tx);
             loop {
-                if download_done.load(Ordering::SeqCst) {
+                if hasher_done.load(Ordering::SeqCst) {
                     break;
                 }
             }
@@ -173,7 +176,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             } else {
                 // dbg!("sha256sum complete");
                 get_sha256_tx.send(hasher).unwrap();
-                download_done_copy.fetch_or(true, Ordering::SeqCst);
+                hasher_done_copy.fetch_or(true, Ordering::SeqCst);
                 return;
             }
             let (buf, reader_size) = rx;
@@ -187,13 +190,23 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     // Progress update
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 2 of 5: Downloading system release ...".to_string(),
+            "Step 2 of 6: Downloading system release ...".to_string(),
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
+        if download_done.load(Ordering::SeqCst) {
+            break;
+        }
+    }
+    loop {
+        sender.send(InstallProgress::Pending(
+            "Step 3 of 6: Verifying system release ...".to_string(),
+            0,
+        ))?;
+        std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
             let final_hash = hex::encode(hasher.finalize());
             if final_hash != right_sha256 {
@@ -208,7 +221,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 3 of 5: Unpacking system release ...".to_string(),
+            "Step 4 of 6: Unpacking system release ...".to_string(),
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -220,7 +233,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     worker.join().unwrap();
     sha256sum_work.join().unwrap();
     sender.send(InstallProgress::Pending(
-        "Step 4 of 5: Generating initramfs (initial RAM filesystem) ...".to_string(),
+        "Step 5 of 6: Generating initramfs (initial RAM filesystem) ...".to_string(),
         0,
     ))?;
 
@@ -228,7 +241,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     install::dive_into_guest(&mount_path_copy)?;
     install::execute_dracut()?;
     sender.send(InstallProgress::Pending(
-        "Step 5 of 5: Installing and configuring GRUB bootloader ...".to_string(),
+        "Step 6 of 5: Installing and configuring GRUB bootloader ...".to_string(),
         0,
     ))?;
 
