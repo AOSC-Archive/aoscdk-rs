@@ -15,6 +15,7 @@ use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
 use nix::fcntl::FallocateFlags;
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 mod tui;
@@ -201,10 +202,11 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             break;
         }
     }
+    let mut fake_counter = 0;
     loop {
         sender.send(InstallProgress::Pending(
             "Step 3 of 6: Verifying system release ...".to_string(),
-            0,
+            fake_counter,
         ))?;
         std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
@@ -217,6 +219,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
                 ));
             }
             break;
+        }
+        fake_counter += 1;
+        if fake_counter == 100 {
+            fake_counter = 0;
         }
     }
     loop {
@@ -232,17 +238,19 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     // GC the worker thread
     worker.join().unwrap();
     sha256sum_work.join().unwrap();
+    let mut rng = thread_rng();
+    let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
         "Step 5 of 6: Generating initramfs (initial RAM filesystem) ...".to_string(),
-        0,
+        fake_counter,
     ))?;
-
     let escape_vector = install::get_dir_fd(PathBuf::from("/"))?;
     install::dive_into_guest(&mount_path_copy)?;
     install::execute_dracut()?;
+    let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
-        "Step 6 of 5: Installing and configuring GRUB bootloader ...".to_string(),
-        0,
+        "Step 6 of 6: Installing and configuring GRUB bootloader ...".to_string(),
+        fake_counter,
     ))?;
 
     if disks::is_efi_booted() {

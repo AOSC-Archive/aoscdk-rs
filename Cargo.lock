@@ -52,6 +52,7 @@ dependencies = [
  "nix",
  "nom 7.1.0",
  "number_prefix",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",

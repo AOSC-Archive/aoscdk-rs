@@ -843,16 +843,12 @@ fn read_user_config_on_file() -> Result<InstallConfig> {
 fn show_finished(siv: &mut Cursive) {
     siv.pop_layer();
     siv.add_layer(
-        wrap_in_dialog(
-            TextView::new(FINISHED_TEXT),
-            "All Done",
-            None,
-        )
-        .button("Reboot", |s| {
-            install::sync_and_reboot().ok();
-            s.quit();
-        })
-        .button("Exit to LiveKit", |s| s.quit()),
+        wrap_in_dialog(TextView::new(FINISHED_TEXT), "All Done", None)
+            .button("Reboot", |s| {
+                install::sync_and_reboot().ok();
+                s.quit();
+            })
+            .button("Exit to LiveKit", |s| s.quit()),
     );
 }
 
