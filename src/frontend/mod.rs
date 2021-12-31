@@ -208,7 +208,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 3 of 5: Extracting system release ...".to_string(),
+            "Step 3 of 5: Unpacking system release ...".to_string(),
             counter.get() * 100 / file_size,
         ))?;
         std::thread::sleep(refresh_interval);
