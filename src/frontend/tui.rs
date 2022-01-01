@@ -338,8 +338,7 @@ fn select_mirrors_view(
                         let loader = AsyncView::new_with_bg_creator(
                             s,
                             move || {
-                                let new_mirrors =
-                                    network::speedtest_mirrors(mirrors_clone_2.clone());
+                                let new_mirrors = network::speedtest_mirrors(mirrors_clone_2);
                                 Ok(new_mirrors)
                             },
                             move |mirrors| {
@@ -416,8 +415,8 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         s,
                         &format!(
                             "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
-                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0,
-                            required_size as f32 / 1024.0 / 1024.0 / 1024.0
+                            current_partition.size as f32 / 11073741824.0, // 1024 * 1024 * 1024 = 11073741824
+                            required_size as f32 / 11073741824.0
                         ));
                     return;
                 }
