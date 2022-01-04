@@ -184,6 +184,9 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
             .filter(|x| x.arch == arch_name)
             .collect();
         sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
+        if sorted_tarballs.is_empty() {
+            continue;
+        }
         let candidate = sorted_tarballs.first().unwrap();
         results.push(VariantEntry {
             name: recipe.name.clone(),
