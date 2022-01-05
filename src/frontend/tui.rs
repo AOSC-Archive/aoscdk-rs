@@ -391,6 +391,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Continue", move |s| {
             let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
+            let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
             if let Some(disk_list) = disk_list {
                 let disk_list = disk_list.clone();
                 let current_partition = if cfg!(debug_assertions) {
@@ -399,7 +400,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         fs_type: None,
                         path: Some(PathBuf::from("/dev/loop0p1")),
                         parent_path: Some(PathBuf::from("/dev/loop0")),
-                        size: 4284067840,
+                        size: required_size,
                     })
                 } else {
                     disk_list.selection()
@@ -409,14 +410,13 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     // s.refresh();
                     return;
                 }
-                let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
                 if current_partition.size < required_size {
                     show_msg(
                         s,
                         &format!(
                             "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
-                            current_partition.size as f32 / 11073741824.0, // 1024 * 1024 * 1024 = 11073741824
-                            required_size as f32 / 11073741824.0
+                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0, // 1024 * 1024 * 1024 = 11073741824
+                            required_size as f32 / 1024.0 / 1024.0 / 1024.0
                         ));
                     return;
                 }
