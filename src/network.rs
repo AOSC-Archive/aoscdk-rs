@@ -173,11 +173,14 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     }
     let arch_name = arch_name.unwrap();
     // filter: tarballs array is not empty and the mainline/retro switch matches
-    for recipe in recipes
+    let mut all_empty = true;
+    let right_recipes = recipes
         .variants
         .into_iter()
         .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty() && x.name != "BuildKit")
-    {
+        .collect::<Vec<Variant>>();
+    let right_recipes_len = right_recipes.len();
+    for (index, recipe) in right_recipes.into_iter().enumerate() {
         let mut sorted_tarballs: Vec<Tarball> = recipe
             .tarballs
             .into_iter()
@@ -185,8 +188,12 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
             .collect();
         sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
         if sorted_tarballs.is_empty() {
+            if all_empty && index == right_recipes_len - 1 {
+                return Err(anyhow!("All tarball list is empty!"));
+            }
             continue;
         }
+        all_empty = false;
         let candidate = sorted_tarballs.first().unwrap();
         results.push(VariantEntry {
             name: recipe.name.clone(),
