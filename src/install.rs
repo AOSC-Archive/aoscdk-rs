@@ -81,6 +81,7 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
     let mut tar_processor = tar::Archive::new(decompress);
     tar_processor.set_unpack_xattrs(true);
     tar_processor.set_preserve_permissions(true);
+    tar_processor.set_preserve_ownerships(true);
     tar_processor.unpack(path)?;
 
     Ok(())
