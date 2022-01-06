@@ -18,7 +18,7 @@ cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view" }
 lazy_static = "1.4"
 number_prefix = "0.4"
 xz2 = "0.1"
-tar = "0.4"
+tar = { git = "https://github.com/eatradish/tar-rs", rev = "d169fb24f80fbf626c87374e55ff45e887516e37" }
 sha2 = "0.10"
 hex = "0.4"
 tempfile = "3.2"
