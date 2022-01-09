@@ -188,10 +188,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         }
     });
 
+    let file_size = file_size as f64;
     // Progress update
     loop {
         let tarball_downloaded_size = counter.get() as f64;
-        let file_size = file_size as f64;
         let count = (tarball_downloaded_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
             "Step 2 of 6: Downloading system release ...".to_string(),
@@ -230,7 +230,6 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     }
     loop {
         let tarball_unpack_size = counter.get() as f64;
-        let file_size = file_size as f64;
         let count = (tarball_unpack_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
             "Step 4 of 6: Unpacking system release ...".to_string(),
@@ -275,8 +274,8 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     install::set_hostname(&config.hostname.unwrap())?;
     let locale = config.locale.as_ref().unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
-    install::execute_locale_gen(&locale)?;
-    install::set_locale(&locale)?;
+    install::execute_locale_gen(locale)?;
+    install::set_locale(locale)?;
     install::escape_chroot(escape_vector)?;
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path)?;
