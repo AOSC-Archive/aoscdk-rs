@@ -33,7 +33,11 @@ fn read_system_locale_list() -> Result<Vec<u8>> {
 
 /// Get the list of available locales
 pub fn get_locale_list() -> Result<Vec<String>> {
-    let data = read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec());
+    let data = if !cfg!(feature = "is_retro") {
+        read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec())
+    } else {
+        BUNDLED_LOCALE_GEN.to_vec()
+    };
     let names = locale_names(&data).map_err(|_| anyhow!("Could not parse system locale list"))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
     Ok(names)
@@ -207,6 +211,33 @@ pub fn execute_dracut() -> Result<()> {
         ));
     }
 
+    Ok(())
+}
+
+/// Runs locale-gen
+/// Must be used in a chroot context
+#[cfg(feature = "is_retro")]
+pub fn execute_locale_gen(locale: &str) -> Result<()> {
+    let mut locale_gen_file = std::fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("/etc/locale.gen")?;
+    let locale = format!("{}\n", locale);
+    locale_gen_file.write_all(locale.as_bytes())?;
+    let output = Command::new("/usr/bin/locale-gen").output()?;
+    if !output.status.success() {
+        return Err(anyhow!(
+            "Failed to execute locale-gen: \n{}\n{}",
+            String::from_utf8_lossy(&output.stderr),
+            String::from_utf8_lossy(&output.stdout)
+        ));
+    }
+
+    Ok(())
+}
+
+#[cfg(not(feature = "is_retro"))]
+pub fn execute_locale_gen(_locale: &str) -> Result<()> {
     Ok(())
 }
 

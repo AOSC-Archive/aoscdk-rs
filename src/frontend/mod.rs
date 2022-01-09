@@ -267,8 +267,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         _ => true,
     })?;
     install::set_hostname(&config.hostname.unwrap())?;
+    let locale = config.locale.as_ref().unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
-    install::set_locale(config.locale.as_ref().unwrap())?;
+    install::execute_locale_gen(&locale)?;
+    install::set_locale(&locale)?;
     install::escape_chroot(escape_vector)?;
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path)?;
