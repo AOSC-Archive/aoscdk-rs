@@ -190,9 +190,12 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
 
     // Progress update
     loop {
+        let tarball_downloaded_size = counter.get() as f64;
+        let file_size = file_size as f64;
+        let count = (tarball_downloaded_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
             "Step 2 of 6: Downloading system release ...".to_string(),
-            counter.get() * 100 / file_size,
+            count,
         ))?;
         std::thread::sleep(refresh_interval);
         if let Ok(err) = error_channel_rx.try_recv() {
@@ -226,9 +229,12 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
         }
     }
     loop {
+        let tarball_unpack_size = counter.get() as f64;
+        let file_size = file_size as f64;
+        let count = (tarball_unpack_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
             "Step 4 of 6: Unpacking system release ...".to_string(),
-            counter.get() * 100 / file_size,
+            count,
         ))?;
         std::thread::sleep(refresh_interval);
         if extract_done.load(Ordering::SeqCst) {
@@ -283,7 +289,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
 }
 
 #[test]
-fn test_download() {
+fn test_download_amd64() {
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
