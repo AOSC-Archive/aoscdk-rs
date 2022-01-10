@@ -236,6 +236,8 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
     Ok(())
 }
 
+/// Runs locale-gen (dummy function for non-retro mode)
+/// Must be used in a chroot context
 #[cfg(not(feature = "is_retro"))]
 pub fn execute_locale_gen(_locale: &str) -> Result<()> {
     Ok(())

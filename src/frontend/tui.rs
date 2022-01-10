@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use cursive::views::{
     Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
-    ResizedView, ScrollView, SelectView, TextView,
+    ResizedView, ScrollView, SelectView, TextContent, TextView,
 };
 use cursive::{traits::*, utils::Counter};
 use cursive::{view::SizeConstraint, views::Button};
@@ -572,6 +572,8 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     let tc_copy = Rc::clone(&tc);
     let locales = install::get_locale_list().unwrap();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
+    let mut timezone_selected_status = TextView::new("Not set yet");
+    let status_text = Arc::new(timezone_selected_status.get_shared_content());
     let timezone_view = ListView::new()
         .child(
             "Timezone",
@@ -579,9 +581,15 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
                 let zoneinfo = install::get_zoneinfo_list().unwrap();
                 let city_clone = Rc::clone(&city_copy);
                 let continent_copy_copy = Rc::clone(&continent_copy);
-                s.add_layer(set_timezone(zoneinfo, city_clone, continent_copy_copy))
+                s.add_layer(set_timezone(
+                    zoneinfo,
+                    city_clone,
+                    continent_copy_copy,
+                    status_text.clone(),
+                ))
             }),
         )
+        .child("Timezone selected", timezone_selected_status.center())
         .child(
             "Locale",
             make_locale_list(locales)
@@ -643,6 +651,7 @@ fn set_timezone(
     zoneinfo: Vec<(String, Vec<String>)>,
     city_clone: Rc<RefCell<String>>,
     continent_copy_copy: Rc<RefCell<String>>,
+    status_text: Arc<TextContent>,
 ) -> Dialog {
     wrap_in_dialog(
         make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
@@ -652,6 +661,10 @@ fn set_timezone(
             let city_clone_clone = Rc::clone(&city_clone);
             let city_clone_3 = Rc::clone(&city_clone_clone);
             let continent_clone_3 = Rc::clone(&continent_copy_copy);
+            let status_text_copy = status_text.clone();
+            status_text_copy.set_content("");
+            status_text_copy.append(format!("{}/", c));
+            let status_text_copy_copy = status_text_copy.clone();
             continent_copy_copy.replace(c.to_string());
             s.pop_layer();
             s.add_layer(
@@ -663,6 +676,7 @@ fn set_timezone(
                             .with_all_str(citys.iter())
                             .on_submit(move |_, c: &String| {
                                 city_clone_clone.replace(c.to_string());
+                                status_text_copy.append(c.to_string());
                             })
                             .min_width(20),
                     ),
@@ -682,6 +696,7 @@ fn set_timezone(
                         zoneinfo_clone.clone(),
                         Rc::clone(&city_clone_3),
                         Rc::clone(&continent_clone_3),
+                        status_text_copy_copy.clone(),
                     ));
                 }),
             )
@@ -793,7 +808,6 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
     let config_clone = config.clone();
-    let config_clone_2 = config;
     let install_thread = thread::spawn(move || begin_install(tx, config_clone));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
@@ -806,7 +820,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            if let Some(partition) = config_clone_2.partition {
+            if let Some(partition) = config.partition {
                 if let Some(path) = partition.path.as_ref() {
                     install::umount_all(path);
                 }
