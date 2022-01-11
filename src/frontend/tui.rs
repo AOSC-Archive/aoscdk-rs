@@ -577,12 +577,12 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     let tc_copy = Rc::clone(&tc);
     let locales = install::get_locale_list().unwrap();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
-    let mut timezone_selected_status = TextView::new("Not set yet");
+    let mut timezone_selected_status = TextView::new("N/A");
     let status_text = Arc::new(timezone_selected_status.get_shared_content());
     let timezone_view = ListView::new()
         .child(
             "Timezone",
-            Button::new("set", move |s| {
+            Button::new("Set Timezone", move |s| {
                 let zoneinfo = install::get_zoneinfo_list().unwrap();
                 let city_clone = Rc::clone(&city_copy);
                 let continent_copy_copy = Rc::clone(&continent_copy);
@@ -594,7 +594,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
                 ))
             }),
         )
-        .child("Timezone selected", timezone_selected_status.center())
+        .child("Selected Timezone", timezone_selected_status.center())
         .child(
             "Locale",
             make_locale_list(locales)
