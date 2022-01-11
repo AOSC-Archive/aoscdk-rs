@@ -103,5 +103,5 @@ $ cargo test --nocapture
  Running unittests (target/debug/deps/aoscdk_rs-3b358921c017024b)
 
 // 而后执行如下命令进行调试
-# sudo target/debug/deps/aoscdk_rs-3b358921c017024b --nocapture
+# target/debug/deps/aoscdk_rs-3b358921c017024b --nocapture
 ```
