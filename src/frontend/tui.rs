@@ -608,11 +608,11 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
             SelectView::new()
                 .autojump()
                 .popup()
-                .with_all_str(vec!["UTC (Recommended)", "Local time (Like Windows)"])
+                .with_all_str(vec!["UTC (Recommended)", "Local time (like Windows)"])
                 .on_submit(move |_, c: &str| {
                     let selected = match c {
                         "UTC (Recommended)" => "UTC",
-                        "Local time (Like Windows)" => "RTC",
+                        "Local time (like Windows)" => "RTC",
                         _ => unreachable!(),
                     };
                     tc_copy.replace(selected.to_string());
