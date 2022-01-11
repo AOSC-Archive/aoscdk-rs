@@ -5,7 +5,7 @@ DeployKit 是 AOSC OS 系统安装工具。
 Deploykit 已经在 AOSC OS Livekit 中附带了，进入 AOSC OS Livekit 输入 `deploykit` 即可开始使用。若你只想使用 DeployKit（而不打算开发与调试），你应该不需要自行安装。
 
 ## 编译与使用
-***注意，在大多时候你只需要使用 AOSC OS Livekit 自带的 DeployKit 就好！***
+**注意，在大多时候你只需要使用 AOSC OS Livekit 自带的 DeployKit 就好！**
 
 若要自行编译使用 DeployKit（例如，你在其他发行版中想尝试 deploykit），你需要自行安装其依赖再编译，依赖如下：
 
