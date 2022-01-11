@@ -1,11 +1,15 @@
 use crate::{
-    disks, install::{self, umount_all},
+    disks,
+    install::{self, umount_all},
     network::{self, Mirror, VariantEntry},
 };
 use anyhow::Result;
-use cursive::views::{
-    Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar, RadioGroup,
-    ResizedView, ScrollView, SelectView, TextContent, TextView,
+use cursive::{
+    event::Event,
+    views::{
+        Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar,
+        RadioGroup, ResizedView, ScrollView, SelectView, TextContent, TextView,
+    },
 };
 use cursive::{traits::*, utils::Counter};
 use cursive::{view::SizeConstraint, views::Button};
@@ -13,11 +17,11 @@ use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use number_prefix::NumberPrefix;
-use tempfile::TempDir;
 use std::process::Command;
 use std::rc::Rc;
 use std::{cell::RefCell, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
+use tempfile::TempDir;
 
 use super::{begin_install, InstallConfig};
 
@@ -787,6 +791,12 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
+    siv.clear_global_callbacks(Event::Exit);
+    siv.clear_global_callbacks(Event::CtrlChar('c'));
+    ctrlc::set_handler(|| {
+        return;
+    })
+    .expect("Error setting SIGINT handler.");
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
