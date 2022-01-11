@@ -49,7 +49,11 @@ struct InstallConfig {
     tc: Option<Arc<String>>,
 }
 
-fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Result<()> {
+fn begin_install(
+    sender: Sender<InstallProgress>,
+    config: InstallConfig,
+    tempdir: PathBuf,
+) -> Result<()> {
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
@@ -66,7 +70,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
 
     let partition = &config.partition.unwrap();
     disks::format_partition(partition)?;
-    let mount_path = install::auto_mount_root_path(partition)?;
+    let mount_path = install::auto_mount_root_path(tempdir, partition)?;
     let mount_path_copy = mount_path.clone();
     let mut efi_path = mount_path.clone();
     if disks::is_efi_booted() {
@@ -95,7 +99,6 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
-    let error_channel_tx_copy_2 = error_channel_tx;
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -183,7 +186,7 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
             let (buf, reader_size) = rx;
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
                 let e = anyhow!("Failed to write hasher! {}", e);
-                send_error!(error_channel_tx_copy_2, e);
+                send_error!(error_channel_tx, e);
             }
         }
     });
@@ -289,8 +292,10 @@ fn begin_install(sender: Sender<InstallProgress>, config: InstallConfig) -> Resu
 
 #[test]
 fn test_download_amd64() {
+    use tempfile::TempDir;
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
-    begin_install(tx, config).unwrap();
+    let tempdir = TempDir::new().unwrap().into_path();
+    begin_install(tx, config, tempdir).unwrap();
 }

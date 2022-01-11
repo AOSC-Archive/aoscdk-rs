@@ -11,9 +11,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
 
-use tempfile::TempDir;
-
-use crate::disks::Partition;
+use crate::disks::{is_efi_booted, Partition};
 use crate::parser::{list_zoneinfo, locale_names};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
@@ -92,9 +90,7 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
 }
 
 /// Mount the filesystem to a temporary directory
-pub fn auto_mount_root_path(partition: &Partition) -> Result<PathBuf> {
-    let tmp_dir = TempDir::new()?;
-    let tmp_path = tmp_dir.into_path();
+pub fn auto_mount_root_path(tmp_path: PathBuf, partition: &Partition) -> Result<PathBuf> {
     mount_root_path(partition, &tmp_path)?;
 
     Ok(tmp_path)
@@ -385,11 +381,15 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
 }
 
 /// Run umount -R
-pub fn umount_all(path: &Path) {
-    Command::new("umount")
-        .args(vec!["-R", &path.to_string_lossy()])
-        .output()
-        .ok();
+/// Test in Livekit only
+pub fn umount_all(mount_path: &Path) -> Result<()> {
+    let efi_path = mount_path.join("efi");
+    if is_efi_booted() {
+        umount_root_path(&efi_path).ok();
+    }
+    umount_root_path(mount_path).ok();
+
+    Ok(())
 }
 
 #[test]

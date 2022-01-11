@@ -1,5 +1,5 @@
 use crate::{
-    disks, install,
+    disks, install::{self, umount_all},
     network::{self, Mirror, VariantEntry},
 };
 use anyhow::Result;
@@ -13,6 +13,7 @@ use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use number_prefix::NumberPrefix;
+use tempfile::TempDir;
 use std::process::Command;
 use std::rc::Rc;
 use std::{cell::RefCell, sync::Arc, thread};
@@ -808,7 +809,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
     let config_clone = config.clone();
-    let install_thread = thread::spawn(move || begin_install(tx, config_clone));
+    let tempdir = TempDir::new().unwrap().into_path();
+    let tempdir_copy = tempdir.clone();
+    let install_thread = thread::spawn(move || begin_install(tx, config_clone, tempdir_copy));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
@@ -820,11 +823,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            if let Some(partition) = config.partition {
-                if let Some(path) = partition.path.as_ref() {
-                    install::umount_all(path);
-                }
-            }
+            umount_all(&tempdir).ok();
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(s, &err.to_string());
