@@ -1,13 +1,19 @@
-# AOSC OS DeployKit
-DeployKit 是 AOSC OS 系统安装工具。
+# DeployKit
+
+DeployKit 是 AOSC OS 的系统安装工具。
 
 ## 如何使用
-Deploykit 已经在 AOSC OS Livekit 中附带了，进入 AOSC OS Livekit 输入 `deploykit` 即可开始使用。若你只想使用 DeployKit（而不打算开发与调试），你应该不需要自行安装。
+
+AOSC OS LiveKit 中预装 DeployKit。进入 AOSC OS LiveKit 输入 `deploykit` 命令
+即可开始使用。若您只希望使用 DeployKit（而不打算开发与调试），您应该不需要
+自行安装。
 
 ## 编译与使用
-**注意，在大多时候你只需要使用 AOSC OS Livekit 自带的 DeployKit 就好！**
 
-若要自行编译使用 DeployKit（例如，你在其他发行版中想尝试 deploykit），你需要自行安装其依赖再编译，依赖如下：
+**注意，安装 AOSC OS 只需使用 LiveKit 中自带的 DeployKit！**
+
+若要自行编译使用 DeployKit（比如您想在其他发行版尝试 DeployKit），您需要在
+编译前自行安装以下依赖：
 
 - OpenSSL 1.1
 - Glibc
@@ -15,57 +21,66 @@ Deploykit 已经在 AOSC OS Livekit 中附带了，进入 AOSC OS Livekit 输入
 - ncurses
 - pkg-config
 - libparted
-- Rust w/ Cargo
+- Rust + Cargo
 
-若你在 AOSC OS 下，请使用以下命令安装其依赖：
+若您使用的是 AOSC OS，请使用如下命令安装其依赖：
 
 ```
 # apt install llvm pkg-config gcc parted ncurses openssl
 ```
 
-之后再编译：
+而后运行如下命令编译：
 
 ```
 $ cargo build --release
 ```
 
 ## Retro
-若要在一些较老的架构下运行，你可能需要打开 `is_retro` 特性：
+
+若要编译 DeployKit 的 AOSC OS/Retro 版本，请打开 `is_retro` 特性：
 
 ```
 $ cargo build --release --features is_retro
 ```
 
 ## 调试
-若要调试 DeployKit，你可能需要做：
 
-1. 创建一个用于安装系统的硬盘镜像（img）：
+欲调试 DeployKit，请先完成如下步骤：
+
+1. 创建一个用于安装系统的硬盘镜像：
 
 ```
-// 确保你的环境已经加载了 loop 模块，若失败，你可能需要重新编译内核。
-# modprobe loop 
-// 创建一个 35GB 的硬盘镜像文件（为了能够正常安装 AOSC OS KDE tarball），起名为 test.img:
+// 确保您已加载 loop 模块，若如下命令出错，您可能需要重新编译内核
+# modprobe loop
+
+// 创建一个 35GiB 的硬盘镜像文件（以正常安装 AOSC OS KDE），起名为 test.img
 $ dd if=/dev/zero of=/path/to/aoscdk-rs-src/test.img bs=1M count=35840 status=progress
+
 // 使用 losetup 挂载镜像至 /dev/loop0
 # losetup /dev/loop0 /path/to/aoscdk-rs-src/test.img
-// 分区，分区一为主分区，若你的机器使用 UEFI 启动，则分区二为 EFI 分区
+
+// 分区：分区一为主分区，若你的机器使用 UEFI 启动，则分区二为 EFI 系统分区 (ESP)
 # cfdisk /dev/loop0
+
 // 刷新分区表
 # partprobe /dev/loop0
 ```
 
-2. 编译 debug 版本的 deploykit：
+2. 编译 DeployKit 的调试版本：
 
 ```
-// 编译 debug 版 deploykit，注意不要加 --release
+// 编译调试版 DeployKit，注意不要加 --release
 $ cargo build
-// 运行
-# /path/to/aoscdk-rs-src/target/target/debug/aoscdk-rs
+
+// 启动调试版 DeployKit
+# /path/to/aoscdk-rs-src/target/debug/aoscdk-rs
 ```
 
-**在此建议使用 I/O 较快的机器调试 DeployKit，因为 I/O 较慢的机器调试 DeployKit 是一种折磨！**
+**在此建议使用性能较好的机器调试 DeployKit，因为使用性能较低的机器调试
+DeployKit 是一种折磨！**
 
-若需要输出日志到终端，但 TUI 显示消息比较困难，你可以借助 test 函数，像 `frontend/mod` 的一个例子：
+若需要输出日志到终端，但 TUI 显示消息比较困难，您可以借助 test 函数，
+如 `frontend/mod` 中一例：
 
 ```Rust
 #[test]
@@ -83,8 +98,10 @@ fn test_download_amd64() {
 
 ```
 $ cargo test --nocapture
-// 若你的测试需要管理员权限，观察输出，看到类似这样的信息：
+
+// 观察输出，您应该会看到类似这样的信息
  Running unittests (target/debug/deps/aoscdk_rs-3b358921c017024b)
-// 再执行
+
+// 而后执行如下命令进行调试
 # sudo target/debug/deps/aoscdk_rs-3b358921c017024b --nocapture
 ```
