@@ -793,10 +793,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
-    ctrlc::set_handler(|| {
-        return;
-    })
-    .expect("Error setting SIGINT handler.");
+    ctrlc::set_handler(|| {}).expect("Error setting SIGINT handler.");
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
@@ -818,10 +815,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
-    let config_clone = config.clone();
     let tempdir = TempDir::new().unwrap().into_path();
     let tempdir_copy = tempdir.clone();
-    let install_thread = thread::spawn(move || begin_install(tx, config_clone, tempdir_copy));
+    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
