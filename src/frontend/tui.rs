@@ -604,7 +604,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20),
         )
         .child(
-            "Set UTC/RTC",
+            "RTC Timezone",
             SelectView::new()
                 .autojump()
                 .popup()
