@@ -803,7 +803,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
-                "Please wait while the installation is taking place.",
+                "Please wait while the installation takes place. This may take minutes or in extreme cases, hours, depending on your device's performance.",
             ))
             .child(DummyView {})
             .child(ProgressBar::new().max(100).with_value(counter))
