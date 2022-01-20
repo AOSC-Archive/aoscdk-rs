@@ -17,7 +17,7 @@ use crate::{
     network,
 };
 use anyhow::{anyhow, Result};
-use cursive::utils::{Counter, ProgressReader};
+use cursive::utils::Counter;
 use log::info;
 use nix::fcntl::FallocateFlags;
 use rand::{thread_rng, Rng};
@@ -239,7 +239,7 @@ fn begin_install(
                 send_error!(error_channel_tx_copy, e);
             }
         };
-        match network::download_file(url) {
+        match network::download_file(url.clone()) {
             Ok(mut reader) => {
                 info!("Allocating tarball file: {:?}", tarball_file);
                 if let Err(e) = nix::fcntl::fallocate(
@@ -299,20 +299,18 @@ fn begin_install(
         }
         counter_clone.set(0);
 
-        info!("Trying open tarball file: {:?}", tarball_file);
-        match std::fs::File::open(tarball_file.clone()) {
-            Ok(file) => output = file,
-            Err(e) => {
-                let e = anyhow!("Installer failed to read system release:\n\n{}", e);
-                send_error!(error_channel_tx_copy, e);
-            }
-        }
-
-        let reader = ProgressReader::new(counter_clone, output);
-
         info!("Trying extract tarball file: {:?}", tarball_file);
-        if let Err(e) = install::extract_tar_xz(reader, &mount_path) {
-            let e = anyhow!("Installer failed to unpack system release:\n\n{}", e);
+        if let Err(e) = install::extract_file(
+            file_size as f64,
+            url,
+            &tarball_file,
+            &mount_path,
+            counter_clone,
+        ) {
+            let e = anyhow!(
+                "Installer failed to unpack system release:\n\n{}",
+                e
+            );
             send_error!(error_channel_tx_copy, e);
         }
 

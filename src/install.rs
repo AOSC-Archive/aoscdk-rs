@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
 use log::info;
+use cursive::utils::ProgressReader;
 use nix::dir::Dir;
 use nix::errno::Errno;
 use nix::fcntl::{FallocateFlags, OFlag};
@@ -58,6 +59,11 @@ fn no_need_to_run_info(s: &str, str_is_retro: bool) {
     }
 }
 
+pub enum ExtractFileType {
+    Tar,
+    Squashfs,
+}
+
 fn read_system_locale_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
     let mut data: Vec<u8> = Vec::new();
@@ -106,7 +112,7 @@ pub fn get_zoneinfo_list() -> Result<Vec<String>> {
 }
 
 /// Extract the given .tar.xz stream and preserve all the file attributes
-pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
+fn extract_tar_xz<P: AsRef<Path>, R: Read>(reader: R, path: P) -> Result<()> {
     let decompress = xz2::read::XzDecoder::new(reader);
     let mut tar_processor = tar::Archive::new(decompress);
     tar_processor.set_unpack_xattrs(true);
@@ -115,6 +121,45 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
     tar_processor.unpack(path)?;
 
     Ok(())
+}
+
+/// Extract the .squashfs and callback download progress
+fn extract_squashfs<P: AsRef<Path>>(
+    file_size: f64,
+    archive: P,
+    path: P,
+    counter: cursive::utils::Counter,
+) -> Result<()> {
+    Ok(distinst_squashfs::extract(archive, path, move |count| {
+        counter.set((file_size * count as f64 / 100.0) as usize);
+    })?)
+}
+
+/// Extract .tar.xz or .squashfs
+pub fn extract_file(
+    file_size: f64,
+    url: String,
+    archive_path: &Path,
+    extract_path: &Path,
+    counter: cursive::utils::Counter,
+) -> Result<()> {
+    let extract_file_type = if url.ends_with(".squashfs") {
+        ExtractFileType::Squashfs
+    } else if url.ends_with(".tar.xz") {
+        ExtractFileType::Tar
+    } else {
+        return Err(anyhow!("Unsupport format!"));
+    };
+
+    match extract_file_type {
+        ExtractFileType::Tar => extract_tar_xz(
+            ProgressReader::new(counter, std::fs::File::open(archive_path)?),
+            extract_path,
+        ),
+        ExtractFileType::Squashfs => {
+            extract_squashfs(file_size, archive_path, extract_path, counter)
+        }
+    }
 }
 
 /// Mount the filesystem to a temporary directory
