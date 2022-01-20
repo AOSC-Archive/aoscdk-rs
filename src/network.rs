@@ -5,6 +5,8 @@ use sha2::{Digest, Sha256};
 use std::{
     env::consts::ARCH,
     io::Write,
+    sync::mpsc,
+    thread,
     time::{Duration, Instant},
 };
 
@@ -103,12 +105,20 @@ fn get_arch_name() -> Option<&'static str> {
     }
 }
 
-pub fn download_file(url: &str) -> Result<reqwest::blocking::Response> {
+pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
     let client = reqwest::blocking::ClientBuilder::new()
         .user_agent(DEPLOYKIT_USER_AGENT!())
         .build()?;
-    let resp = client.get(url).send()?;
-    let resp = resp.error_for_status()?;
+    let (tx, rx) = mpsc::channel();
+    let worker = thread::spawn(move || -> Result<()> {
+        let resp = client.get(url).send()?;
+        let resp = resp.error_for_status()?;
+        tx.send(resp).unwrap();
+
+        Ok(())
+    });
+    worker.join().unwrap()?;
+    let resp = rx.recv_timeout(Duration::from_secs(30))?;
 
     Ok(resp)
 }
