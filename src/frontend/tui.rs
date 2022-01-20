@@ -764,7 +764,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                 config.mirror.unwrap().name,
                 config.user.unwrap(),
                 config.locale.unwrap(),
-                format!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
+                format_args!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
                 config.tc.unwrap()
             )),
             "Confirmation",

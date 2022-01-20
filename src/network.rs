@@ -118,16 +118,9 @@ pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
         Ok(())
     });
     worker.join().unwrap()?;
-    let resp;
-    match rx.recv_timeout(Duration::from_secs(30)) {
-        Ok(r) => resp = r,
-        Err(e) => {
-            return Err(anyhow!(
-                "Network response timeout! error msg: {}",
-                e.to_string()
-            ))
-        }
-    };
+    let resp = rx
+        .recv_timeout(Duration::from_secs(30))
+        .map_err(|e| anyhow!("Network response timeout! error msg: {}", e.to_string()))?;
 
     Ok(resp)
 }
