@@ -825,7 +825,10 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
                     counter_clone.set(pct);
                     status_text.set_content(msg);
                 }
-                super::InstallProgress::Finished => cb_sink.send(Box::new(show_finished)).unwrap(),
+                super::InstallProgress::Finished => {
+                    cb_sink.send(Box::new(show_finished)).unwrap();
+                    return;
+                },
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
