@@ -260,7 +260,7 @@ pub fn gen_ssh_key() -> Result<()> {
     let output = Command::new("ssh-keygen").arg("-A").output()?;
     if !output.status.success() {
         return Err(anyhow!(
-            "Failed to execute ssh-agent: \n{}\n{}",
+            "Failed to execute ssh-keygen: \n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         ));
