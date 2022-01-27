@@ -246,6 +246,29 @@ pub fn execute_dracut() -> Result<()> {
     Ok(())
 }
 
+/// Runs ssh-keygen -A (dummy function for non-retro mode)
+/// Must be used in a chroot context
+#[cfg(not(feature = "is_retro"))]
+pub fn gen_ssh_key() -> Result<()> {
+    Ok(())
+}
+
+/// Runs ssh-keygen -A
+/// Must be used in a chroot context
+#[cfg(feature = "is_retro")]
+pub fn gen_ssh_key() -> Result<()> {
+    let output = Command::new("ssh-agent").arg("-A").output()?;
+    if !output.status.success() {
+        return Err(anyhow!(
+            "Failed to execute ssh-agent: \n{}\n{}",
+            String::from_utf8_lossy(&output.stderr),
+            String::from_utf8_lossy(&output.stdout)
+        ));
+    }
+
+    Ok(())
+}
+
 /// Sets hostname in the guest environment
 /// Must be used in a chroot context
 pub fn set_hostname(name: &str) -> Result<()> {
