@@ -257,7 +257,7 @@ pub fn gen_ssh_key() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn gen_ssh_key() -> Result<()> {
-    let output = Command::new("ssh-agent").arg("-A").output()?;
+    let output = Command::new("ssh-keygen").arg("-A").output()?;
     if !output.status.success() {
         return Err(anyhow!(
             "Failed to execute ssh-agent: \n{}\n{}",
