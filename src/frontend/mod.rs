@@ -275,7 +275,7 @@ fn begin_install(
     gen_ssh_key_work.join().unwrap();
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 7 of 7: Verifying system release ...".to_string(),
+            "Step 7 of 7: Generating OpenSSH host keys ...".to_string(),
             fake_counter,
         ))?;
         if let Ok(result) = gen_ssh_key_work_rx.try_recv() {
