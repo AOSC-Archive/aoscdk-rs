@@ -272,7 +272,6 @@ fn begin_install(
         gen_ssh_key_work_tx.send(result).unwrap();
     });
     let mut fake_counter = 0;
-    gen_ssh_key_work.join().unwrap();
     loop {
         sender.send(InstallProgress::Pending(
             "Step 7 of 7: Generating OpenSSH host keys ...".to_string(),
@@ -287,6 +286,7 @@ fn begin_install(
             fake_counter = 0;
         }
     }
+    gen_ssh_key_work.join().unwrap();
     install::set_zoneinfo(
         format!("{}/{}", &config.continent.unwrap(), &config.city.unwrap()).as_str(),
     )?;
