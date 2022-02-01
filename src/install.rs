@@ -416,7 +416,7 @@ pub fn umount_all(mount_path: &Path, root_fd: Dir) -> Result<()> {
     Ok(())
 }
 
-pub fn bye_chroot(root_fd: Dir) -> Result<()> {
+fn bye_chroot(root_fd: Dir) -> Result<()> {
     let output = Command::new("systemd-detect-virt").arg("-c").arg("-r").output()?;
     if output.status.success() {
         escape_chroot(root_fd)?;
