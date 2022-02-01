@@ -109,51 +109,55 @@ fn begin_install(
                 send_error!(error_channel_tx_copy, e);
             }
         }
-        if let Ok(mut reader) = network::download_file(url) {
-            if let Err(e) = nix::fcntl::fallocate(
-                output.as_raw_fd(),
-                FallocateFlags::empty(),
-                0,
-                file_size.try_into().unwrap(),
-            ) {
-                let e = anyhow!("Failed to create a file using fallocate! {}", e);
-                send_error!(error_channel_tx_copy, e);
-            }
-            if let Err(e) = output.flush() {
-                let e = anyhow!("Failed to fallocate flush! {}", e);
-                send_error!(error_channel_tx_copy, e);
-            }
-            let mut tarball_size = 0;
-            loop {
-                let mut buf = vec![0; 4096];
-                let reader_size;
-                match reader.read(&mut buf[..]) {
-                    Ok(size) => reader_size = size,
-                    Err(e) => {
-                        send_error!(error_channel_tx_copy, e);
-                    }
-                };
-                tarball_size += reader_size;
-                if let Err(e) = output.write_all(&buf[..reader_size]) {
-                    let e = anyhow!("Failed to write file! {}", e);
+        match network::download_file(url) {
+            Ok(mut reader) => {
+                if let Err(e) = nix::fcntl::fallocate(
+                    output.as_raw_fd(),
+                    FallocateFlags::empty(),
+                    0,
+                    file_size.try_into().unwrap(),
+                ) {
+                    let e = anyhow!("Failed to create a file using fallocate! {}", e);
                     send_error!(error_channel_tx_copy, e);
                 }
-                sha256_work_tx.send((buf, reader_size)).unwrap();
-                counter_clone.set(tarball_size);
-                if tarball_size == file_size {
-                    download_done_copy.fetch_or(true, Ordering::SeqCst);
-                    // dbg!("download complete");
-                    break;
+                if let Err(e) = output.flush() {
+                    let e = anyhow!("Failed to fallocate flush! {}", e);
+                    send_error!(error_channel_tx_copy, e);
+                }
+                let mut tarball_size = 0;
+                loop {
+                    let mut buf = vec![0; 4096];
+                    let reader_size;
+                    match reader.read(&mut buf[..]) {
+                        Ok(size) => reader_size = size,
+                        Err(e) => {
+                            send_error!(error_channel_tx_copy, e);
+                        }
+                    };
+                    tarball_size += reader_size;
+                    if let Err(e) = output.write_all(&buf[..reader_size]) {
+                        let e = anyhow!("Failed to write file! {}", e);
+                        send_error!(error_channel_tx_copy, e);
+                    }
+                    sha256_work_tx.send((buf, reader_size)).unwrap();
+                    counter_clone.set(tarball_size);
+                    if tarball_size == file_size {
+                        download_done_copy.fetch_or(true, Ordering::SeqCst);
+                        // dbg!("download complete");
+                        break;
+                    }
+                }
+                drop(sha256_work_tx);
+                loop {
+                    if hasher_done.load(Ordering::SeqCst) {
+                        break;
+                    }
                 }
             }
-            drop(sha256_work_tx);
-            loop {
-                if hasher_done.load(Ordering::SeqCst) {
-                    break;
-                }
+            Err(e) => {
+                let e = anyhow!("Failed to Download tarball!, why: {}", e);
+                send_error!(error_channel_tx_copy, e);
             }
-        } else {
-            return;
         }
         counter_clone.set(0);
         match std::fs::File::open(tarball_file.clone()) {
@@ -315,6 +319,16 @@ fn begin_install(
 fn test_download_amd64() {
     use tempfile::TempDir;
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
+    let config = serde_json::from_str(json).unwrap();
+    let (tx, _rx) = std::sync::mpsc::channel();
+    let tempdir = TempDir::new().unwrap().into_path();
+    begin_install(tx, config, tempdir).unwrap();
+}
+
+#[test]
+fn test_download_i486() {
+    use tempfile::TempDir;
+    let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-i486/base/aosc-os_base_20200620.1_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
