@@ -405,15 +405,13 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
 
 /// Run umount -R
 /// Test in Livekit only
-pub fn umount_all(mount_path: &Path, root_fd: Dir) -> Result<()> {
+pub fn umount_all(mount_path: &Path, root_fd: Dir) {
     bye_chroot(root_fd).ok();
     let efi_path = mount_path.join("efi");
     if is_efi_booted() {
         umount_root_path(&efi_path).ok();
     }
     umount_root_path(mount_path).ok();
-
-    Ok(())
 }
 
 fn bye_chroot(root_fd: Dir) -> Result<()> {

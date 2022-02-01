@@ -833,7 +833,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            umount_all(&tempdir, root_fd).ok();
+            umount_all(&tempdir, root_fd);
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(s, &err.to_string());
