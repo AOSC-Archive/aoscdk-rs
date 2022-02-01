@@ -815,8 +815,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
-    let tempdir = TempDir::new().unwrap().into_path();
+    let tempdir = TempDir::new().expect("Unable to create temporary directory").into_path();
     let tempdir_copy = tempdir.clone();
+    let root_fd = install::get_dir_fd(PathBuf::from("/")).expect("Get Dir fd / failed!");
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
@@ -828,11 +829,11 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
                 super::InstallProgress::Finished => {
                     cb_sink.send(Box::new(show_finished)).unwrap();
                     return;
-                },
+                }
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            umount_all(&tempdir).ok();
+            umount_all(&tempdir, root_fd).ok();
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(s, &err.to_string());
