@@ -281,6 +281,7 @@ fn begin_install(
             "Step 7 of 7: Generating OpenSSH host keys ...".to_string(),
             fake_counter,
         ))?;
+        std::thread::sleep(refresh_interval);
         if let Ok(result) = gen_ssh_key_work_rx.try_recv() {
             result?;
             break;
