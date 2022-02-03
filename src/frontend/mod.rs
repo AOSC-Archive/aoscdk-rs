@@ -64,7 +64,7 @@ fn begin_install(
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let hasher_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     sender.send(InstallProgress::Pending(
-        "Step 1 of 7: Formatting partitions ...".to_string(),
+        "Step 1 of 8: Formatting partitions ...".to_string(),
         0,
     ))?;
 
@@ -201,7 +201,7 @@ fn begin_install(
         let tarball_downloaded_size = counter.get() as f64;
         let count = (tarball_downloaded_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
-            "Step 2 of 7: Downloading system release ...".to_string(),
+            "Step 2 of 8: Downloading system release ...".to_string(),
             count,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -215,7 +215,7 @@ fn begin_install(
     let mut fake_counter = 0;
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 3 of 7: Verifying system release ...".to_string(),
+            "Step 3 of 8: Verifying system release ...".to_string(),
             fake_counter,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -239,7 +239,7 @@ fn begin_install(
         let tarball_unpack_size = counter.get() as f64;
         let count = (tarball_unpack_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
-            "Step 4 of 7: Unpacking system release ...".to_string(),
+            "Step 4 of 8: Unpacking system release ...".to_string(),
             count,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -253,7 +253,7 @@ fn begin_install(
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
-        "Step 5 of 7: Generating initramfs (initial RAM filesystem) ...".to_string(),
+        "Step 5 of 8: Generating initramfs (initial RAM filesystem) ...".to_string(),
         fake_counter,
     ))?;
     let escape_vector = install::get_dir_fd(PathBuf::from("/"))?;
@@ -261,10 +261,9 @@ fn begin_install(
     install::execute_dracut()?;
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
-        "Step 6 of 7: Installing and configuring GRUB bootloader ...".to_string(),
+        "Step 6 of 8: Installing and configuring GRUB bootloader ...".to_string(),
         fake_counter,
     ))?;
-
     if disks::is_efi_booted() {
         install::execute_grub_install(None)?;
     } else {
@@ -278,7 +277,7 @@ fn begin_install(
     let mut fake_counter = 0;
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 7 of 7: Generating OpenSSH host keys ...".to_string(),
+            "Step 7 of 8: Generating OpenSSH host keys ...".to_string(),
             fake_counter,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -292,6 +291,11 @@ fn begin_install(
         }
     }
     gen_ssh_key_work.join().unwrap();
+    let fake_counter: usize = rng.gen_range(0..100);
+    sender.send(InstallProgress::Pending(
+        "Step 8 of 8: Finalising installation ...".to_string(),
+        fake_counter,
+    ))?;
     install::set_zoneinfo(
         format!("{}/{}", &config.continent.unwrap(), &config.city.unwrap()).as_str(),
     )?;
