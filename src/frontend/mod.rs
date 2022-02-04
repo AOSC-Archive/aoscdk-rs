@@ -323,3 +323,13 @@ fn test_download_i486_404() {
     let tempdir = TempDir::new().unwrap().into_path();
     assert!(begin_install(tx, config, tempdir).is_err());
 }
+
+#[test]
+fn test_download_i486() {
+    use tempfile::TempDir;
+    let json = r#"{"variant":{"name":"Base","size":97613332,"install_size":448060928,"date":"20220128","sha256sum":"2b691be7f14c4948fac7e1533bd5a19e78ee72640f666b64f2c1fae2216ab708","url":"os-i486/base/aosc-os_base_20220128_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"C.UTF-8","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
+    let config = serde_json::from_str(json).unwrap();
+    let (tx, _rx) = std::sync::mpsc::channel();
+    let tempdir = TempDir::new().unwrap().into_path();
+    assert!(begin_install(tx, config, tempdir).is_ok());
+}
