@@ -214,12 +214,31 @@ pub fn execute_dracut() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn execute_locale_gen(locale: &str) -> Result<()> {
-    let mut locale_gen_file = std::fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open("/etc/locale.gen")?;
-    let locale = format!("{}\n", locale);
-    locale_gen_file.write_all(locale.as_bytes())?;
+    let mut locale_gen_file = std::fs::File::open("/etc/locale.gen")?;
+    let mut buf = String::new();
+    locale_gen_file.read_to_string(&mut buf)?;
+    let mut locale_gen_list = buf.split("\n").map(|x| x.into()).collect::<Vec<String>>();
+    let index = locale_gen_list
+        .iter()
+        .position(|x| x.contains(locale))
+        .ok_or_else(|| anyhow!("Cannot get this locale from list!"))?;
+    let selected_locale = &locale_gen_list[index];
+    let split_selected_locale = selected_locale.split_once(".");
+    if split_selected_locale.is_some() {
+        locale_gen_list[index] = locale_gen_list[index].replace("#", "");
+    } else {
+        let match_index_list = locale_gen_list
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| x.contains(locale))
+            .map(|(index, _)| index)
+            .collect::<Vec<_>>();
+        for i in match_index_list {
+            locale_gen_list[i] = locale_gen_list[i].replace("#", "");
+        }
+    }
+    let locale_gen_str = locale_gen_list.join("\n");
+    locale_gen_file.write_all(locale_gen_str.as_bytes())?;
     let output = Command::new("/usr/bin/locale-gen").output()?;
     if !output.status.success() {
         return Err(anyhow!(
