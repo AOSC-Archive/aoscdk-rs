@@ -333,5 +333,5 @@ fn test_download_i486() {
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    begin_install(tx, config, tempdir).unwrap();
+    assert!(begin_install(tx, config, tempdir).is_ok());
 }

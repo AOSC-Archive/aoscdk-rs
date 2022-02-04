@@ -214,7 +214,7 @@ pub fn execute_dracut() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn execute_locale_gen(locale: &str) -> Result<()> {
-    let mut locale_gen_file = std::fs::File::open("/etc/locale.gen")?;
+    let mut locale_gen_file = std::fs::OpenOptions::new().read(true).write(true).open("/etc/locale.gen")?;
     let mut buf = String::new();
     locale_gen_file.read_to_string(&mut buf)?;
     let mut locale_gen_list = buf.split("\n").map(|x| x.into()).collect::<Vec<String>>();
