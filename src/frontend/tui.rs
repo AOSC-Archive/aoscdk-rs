@@ -815,7 +815,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
-    let tempdir = TempDir::new().expect("Unable to create temporary directory").into_path();
+    let tempdir = TempDir::new()
+        .expect("Unable to create temporary directory")
+        .into_path();
     let tempdir_copy = tempdir.clone();
     let root_fd = install::get_dir_fd(PathBuf::from("/"));
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));

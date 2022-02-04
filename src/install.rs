@@ -5,7 +5,7 @@ use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
-use std::io::{prelude::*, SeekFrom};
+use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -214,6 +214,7 @@ pub fn execute_dracut() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn execute_locale_gen(locale: &str) -> Result<()> {
+    use std::io::SeekFrom;
     let mut locale_gen_file = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
