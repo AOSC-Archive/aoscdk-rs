@@ -110,17 +110,15 @@ pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
         .user_agent(DEPLOYKIT_USER_AGENT!())
         .build()?;
     let (tx, rx) = mpsc::channel();
-    let worker = thread::spawn(move || -> Result<()> {
-        let resp = client.get(url).send()?;
-        let resp = resp.error_for_status()?;
+    let worker = thread::spawn(move || {
+        let resp = client.get(url).send();
         tx.send(resp).unwrap();
-
-        Ok(())
     });
-    worker.join().unwrap()?;
-    let resp = rx
+    worker.join().unwrap();
+    let resp_result = rx
         .recv_timeout(Duration::from_secs(30))
         .map_err(|e| anyhow!("Network response timeout! error msg: {}", e.to_string()))?;
+    let resp = resp_result?.error_for_status()?;
 
     Ok(resp)
 }
