@@ -5,7 +5,7 @@ use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
-use std::io::prelude::*;
+use std::io::{prelude::*, SeekFrom};
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -241,6 +241,7 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
         }
     }
     let locale_gen_str = locale_gen_list.join("\n");
+    locale_gen_file.seek(SeekFrom::Start(0))?;
     locale_gen_file.write_all(locale_gen_str.as_bytes())?;
     let output = Command::new("/usr/bin/locale-gen").output()?;
     if !output.status.success() {
