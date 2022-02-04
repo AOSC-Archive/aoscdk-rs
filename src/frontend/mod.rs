@@ -304,6 +304,7 @@ fn begin_install(
     Ok(())
 }
 
+#[cfg(all(not(feature = "is_retro"), target_arch = "x86_64"))]
 #[test]
 fn test_download_amd64() {
     use tempfile::TempDir;
@@ -324,6 +325,7 @@ fn test_download_i486_404() {
     assert!(begin_install(tx, config, tempdir).is_err());
 }
 
+#[cfg(all(feature = "is_retro", target_arch = "x86"))]
 #[test]
 fn test_download_i486() {
     use tempfile::TempDir;
@@ -331,5 +333,5 @@ fn test_download_i486() {
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir).is_ok());
+    begin_install(tx, config, tempdir).unwrap();
 }
