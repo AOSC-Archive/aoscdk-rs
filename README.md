@@ -23,12 +23,14 @@ different distribution, please install the following dependencies:
 - pkg-config
 - libparted
 - Rust + Cargo
+- unsquashfs (from squash-tools)
 
 If you are using AOSC OS, please install the dependencies with the following
 command:
 
 ```
-# apt install llvm pkg-config gcc parted ncurses openssl
+# apt install llvm pkg-config gcc parted ncurses openssl squashfs-tools
+
 ```
 
 And run the following command to build DeployKit:

@@ -22,11 +22,12 @@ AOSC OS LiveKit 中预装 DeployKit。进入 AOSC OS LiveKit 输入 `deploykit` 
 - pkg-config
 - libparted
 - Rust + Cargo
+- unsquashfs (from squash-tools)
 
 若您使用的是 AOSC OS，请使用如下命令安装其依赖：
 
 ```
-# apt install llvm pkg-config gcc parted ncurses openssl
+# apt install llvm pkg-config gcc parted ncurses openssl squashfs-tools
 ```
 
 而后运行如下命令编译：
