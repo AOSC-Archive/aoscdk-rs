@@ -269,28 +269,12 @@ fn begin_install(
     } else {
         install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()))?;
     };
-    let (gen_ssh_key_work_tx, gen_ssh_key_work_rx) = std::sync::mpsc::channel();
-    let gen_ssh_key_work = thread::spawn(move || {
-        let result = install::gen_ssh_key();
-        gen_ssh_key_work_tx.send(result).unwrap();
-    });
-    let mut fake_counter = 0;
-    loop {
-        sender.send(InstallProgress::Pending(
-            "Step 7 of 8: Generating OpenSSH host keys ...".to_string(),
-            fake_counter,
-        ))?;
-        std::thread::sleep(refresh_interval);
-        if let Ok(result) = gen_ssh_key_work_rx.try_recv() {
-            result?;
-            break;
-        }
-        fake_counter += 1;
-        if fake_counter == 100 {
-            fake_counter = 0;
-        }
-    }
-    gen_ssh_key_work.join().unwrap();
+    let fake_counter: usize = rng.gen_range(0..100);
+    sender.send(InstallProgress::Pending(
+        "Step 7 of 8: Generating OpenSSH host keys ...".to_string(),
+        fake_counter,
+    ))?;
+    install::gen_ssh_key()?;
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
         "Step 8 of 8: Finalising installation ...".to_string(),
