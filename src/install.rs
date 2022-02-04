@@ -234,7 +234,9 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
             .map(|(index, _)| index)
             .collect::<Vec<_>>();
         for i in match_index_list {
-            locale_gen_list[i] = locale_gen_list[i].replace("#", "");
+            if !locale_gen_list[i].starts_with("# ") {
+                locale_gen_list[i] = locale_gen_list[i].replace("#", "");
+            }
         }
     }
     let locale_gen_str = locale_gen_list.join("\n");
