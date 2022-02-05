@@ -1,6 +1,6 @@
 [package]
 name = "aoscdk-rs"
-version = "0.3.5"
+version = "0.3.6-alpha.0"
 authors = ["liushuyu <liushuyu011@gmail.com>"]
 edition = "2018"
 
