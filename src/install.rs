@@ -234,7 +234,7 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
         let match_index_list = locale_gen_list
             .iter()
             .enumerate()
-            .filter(|(_, x)| x.contains(locale) && !x.starts_with("# "))
+            .filter(|(_, x)| x.starts_with(&format!("#{}", locale)))
             .map(|(index, _)| index)
             .collect::<Vec<_>>();
         for i in match_index_list {
