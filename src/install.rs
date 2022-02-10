@@ -7,12 +7,11 @@ use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
-use std::os::unix::prelude::OsStrExt;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
 
-use crate::disks::{fstab_entries, is_efi_booted, Partition};
+use crate::disks::{is_efi_booted, Partition};
 use crate::parser::{list_zoneinfo, locale_names};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
@@ -129,8 +128,10 @@ pub fn mount_root_path(partition: &Partition, target: &Path) -> Result<()> {
 }
 
 /// Gen fstab to /etc/fstab
-pub fn genfstab_to_file(partition: &Partition, target: &Path) -> Result<()> {
-    let s = fstab_entries(partition, target)?;
+#[cfg(not(debug_assertions))]
+pub fn genfstab_to_file(partition: &Partition) -> Result<()> {
+    use std::os::unix::prelude::OsStrExt;
+    let s = disks::fstab_entries(partition)?;
     let mut f = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -138,6 +139,12 @@ pub fn genfstab_to_file(partition: &Partition, target: &Path) -> Result<()> {
         .open("/etc/fstab")?;
     f.write_all(s.as_bytes())?;
 
+    Ok(())
+}
+
+/// Gen fstab to /etc/fstab
+#[cfg(debug_assertions)]
+pub fn genfstab_to_file(_partition: &Partition) -> Result<()> {
     Ok(())
 }
 

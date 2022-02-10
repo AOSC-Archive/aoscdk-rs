@@ -251,10 +251,10 @@ fn begin_install(
     worker.join().unwrap();
     sha256sum_work.join().unwrap();
     // genfstab to file
-    install::genfstab_to_file(partition, &tempdir)?;
+    install::genfstab_to_file(partition)?;
     if disks::is_efi_booted() {
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
-        install::genfstab_to_file(&esp_part, &tempdir.join("efi"))?;
+        install::genfstab_to_file(&esp_part)?;
     }
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
