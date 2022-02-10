@@ -70,7 +70,7 @@ fn begin_install(
 
     let partition = &config.partition.unwrap();
     disks::format_partition(partition)?;
-    let mount_path = install::auto_mount_root_path(tempdir, partition)?;
+    let mount_path = install::auto_mount_root_path(&tempdir, partition)?;
     let mount_path_copy = mount_path.clone();
     let mut efi_path = mount_path.clone();
     if disks::is_efi_booted() {
@@ -250,6 +250,12 @@ fn begin_install(
     // GC the worker thread
     worker.join().unwrap();
     sha256sum_work.join().unwrap();
+    // genfstab to file
+    install::genfstab_to_file(partition, &tempdir)?;
+    if disks::is_efi_booted() {
+        let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
+        install::genfstab_to_file(&esp_part, &tempdir.join("efi"))?;
+    }
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(

@@ -1,6 +1,10 @@
 use anyhow::{anyhow, Result};
 
+use disk_types::FileSystem;
+use fstab_generate::BlockInfo;
+use fstab_generate::PartitionID;
 use serde::{Deserialize, Serialize};
+use std::ffi::OsString;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -123,4 +127,27 @@ pub fn list_partitions() -> Vec<Partition> {
     }
 
     partitions
+}
+
+pub fn fstab_entries(partition: &Partition, target: &Path) -> Result<OsString> {
+    let root_id =
+        PartitionID::get_partuuid(target).ok_or_else(|| anyhow!("Could get partition uuid!"))?;
+    let fs_type = partition
+        .fs_type
+        .as_ref()
+        .ok_or_else(|| anyhow!("Could get partition Object!"))?;
+    let (fs_type, option) = if fs_type.starts_with("vfat") {
+        (FileSystem::Fat32, "defaults")
+    } else if fs_type.starts_with("ext4") {
+        (FileSystem::Ext4, "defaults")
+    } else if fs_type.starts_with("swap") {
+        (FileSystem::Swap, "sw")
+    } else {
+        return Err(anyhow!("Unsupport fs type!"));
+    };
+    let root = BlockInfo::new(root_id, fs_type, Some(target), option);
+    let fstab = &mut OsString::new();
+    root.write_entry(fstab);
+
+    Ok(fstab.to_owned())
 }
