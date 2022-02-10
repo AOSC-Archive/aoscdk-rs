@@ -38,6 +38,7 @@ pub fn get_locale_list() -> Result<Vec<String>> {
     };
     let names = locale_names(&data).map_err(|_| anyhow!("Could not parse system locale list"))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
+
     Ok(names)
 }
 
