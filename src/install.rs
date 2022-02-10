@@ -93,7 +93,7 @@ pub fn extract_tar_xz<R: Read>(reader: R, path: &Path) -> Result<()> {
 
 /// Mount the filesystem to a temporary directory
 pub fn auto_mount_root_path(tmp_path: &Path, partition: &Partition) -> Result<PathBuf> {
-    mount_root_path(partition, &tmp_path)?;
+    mount_root_path(partition, tmp_path)?;
 
     Ok(tmp_path.to_path_buf())
 }

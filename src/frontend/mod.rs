@@ -2,7 +2,7 @@ use std::{
     convert::TryInto,
     io::{Read, Write},
     os::unix::prelude::AsRawFd,
-    path::{PathBuf, Path},
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Sender},

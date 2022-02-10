@@ -143,7 +143,7 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
     } else {
         return Err(anyhow!("Unsupport fs type!"));
     };
-    let root_id = fstab_generate::BlockInfo::get_partition_id(target, fs_type)
+    let root_id = BlockInfo::get_partition_id(target, fs_type)
         .ok_or_else(|| anyhow!("Could not get partition uuid!"))?;
     let root = BlockInfo::new(root_id, fs_type, Some(mount_path), option);
     let fstab = &mut OsString::new();
