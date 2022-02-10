@@ -128,8 +128,7 @@ pub fn list_partitions() -> Vec<Partition> {
 #[cfg(not(debug_assertions))]
 pub fn fstab_entries(partition: &Partition) -> Result<OsString> {
     use disk_types::FileSystem;
-    use fstab_generate::BlockInfo;
-    use fstab_generate::PartitionID;
+    use fstab_generate::{BlockInfo, PartitionID};
     use std::ffi::OsString;
     let target = partition.parent_path.as_ref().unwrap();
     let fs_type = partition
