@@ -2,8 +2,6 @@
 
 PROJDIR="$(dirname $(realpath "$0"))"
 PROJNAME="$(basename "$PROJDIR")"
-echo $PROJNAME
-# exit 0
 
 PANDOC_LATEX_VARS="
 -V fontsize=11pt
@@ -12,7 +10,6 @@ PANDOC_LATEX_VARS="
 "
 
 
-# mkdir -p "$PWD/_dist"
 for DIRPATH in $PROJDIR/*; do
     if [[ -d $DIRPATH ]]; then
         DIRNAME="$(basename "$DIRPATH")"
@@ -25,8 +22,6 @@ for DIRPATH in $PROJDIR/*; do
             --pdf-engine=xelatex \
             --number-sections \
             -o "$PROJDIR/$DIRNAME.pdf"
-        # mkdir -p "$PWD/_dist/$PROJNAME"
-        # cp -af "$PROJDIR/$DIRNAME.pdf" "$PWD/_dist/$PROJNAME/$DIRNAME.pdf"
     fi
 done
 
