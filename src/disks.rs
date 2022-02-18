@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
+const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,6 +23,16 @@ pub struct Partition {
 #[inline]
 pub fn is_efi_booted() -> bool {
     Path::new(EFI_DETECT_PATH).is_dir()
+}
+
+pub fn get_recommended_fs_type(type_: &str) -> &str {
+    for i in ALLOWED_FS_TYPE {
+        if *i == type_ {
+            return i;
+        }
+    }
+
+    DEFAULT_FS_TYPE
 }
 
 pub fn format_partition(partition: &Partition) -> Result<()> {
@@ -58,7 +69,13 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
 
 pub fn fill_fs_type(part: &Partition) -> Partition {
     let mut new_part = part.clone();
-    new_part.fs_type = Some(DEFAULT_FS_TYPE.to_string());
+    let new_fs_type: String;
+    if let Some(fs_type) = new_part.fs_type.clone() {
+        new_fs_type = get_recommended_fs_type(&fs_type).to_string();
+    } else {
+        new_fs_type = DEFAULT_FS_TYPE.to_string();
+    }
+    new_part.fs_type = Some(new_fs_type);
 
     new_part
 }
@@ -150,4 +167,10 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
     root.write_entry(fstab);
 
     Ok(fstab.to_owned())
+}
+
+#[test]
+fn test_fs_recommendation() {
+    assert_eq!(get_recommended_fs_type("btrfs"), "btrfs");
+    assert_eq!(get_recommended_fs_type("ext2"), "ext4");
 }
