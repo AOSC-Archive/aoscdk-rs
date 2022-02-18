@@ -43,7 +43,7 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     let output;
     if fs_type == "ext4" {
         cmd = command.arg("-Fq");
-    } else if fs_type == "vfat" {
+    } else if fs_type == "fat32" {
         cmd = command.arg("-F32");
     } else {
         cmd = command.arg("-f");
@@ -155,23 +155,17 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
         .fs_type
         .as_ref()
         .ok_or_else(|| anyhow!("Could get partition Object!"))?;
-    let fs_type_and_option;
-    if fs_type.starts_with("fat32") {
-        fs_type_and_option = (FileSystem::Fat32, "defaults");
-    } else if fs_type.starts_with("ext4") {
-        fs_type_and_option = (FileSystem::Ext4, "defaults");
-    } else if fs_type.starts_with("btrfs") {
-        fs_type_and_option = (FileSystem::Btrfs, "defaults");
-    } else if fs_type.starts_with("xfs") {
-        fs_type_and_option = (FileSystem::Xfs, "defaults");
-    } else if fs_type.starts_with("f2fs") {
-        fs_type_and_option = (FileSystem::F2fs, "defaults");
-    } else if fs_type.starts_with("swap") {
-        fs_type_and_option = (FileSystem::Swap, "sw");
-    } else {
-        return Err(anyhow!("Unsupport fs type!"));
+    let (fs_type, option) = match fs_type.as_str() {
+        "fat32" => (FileSystem::Fat32, "defaults"),
+        "ext4" => (FileSystem::Ext4, "defaults"),
+        "btrfs" => (FileSystem::Btrfs, "defaults"),
+        "xfs" => (FileSystem::Xfs, "defaults"),
+        "f2fs" => (FileSystem::F2fs, "defaults"),
+        "swap" => (FileSystem::Swap, "sw"),
+        _ => {
+            return Err(anyhow!("Unsupport fs type!"))
+        }
     };
-    let (fs_type, option) = fs_type_and_option;
     let root_id = BlockInfo::get_partition_id(target, fs_type)
         .ok_or_else(|| anyhow!("Could not get partition uuid!"))?;
     let root = BlockInfo::new(root_id, fs_type, Some(mount_path), option);
