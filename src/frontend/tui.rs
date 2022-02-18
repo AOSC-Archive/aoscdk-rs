@@ -408,7 +408,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let current_partition = if cfg!(debug_assertions) {
                     // prevent developer/tester accidentally delete their partitions
                     Rc::new(disks::Partition {
-                        fs_type: Some("ntfs".to_string()),
+                        fs_type: None,
                         path: Some(PathBuf::from("/dev/loop0p1")),
                         parent_path: Some(PathBuf::from("/dev/loop0")),
                         size: required_size,
@@ -460,28 +460,30 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         .unwrap()
                     });
                     s.add_layer(view);
-                } else if fs_type == Some(&"ext4".to_string()) {
+                } else if fs_type == Some(&"ext4".to_string()) || fs_type.is_none() {
                     let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
                     config.partition = Some(Arc::new(new_part));
                     partition_view_to_next(s, config);
-                } else if !ALLOWED_FS_TYPE.contains(&fs_type.unwrap().as_str()) {
-                    let view = wrap_in_dialog(LinearLayout::vertical()
-                    .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
-                    .button("Ok", move |s| {
-                        let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
-                        let mut config_clone = config_copy.clone();
-                        config_clone.partition = Some(Arc::new(new_part));
-                        s.pop_layer();
-                        partition_view_to_next(s, config_clone);
-                    })
-                    .button("Cancel", move |s| {
-                        s.cb_sink()
-                        .send(Box::new(|s| {
+                } else if let Some(fs_type) = fs_type {
+                    if !ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
+                        let view = wrap_in_dialog(LinearLayout::vertical()
+                        .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
+                        .button("Ok", move |s| {
+                            let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
+                            let mut config_clone = config_copy.clone();
+                            config_clone.partition = Some(Arc::new(new_part));
                             s.pop_layer();
-                        }))
-                        .unwrap()
-                    });
-                    s.add_layer(view);
+                            partition_view_to_next(s, config_clone);
+                        })
+                        .button("Cancel", move |s| {
+                            s.cb_sink()
+                            .send(Box::new(|s| {
+                                s.pop_layer();
+                            }))
+                            .unwrap()
+                        });
+                        s.add_layer(view);
+                    }
                 }
             }
         })
