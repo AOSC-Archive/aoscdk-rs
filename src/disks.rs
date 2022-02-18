@@ -155,7 +155,13 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
         (FileSystem::Fat32, "defaults")
     } else if fs_type.starts_with("ext4") {
         (FileSystem::Ext4, "defaults")
-    } else if fs_type.starts_with("swap") {
+    } else if fs_type.starts_with("btrfs") {
+        (FileSystem::Btrfs, "defaults")
+    } else if fs_type.starts_with("xfs") {
+        (FileSystem::Xfs, "defaults")
+    } else if fs_type.starts_with("f2fs") {
+        (FileSystem::F2fs, "defaults")
+    }else if fs_type.starts_with("swap") {
         (FileSystem::Swap, "sw")
     } else {
         return Err(anyhow!("Unsupport fs type!"));
