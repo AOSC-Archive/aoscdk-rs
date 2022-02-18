@@ -436,36 +436,36 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let config_copy_2 = config.clone();
                 let fs_type = current_partition.fs_type.as_ref();
                 let current_partition_clone = current_partition.clone();
-                if fs_type != Some(&"ext4".to_string()) && ALLOWED_FS_TYPE.contains(&fs_type.unwrap().as_str()) {
-                    let view = wrap_in_dialog(LinearLayout::vertical()
-                    .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), fs_type.unwrap()))), "AOSC OS Installer", None)
-                    .button("Yes", move |s| {
-                        let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
-                        let mut config_clone = config_copy.clone();
-                        config_clone.partition = Some(Arc::new(new_part));
-                        s.pop_layer();
-                        partition_view_to_next(s, config_clone);
-                    })
-                    .button("Use Ext4", move |s| {
-                        let new_part = disks::fill_fs_type(current_partition.as_ref(), true);
-                        let mut config_clone = config_copy_2.clone();
-                        config_clone.partition = Some(Arc::new(new_part));
-                        partition_view_to_next(s, config_clone);
-                    })
-                    .button("Cancel", move |s| {
-                        s.cb_sink()
-                        .send(Box::new(|s| {
+                if let Some(fs_type) = fs_type {
+                    if fs_type != "ext4" && ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
+                        let view = wrap_in_dialog(LinearLayout::vertical()
+                        .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), fs_type))), "AOSC OS Installer", None)
+                        .button("Yes", move |s| {
+                            let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
+                            let mut config_clone = config_copy.clone();
+                            config_clone.partition = Some(Arc::new(new_part));
                             s.pop_layer();
-                        }))
-                        .unwrap()
-                    });
-                    s.add_layer(view);
-                } else if fs_type == Some(&"ext4".to_string()) || fs_type.is_none() {
-                    let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
-                    config.partition = Some(Arc::new(new_part));
-                    partition_view_to_next(s, config);
-                } else if let Some(fs_type) = fs_type {
-                    if !ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
+                            partition_view_to_next(s, config_clone);
+                        })
+                        .button("Use Ext4", move |s| {
+                            let new_part = disks::fill_fs_type(current_partition.as_ref(), true);
+                            let mut config_clone = config_copy_2.clone();
+                            config_clone.partition = Some(Arc::new(new_part));
+                            partition_view_to_next(s, config_clone);
+                        })
+                        .button("Cancel", move |s| {
+                            s.cb_sink()
+                            .send(Box::new(|s| {
+                                s.pop_layer();
+                            }))
+                            .unwrap()
+                        });
+                        s.add_layer(view);
+                    } else if fs_type == "ext4" {
+                        let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
+                        config.partition = Some(Arc::new(new_part));
+                        partition_view_to_next(s, config);
+                    } else if !ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
                         .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
                         .button("Ok", move |s| {
@@ -484,6 +484,10 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         });
                         s.add_layer(view);
                     }
+                } else {
+                    let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
+                    config.partition = Some(Arc::new(new_part));
+                    partition_view_to_next(s, config);
                 }
             }
         })
