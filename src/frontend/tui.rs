@@ -32,6 +32,7 @@ macro_rules! SURE_FS_TYPE_INFO {
         "The current partition format is {}, do you want to use this partition format? We recommend that you use ext4 as the partition format, as it is generally trouble-free."
     };
 }
+const ADVANCED_METHOD_INFO: &str = "Deploykit detects that you are using an unsupported file system format, if you click \"Ok\", Ext4 will be used as your file system format, if you insist on using the file system format of your choice, please use the \"Advanced Installation Method\"";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum VariantColumn {
@@ -407,7 +408,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let current_partition = if cfg!(debug_assertions) {
                     // prevent developer/tester accidentally delete their partitions
                     Rc::new(disks::Partition {
-                        fs_type: Some("xfs".to_string()),
+                        fs_type: Some("ntfs".to_string()),
                         path: Some(PathBuf::from("/dev/loop0p1")),
                         parent_path: Some(PathBuf::from("/dev/loop0")),
                         size: required_size,
@@ -433,7 +434,6 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let mut config = config.clone();
                 let config_copy = config.clone();
                 let config_copy_2 = config.clone();
-                let config_copy_3 = config.clone();
                 let fs_type = current_partition.fs_type.as_ref();
                 let current_partition_clone = current_partition.clone();
                 if fs_type != Some(&"ext4".to_string()) && ALLOWED_FS_TYPE.contains(&fs_type.unwrap().as_str()) {
@@ -444,36 +444,44 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         let mut config_clone = config_copy.clone();
                         config_clone.partition = Some(Arc::new(new_part));
                         s.pop_layer();
-                        if config.user.is_some() {
-                            is_use_last_config(s, config_clone);
-                        } else {
-                            select_user_password(s, config_clone);
-                        }
+                        partition_view_to_next(s, config_clone);
                     })
                     .button("Use Ext4", move |s| {
                         let new_part = disks::fill_fs_type(current_partition.as_ref(), true);
                         let mut config_clone = config_copy_2.clone();
                         config_clone.partition = Some(Arc::new(new_part));
-                        s.pop_layer();
-                        if config_clone.user.is_some() {
-                            is_use_last_config(s, config_clone);
-                        } else {
-                            select_user_password(s, config_clone);
-                        }
+                        partition_view_to_next(s, config_clone);
                     })
                     .button("Cancel", move |s| {
-                        s.pop_layer();
-                        btn_cb(s, config_copy_3.clone());
+                        s.cb_sink()
+                        .send(Box::new(|s| {
+                            s.pop_layer();
+                        }))
+                        .unwrap()
                     });
                     s.add_layer(view);
-                } else {
-                    let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
+                } else if fs_type == Some(&"ext4".to_string()) {
+                    let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
                     config.partition = Some(Arc::new(new_part));
-                    if config.user.is_some() {
-                        is_use_last_config(s, config);
-                    } else {
-                        select_user_password(s, config);
-                    }
+                    partition_view_to_next(s, config);
+                } else if !ALLOWED_FS_TYPE.contains(&fs_type.unwrap().as_str()) {
+                    let view = wrap_in_dialog(LinearLayout::vertical()
+                    .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
+                    .button("Ok", move |s| {
+                        let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
+                        let mut config_clone = config_copy.clone();
+                        config_clone.partition = Some(Arc::new(new_part));
+                        s.pop_layer();
+                        partition_view_to_next(s, config_clone);
+                    })
+                    .button("Cancel", move |s| {
+                        s.cb_sink()
+                        .send(Box::new(|s| {
+                            s.pop_layer();
+                        }))
+                        .unwrap()
+                    });
+                    s.add_layer(view);
                 }
             }
         })
@@ -486,6 +494,15 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
         })
         .button("Exit", |s| s.quit())
     );
+}
+
+fn partition_view_to_next(s: &mut Cursive, config_clone: InstallConfig) {
+    s.pop_layer();
+    if config_clone.user.is_some() {
+        is_use_last_config(s, config_clone);
+    } else {
+        select_user_password(s, config_clone);
+    }
 }
 
 fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
