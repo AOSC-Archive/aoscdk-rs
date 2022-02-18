@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
-const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
+pub(crate) const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,11 +67,15 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     Ok(())
 }
 
-pub fn fill_fs_type(part: &Partition) -> Partition {
+pub fn fill_fs_type(part: &Partition, use_ext4: bool) -> Partition {
     let mut new_part = part.clone();
     let new_fs_type: String;
     if let Some(fs_type) = new_part.fs_type.clone() {
-        new_fs_type = get_recommended_fs_type(&fs_type).to_string();
+        if !use_ext4 {
+            new_fs_type = get_recommended_fs_type(&fs_type).to_string();
+        } else {
+            new_fs_type = DEFAULT_FS_TYPE.to_string();
+        }
     } else {
         new_fs_type = DEFAULT_FS_TYPE.to_string();
     }
@@ -151,21 +155,23 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
         .fs_type
         .as_ref()
         .ok_or_else(|| anyhow!("Could get partition Object!"))?;
-    let (fs_type, option) = if fs_type.starts_with("vfat") {
-        (FileSystem::Fat32, "defaults")
+    let fs_type_and_option;
+    if fs_type.starts_with("fat32") {
+        fs_type_and_option = (FileSystem::Fat32, "defaults");
     } else if fs_type.starts_with("ext4") {
-        (FileSystem::Ext4, "defaults")
+        fs_type_and_option = (FileSystem::Ext4, "defaults");
     } else if fs_type.starts_with("btrfs") {
-        (FileSystem::Btrfs, "defaults")
+        fs_type_and_option = (FileSystem::Btrfs, "defaults");
     } else if fs_type.starts_with("xfs") {
-        (FileSystem::Xfs, "defaults")
+        fs_type_and_option = (FileSystem::Xfs, "defaults");
     } else if fs_type.starts_with("f2fs") {
-        (FileSystem::F2fs, "defaults")
-    }else if fs_type.starts_with("swap") {
-        (FileSystem::Swap, "sw")
+        fs_type_and_option = (FileSystem::F2fs, "defaults");
+    } else if fs_type.starts_with("swap") {
+        fs_type_and_option = (FileSystem::Swap, "sw");
     } else {
         return Err(anyhow!("Unsupport fs type!"));
     };
+    let (fs_type, option) = fs_type_and_option;
     let root_id = BlockInfo::get_partition_id(target, fs_type)
         .ok_or_else(|| anyhow!("Could not get partition uuid!"))?;
     let root = BlockInfo::new(root_id, fs_type, Some(mount_path), option);

@@ -1,5 +1,5 @@
 use crate::{
-    disks,
+    disks::{self, ALLOWED_FS_TYPE},
     install::{self, umount_all},
     network::{self, Mirror, VariantEntry},
 };
@@ -27,6 +27,11 @@ use super::{begin_install, InstallConfig};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
+macro_rules! SURE_FS_TYPE_INFO {
+    () => {
+        "The current partition format is {}, do you want to use this partition format? We recommend that you use ext4 as the partition format, as it is generally trouble-free."
+    };
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum VariantColumn {
@@ -402,7 +407,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let current_partition = if cfg!(debug_assertions) {
                     // prevent developer/tester accidentally delete their partitions
                     Rc::new(disks::Partition {
-                        fs_type: None,
+                        fs_type: Some("xfs".to_string()),
                         path: Some(PathBuf::from("/dev/loop0p1")),
                         parent_path: Some(PathBuf::from("/dev/loop0")),
                         size: required_size,
@@ -426,12 +431,49 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     return;
                 }
                 let mut config = config.clone();
-                let new_part = disks::fill_fs_type(current_partition.as_ref());
-                config.partition = Some(Arc::new(new_part));
-                if config.user.is_some() {
-                    is_use_last_config(s, config);
+                let config_copy = config.clone();
+                let config_copy_2 = config.clone();
+                let config_copy_3 = config.clone();
+                let fs_type = current_partition.fs_type.as_ref();
+                let current_partition_clone = current_partition.clone();
+                if fs_type != Some(&"ext4".to_string()) && ALLOWED_FS_TYPE.contains(&fs_type.unwrap().as_str()) {
+                    let view = wrap_in_dialog(LinearLayout::vertical()
+                    .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), fs_type.unwrap()))), "AOSC OS Installer", None)
+                    .button("Yes", move |s| {
+                        let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
+                        let mut config_clone = config_copy.clone();
+                        config_clone.partition = Some(Arc::new(new_part));
+                        s.pop_layer();
+                        if config.user.is_some() {
+                            is_use_last_config(s, config_clone);
+                        } else {
+                            select_user_password(s, config_clone);
+                        }
+                    })
+                    .button("Use Ext4", move |s| {
+                        let new_part = disks::fill_fs_type(current_partition.as_ref(), true);
+                        let mut config_clone = config_copy_2.clone();
+                        config_clone.partition = Some(Arc::new(new_part));
+                        s.pop_layer();
+                        if config_clone.user.is_some() {
+                            is_use_last_config(s, config_clone);
+                        } else {
+                            select_user_password(s, config_clone);
+                        }
+                    })
+                    .button("Cancel", move |s| {
+                        s.pop_layer();
+                        btn_cb(s, config_copy_3.clone());
+                    });
+                    s.add_layer(view);
                 } else {
-                    select_user_password(s, config);
+                    let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
+                    config.partition = Some(Arc::new(new_part));
+                    if config.user.is_some() {
+                        is_use_last_config(s, config);
+                    } else {
+                        select_user_password(s, config);
+                    }
                 }
             }
         })
