@@ -162,9 +162,7 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
         "xfs" => (FileSystem::Xfs, "defaults"),
         "f2fs" => (FileSystem::F2fs, "defaults"),
         "swap" => (FileSystem::Swap, "sw"),
-        _ => {
-            return Err(anyhow!("Unsupport fs type!"))
-        }
+        _ => return Err(anyhow!("Unsupport fs type!")),
     };
     let root_id = BlockInfo::get_partition_id(target, fs_type)
         .ok_or_else(|| anyhow!("Could not get partition uuid!"))?;

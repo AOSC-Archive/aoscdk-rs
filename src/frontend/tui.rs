@@ -27,12 +27,6 @@ use super::{begin_install, InstallConfig};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
-macro_rules! SURE_FS_TYPE_INFO {
-    () => {
-        "The current partition format is {}, do you want to use this partition format? We recommend that you use ext4 as the partition format, as it is generally trouble-free."
-    };
-}
-const ADVANCED_METHOD_INFO: &str = "Deploykit detects that you are using an unsupported file system format, if you click \"Ok\", Ext4 will be used as your file system format, if you insist on using the file system format of your choice, please use the \"Advanced Installation Method\"";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum VariantColumn {
@@ -65,7 +59,12 @@ macro_rules! SUMMARY_TEXT {
         "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as system time."
     };
 }
-
+macro_rules! SURE_FS_TYPE_INFO {
+    () => {
+        "The current partition format is {}, do you want to use this partition format? We recommend that you use ext4 as the partition format, as it is generally trouble-free."
+    };
+}
+const ADVANCED_METHOD_INFO: &str = "Deploykit detects that you are using an unsupported file system format, if you click \"Ok\", Ext4 will be used as your file system format, if you insist on using the file system format of your choice, please use the \"Advanced Installation Method\"";
 const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS installer!
 
 In the following pages, the installer will guide you through selection of distribution, download sources, partitioning, and other system configurations. The installation process should only take a few minutes, but will require more time on slower hardware."#;
