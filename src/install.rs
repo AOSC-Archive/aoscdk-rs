@@ -462,9 +462,7 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
         size as i64,
     )?;
     swapfile.flush()?;
-    let metadata = swapfile.metadata()?;
-    let mut perm = metadata.permissions();
-    perm.set_mode(0o600);
+    std::fs::set_permissions("/swapfile", std::fs::Permissions::from_mode(0o600))?;
     let mkswap = Command::new("mkswap").arg("/swapfile").output()?;
     if !mkswap.status.success() {
         return Err(anyhow!(
