@@ -40,7 +40,7 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     let fs_type = partition.fs_type.as_ref().unwrap_or(&default_fs);
     let mut command = Command::new(format!("mkfs.{}", fs_type));
     let cmd;
-    let output;
+    
     if fs_type == "ext4" {
         cmd = command.arg("-Fq");
     } else if fs_type == "fat32" {
@@ -48,7 +48,7 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     } else {
         cmd = command.arg("-f");
     }
-    output = cmd
+    let output = cmd
         .arg(
             partition
                 .path
@@ -149,13 +149,13 @@ pub fn list_partitions() -> Vec<Partition> {
     partitions
 }
 
-pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsString> {
-    let target = partition.path.as_ref().unwrap();
-    let fs_type = partition
-        .fs_type
-        .as_ref()
-        .ok_or_else(|| anyhow!("Could get partition Object!"))?;
-    let (fs_type, option) = match fs_type.as_str() {
+pub fn fstab_entries(
+    device_path: Option<&PathBuf>,
+    fs_type: &str,
+    mount_path: Option<&Path>,
+) -> Result<OsString> {
+    let target = device_path.ok_or_else(|| anyhow!("Cannot get your device path!"))?;
+    let (fs_type, option) = match fs_type {
         "fat32" => (FileSystem::Fat32, "defaults"),
         "ext4" => (FileSystem::Ext4, "defaults"),
         "btrfs" => (FileSystem::Btrfs, "defaults"),
@@ -166,11 +166,41 @@ pub fn fstab_entries(partition: &Partition, mount_path: &Path) -> Result<OsStrin
     };
     let root_id = BlockInfo::get_partition_id(target, fs_type)
         .ok_or_else(|| anyhow!("Could not get partition uuid!"))?;
-    let root = BlockInfo::new(root_id, fs_type, Some(mount_path), option);
+    let root = BlockInfo::new(root_id, fs_type, mount_path, option);
     let fstab = &mut OsString::new();
     root.write_entry(fstab);
 
     Ok(fstab.to_owned())
+}
+
+pub fn get_recommand_swap_size() -> Result<f64> {
+    // Get men (GiB)
+    let men = (sys_info::mem_info()?.total / 1024 / 1024) as f64;
+    let swap_size = if men <= 5.0 {
+        1.3 * men + 0.7
+    } else if men > 5.0 && men <= 32.0 {
+        1.1543 * men + 1.36328
+    } else {
+        1.009945 * men + 16.087529
+    };
+    // Swap size GiB to iB
+    let swap_size = swap_size.round() * 1024.0 * 1024.0 * 1024.0;
+
+    Ok(swap_size)
+}
+
+pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
+    // Get men (iB)
+    let men = (sys_info::mem_info()?.total * 1024) as f64;
+    let recommand_size = get_recommand_swap_size()?;
+    let no_hibernation_size = recommand_size - men;
+    if custom_size >= no_hibernation_size && custom_size < recommand_size {
+        return Ok(false);
+    } else if custom_size >= recommand_size {
+        return Ok(true);
+    }
+
+    Err(anyhow!("Size too small!"))
 }
 
 #[test]

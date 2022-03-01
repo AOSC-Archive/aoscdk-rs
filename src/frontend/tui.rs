@@ -17,10 +17,13 @@ use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use number_prefix::NumberPrefix;
-use std::process::Command;
 use std::rc::Rc;
 use std::{cell::RefCell, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
+use std::{
+    process::Command,
+    sync::atomic::{AtomicBool, Ordering},
+};
 use tempfile::TempDir;
 
 use super::{begin_install, InstallConfig};
@@ -54,6 +57,7 @@ impl TableViewItem<VariantColumn> for network::VariantEntry {
         }
     }
 }
+
 macro_rules! SUMMARY_TEXT {
     () => {
         "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as system time."
@@ -705,7 +709,8 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         config.continent = Some(Arc::new(continent));
         config.city = Some(Arc::new(city));
         config.tc = Some(Arc::new(tc));
-        show_summary(s, config);
+        // show_summary(s, config);
+        select_swap(s, config);
     })
     .button("Back", move |s| {
         s.pop_layer();
@@ -775,6 +780,117 @@ fn set_timezone(
     )
 }
 
+fn select_swap(siv: &mut Cursive, config: InstallConfig) {
+    let partition_size = config.partition.as_ref().unwrap().size;
+    let installed_size = config.variant.as_ref().unwrap().install_size;
+    siv.pop_layer();
+    let swap_size = Rc::new(RefCell::new(None));
+    let swap_size_copy = Rc::clone(&swap_size);
+    let is_hibernation = Arc::new(AtomicBool::new(false));
+    let is_hibernation_clone = is_hibernation.clone();
+    let is_hibernation_clone_2 = is_hibernation;
+    let use_swap = Arc::new(AtomicBool::new(false));
+    let use_swap_clone = use_swap.clone();
+    let use_swap_clone_2 = use_swap.clone();
+    let view = ListView::new().child(
+        "Choose",
+        SelectView::new()
+            .popup()
+            .autojump()
+            .with_all_str(vec![
+                "Yes",
+                "Yes, but I need to customize the swapfile size",
+                "No",
+            ])
+            .on_submit(move |s: &mut Cursive, c: &str| match c {
+                "Yes" => {
+                    let size = disks::get_recommand_swap_size();
+                    match size {
+                        Ok(size) => {
+                            if installed_size + size as u64 > partition_size {
+                                show_msg(s, "No space to create swap file!");
+                                return;
+                            }
+                            swap_size_copy.replace(Some(size));
+                            is_hibernation_clone.store(true, Ordering::SeqCst);
+                            use_swap.store(true, Ordering::SeqCst);
+                        }
+                        Err(e) => {
+                            show_msg(s, &e.to_string());
+                        }
+                    }
+                }
+                "Yes, but I need to customize the swapfile size" => {
+                    let is_hibernation_clone_2 = is_hibernation_clone.clone();
+                    let swap_size_copy = swap_size_copy.clone();
+                    let use_swap_copy = use_swap_clone.clone();
+                    let swap_size_temp = Rc::new(RefCell::new(String::new()));
+                    let swap_size_temp_clone = Rc::clone(&swap_size_temp);
+                    s.add_layer(
+                        wrap_in_dialog(
+                            LinearLayout::vertical().child(
+                                EditView::new()
+                                    .on_edit_mut(move |_, c, _| {
+                                        swap_size_temp_clone.replace(c.to_owned());
+                                    })
+                                    .min_width(20)
+                                    .with_name("size"),
+                            ),
+                            "Set swap size",
+                            None,
+                        )
+                        .button("Ok", move |s| {
+                            let size = swap_size_temp.as_ref().to_owned().into_inner();
+                            let size = size.parse::<f64>();
+                            if size.is_err() {
+                                show_msg(s, "size not a number!");
+                                return;
+                            }
+                            let is_hibernation_clone = is_hibernation_clone_2.clone();
+                            let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
+                            match disks::is_enable_hibernation(size) {
+                                Ok(is_h) => {
+                                    is_hibernation_clone.store(is_h, Ordering::SeqCst);
+                                    swap_size_copy.replace(Some(size));
+                                    use_swap_copy.store(true, Ordering::SeqCst);
+                                }
+                                Err(e) => {
+                                    show_msg(s, &e.to_string());
+                                    return;
+                                }
+                            }
+                            s.cb_sink()
+                                .send(Box::new(|s| {
+                                    s.pop_layer();
+                                }))
+                                .unwrap()
+                        }),
+                    )
+                }
+                "No" => {
+                    use_swap.store(false, Ordering::SeqCst);
+                }
+                _ => unreachable!(),
+            }),
+    );
+    let textview = TextView::new("Do you need to enable swap?");
+    siv.add_layer(
+        wrap_in_dialog(
+            LinearLayout::vertical().child(textview).child(view),
+            "AOSC OS Installer",
+            None,
+        )
+        .button("Continue", move |s| {
+            let swap_size = swap_size.as_ref().to_owned().into_inner();
+            let mut config = config.clone();
+            config.use_swap = use_swap_clone_2.clone();
+            config.swap_size = Arc::new(swap_size);
+            config.is_hibernation = is_hibernation_clone_2.clone();
+            show_summary(s, config);
+        }),
+    );
+}
+
 fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
     let config_copy = config.clone();
@@ -787,18 +903,8 @@ fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
         .button("Yes", move |s| show_summary(s, config_copy.clone()))
         .button("No", move |s| {
             fs::remove_file(LAST_USER_CONFIG_FILE).ok();
-            let new_config = InstallConfig {
-                variant: None,
-                partition: config.clone().partition,
-                mirror: None,
-                user: None,
-                password: None,
-                hostname: None,
-                locale: None,
-                continent: None,
-                city: None,
-                tc: None,
-            };
+            let mut new_config = InstallConfig::default();
+            new_config.partition = config.clone().partition;
             select_variant(s, new_config);
         })
         .button("Exit", |s| s.quit()),
@@ -951,18 +1057,7 @@ pub fn tui_main() {
                 if let Ok(config) = read_user_config_on_file() {
                     select_partition(s, config);
                 } else {
-                    let config = InstallConfig {
-                        variant: None,
-                        partition: None,
-                        mirror: None,
-                        user: None,
-                        password: None,
-                        hostname: None,
-                        locale: None,
-                        continent: None,
-                        city: None,
-                        tc: None,
-                    };
+                    let config = InstallConfig::default();
                     select_variant(s, config);
                 }
             })

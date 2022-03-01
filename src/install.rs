@@ -1,13 +1,13 @@
 use anyhow::{anyhow, Result};
 use nix::dir::Dir;
-use nix::fcntl::OFlag;
+use nix::fcntl::{FallocateFlags, OFlag};
 use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
 use std::io::prelude::*;
 use std::os::unix::io::AsRawFd;
-use std::os::unix::prelude::OsStrExt;
+use std::os::unix::prelude::{OsStrExt, PermissionsExt};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
@@ -39,6 +39,7 @@ pub fn get_locale_list() -> Result<Vec<String>> {
     };
     let names = locale_names(&data).map_err(|_| anyhow!("Could not parse system locale list"))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
+
     Ok(names)
 }
 
@@ -51,6 +52,7 @@ fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
     Ok(data)
 }
 
+/// Get the list of available timezone
 pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
     let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
     let mut zoneinfo_list = list_zoneinfo(&data)
@@ -60,18 +62,18 @@ pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
         return Err(anyhow!("zoneinfo list is empty!"));
     }
     zoneinfo_list.sort();
-    let mut continent = zoneinfo_list[0].split_once("/").unwrap().0;
+    let mut last_continent = zoneinfo_list[0].split_once('/').unwrap().0;
     let mut result = Vec::new();
-    let mut city = Vec::new();
+    let mut last_city = Vec::new();
     for i in &zoneinfo_list {
-        let split_name = i.split_once("/").unwrap();
-        if split_name.0 == continent {
-            city.push(split_name.1.to_string());
+        let (continent, city) = i.split_once('/').unwrap();
+        if continent == last_continent {
+            last_city.push(city.to_string());
         } else {
-            result.push((continent.to_string(), city.clone()));
-            city.clear();
-            city.push(split_name.1.to_string());
-            continent = split_name.0;
+            result.push((last_continent.to_string(), last_city.clone()));
+            last_city.clear();
+            last_city.push(city.to_string());
+            last_continent = continent;
         }
     }
 
@@ -129,7 +131,14 @@ pub fn mount_root_path(partition: &Partition, target: &Path) -> Result<()> {
 
 /// Gen fstab to /etc/fstab
 pub fn genfstab_to_file(partition: &Partition, root_path: &Path, mount_path: &Path) -> Result<()> {
-    let s = fstab_entries(partition, mount_path)?;
+    if cfg!(debug_assertions) {
+        return Ok(());
+    }
+    let fs_type = partition
+        .fs_type
+        .as_ref()
+        .ok_or_else(|| anyhow!("Could get partition Object!"))?;
+    let s = fstab_entries(partition.parent_path.as_ref(), fs_type, Some(mount_path))?;
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .append(true)
@@ -410,15 +419,14 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
 /// Must be used in a chroot context
 pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let mut command = Command::new("grub-install");
-    let cmd;
-    if let Some(mbr_dev) = mbr_dev {
-        cmd = command.arg("--target=i386-pc").arg(mbr_dev);
+    let cmd = if let Some(mbr_dev) = mbr_dev {
+        command.arg("--target=i386-pc").arg(mbr_dev)
     } else {
-        cmd = command
+        command
             .arg("--target=x86_64-efi")
             .arg("--bootloader-id=AOSC OS")
-            .arg("--efi-directory=/efi");
-    }
+            .arg("--efi-directory=/efi")
+    };
     let process = cmd.output()?;
     if !process.status.success() {
         return Err(anyhow!(
@@ -440,8 +448,41 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     Ok(())
 }
 
+/// Create swapfile
+/// Must be used in a chroot context
+pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
+    if !use_swap {
+        return Ok(());
+    }
+    let mut swapfile = std::fs::File::create("/swapfile")?;
+    nix::fcntl::fallocate(
+        swapfile.as_raw_fd(),
+        FallocateFlags::empty(),
+        0,
+        size as i64,
+    )?;
+    swapfile.flush()?;
+    let metadata = swapfile.metadata()?;
+    let mut perm = metadata.permissions();
+    perm.set_mode(0o600);
+    let mkswap = Command::new("mkswap").arg("/swapfile").output()?;
+    if !mkswap.status.success() {
+        return Err(anyhow!(
+            "Error: mkswap failed! why: {}\n{}",
+            String::from_utf8_lossy(&mkswap.stderr),
+            String::from_utf8_lossy(&mkswap.stdout)
+        ));
+    }
+    let s = "/swapfile none swap defaults,nofail 0 0";
+    let mut fstab = std::fs::OpenOptions::new()
+        .append(true)
+        .open("/etc/fstab")?;
+    fstab.write_all(s.as_bytes())?;
+
+    Ok(())
+}
+
 /// Run umount -R
-/// Test in Livekit only
 pub fn umount_all(mount_path: &Path, root_fd: Dir) {
     escape_chroot(root_fd).ok();
     let efi_path = mount_path.join("efi");

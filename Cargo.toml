@@ -29,6 +29,7 @@ rand = "0.8"
 ctrlc = { version = "3.2", features = ["termination"] }
 fstab-generate = "0.1"
 disk-types = "0.1"
+sys-info = "0.9"
 
 [features]
 is_retro = []

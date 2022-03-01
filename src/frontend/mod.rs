@@ -47,6 +47,29 @@ struct InstallConfig {
     continent: Option<Arc<String>>,
     city: Option<Arc<String>>,
     tc: Option<Arc<String>>,
+    use_swap: Arc<AtomicBool>,
+    swap_size: Arc<Option<f64>>,
+    is_hibernation: Arc<AtomicBool>,
+}
+
+impl Default for InstallConfig {
+    fn default() -> Self {
+        InstallConfig {
+            variant: None,
+            partition: None,
+            mirror: None,
+            user: None,
+            password: None,
+            hostname: None,
+            locale: None,
+            continent: None,
+            city: None,
+            tc: None,
+            use_swap: Arc::new(AtomicBool::new(false)),
+            swap_size: Arc::new(None),
+            is_hibernation: Arc::new(AtomicBool::new(false)),
+        }
+    }
 }
 
 fn begin_install(
@@ -299,6 +322,12 @@ fn begin_install(
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
     install::execute_locale_gen(locale)?;
     install::set_locale(locale)?;
+    let use_swap = config.use_swap.load(Ordering::SeqCst);
+    if use_swap {
+        if let Some(swap_size) = config.swap_size.as_ref() {
+            install::create_swapfile(*swap_size, use_swap)?;
+        }
+    }
     install::escape_chroot(escape_vector)?;
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path)?;
@@ -322,7 +351,7 @@ fn test_download_amd64() {
 }
 
 #[test]
-fn test_download_i486_404() {
+fn test_404() {
     use tempfile::TempDir;
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-i486/base/aosc-os_base_20200620.1_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
     let config = serde_json::from_str(json).unwrap();
