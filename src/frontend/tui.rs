@@ -414,7 +414,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         fs_type: None,
                         path: Some(PathBuf::from("/dev/loop0p1")),
                         parent_path: Some(PathBuf::from("/dev/loop0")),
-                        size: required_size,
+                        size: required_size + 10 * 1024 * 1024 * 1024,
                     })
                 } else {
                     disk_list.selection()
@@ -429,7 +429,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         s,
                         &format!(
                             "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
-                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0, // 1024 * 1024 * 1024 = 11073741824
+                            current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0,
                             required_size as f32 / 1024.0 / 1024.0 / 1024.0
                         ));
                     return;
@@ -797,13 +797,10 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
         SelectView::new()
             .popup()
             .autojump()
-            .with_all_str(vec![
-                "Yes",
-                "Yes, but I need to customize the swapfile size",
-                "No",
-            ])
+            .with_all_str(vec!["Automatic", "Specify size", "No"])
+            .selected(0)
             .on_submit(move |s: &mut Cursive, c: &str| match c {
-                "Yes" => {
+                "Automatic" => {
                     let size = disks::get_recommand_swap_size();
                     match size {
                         Ok(size) => {
@@ -820,7 +817,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                         }
                     }
                 }
-                "Yes, but I need to customize the swapfile size" => {
+                "Specify size" => {
                     let is_hibernation_clone_2 = is_hibernation_clone.clone();
                     let swap_size_copy = swap_size_copy.clone();
                     let use_swap_copy = use_swap_clone.clone();
@@ -828,14 +825,18 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                     let swap_size_temp_clone = Rc::clone(&swap_size_temp);
                     s.add_layer(
                         wrap_in_dialog(
-                            LinearLayout::vertical().child(
-                                EditView::new()
-                                    .on_edit_mut(move |_, c, _| {
-                                        swap_size_temp_clone.replace(c.to_owned());
-                                    })
-                                    .min_width(20)
-                                    .with_name("size"),
-                            ),
+                            LinearLayout::vertical()
+                                .child(TextView::new(
+                                    "Please enter the swap size you want to set (GiB)",
+                                ))
+                                .child(
+                                    EditView::new()
+                                        .on_edit_mut(move |_, c, _| {
+                                            swap_size_temp_clone.replace(c.to_owned());
+                                        })
+                                        .min_width(20)
+                                        .with_name("size"),
+                                ),
                             "Set swap size",
                             None,
                         )
@@ -848,6 +849,10 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                             }
                             let is_hibernation_clone = is_hibernation_clone_2.clone();
                             let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
+                            if installed_size + size as u64 > partition_size {
+                                show_msg(s, "No space to create swap file!");
+                                return;
+                            }
                             match disks::is_enable_hibernation(size) {
                                 Ok(is_h) => {
                                     is_hibernation_clone.store(is_h, Ordering::SeqCst);
@@ -873,7 +878,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                 _ => unreachable!(),
             }),
     );
-    let textview = TextView::new("Do you need to enable swap?");
+    let textview = TextView::new("Would you like to allocate swap space?");
     siv.add_layer(
         wrap_in_dialog(
             LinearLayout::vertical().child(textview).child(view),
