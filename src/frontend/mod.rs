@@ -125,13 +125,12 @@ fn begin_install(
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
-        let mut output;
-        match std::fs::File::create(tarball_file.clone()) {
-            Ok(file) => output = file,
+        let mut output = match std::fs::File::create(tarball_file.clone()) {
+            Ok(file) => file,
             Err(e) => {
                 send_error!(error_channel_tx_copy, e);
             }
-        }
+        };
         match network::download_file(url) {
             Ok(mut reader) => {
                 if let Err(e) = nix::fcntl::fallocate(
@@ -150,9 +149,8 @@ fn begin_install(
                 let mut tarball_size = 0;
                 loop {
                     let mut buf = vec![0; 4096];
-                    let reader_size;
-                    match reader.read(&mut buf[..]) {
-                        Ok(size) => reader_size = size,
+                    let reader_size = match reader.read(&mut buf[..]) {
+                        Ok(size) => size,
                         Err(e) => {
                             send_error!(error_channel_tx_copy, e);
                         }
@@ -201,15 +199,14 @@ fn begin_install(
     let sha256sum_work = thread::spawn(move || {
         let mut hasher = Sha256::new();
         loop {
-            let rx;
-            if let Ok(result) = sha256_work_rx.recv() {
-                rx = result;
+            let rx = if let Ok(result) = sha256_work_rx.recv() {
+                result
             } else {
                 // dbg!("sha256sum complete");
                 get_sha256_tx.send(hasher).unwrap();
                 hasher_done_copy.fetch_or(true, Ordering::SeqCst);
                 return;
-            }
+            };
             let (buf, reader_size) = rx;
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
                 let e = anyhow!("Failed to write hasher! {}", e);

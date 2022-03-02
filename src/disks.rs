@@ -92,12 +92,11 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
                 continue;
             }
             if part.get_flag(libparted::PartitionFlag::PED_PARTITION_ESP) {
-                let fs_type;
-                if let Ok(type_) = part.get_geom().probe_fs() {
-                    fs_type = Some(type_.name().to_owned());
+                let fs_type = if let Ok(type_) = part.get_geom().probe_fs() {
+                    Some(type_.name().to_owned())
                 } else {
-                    fs_type = None;
-                }
+                    None
+                };
                 let path = part
                     .get_path()
                     .ok_or_else(|| anyhow!("Unable to get the device file for ESP partition"))?;
@@ -124,18 +123,17 @@ pub fn list_partitions() -> Vec<Partition> {
                 if part.num() < 0 {
                     continue;
                 }
-                let fs_type;
                 let geom_length: i64 = part.geom_length();
                 let part_length = if geom_length < 0 {
                     0
                 } else {
                     geom_length as u64
                 };
-                if let Ok(type_) = part.get_geom().probe_fs() {
-                    fs_type = Some(type_.name().to_owned());
+                let fs_type = if let Ok(type_) = part.get_geom().probe_fs() {
+                    Some(type_.name().to_owned())
                 } else {
-                    fs_type = None;
-                }
+                    None
+                };
                 partitions.push(Partition {
                     path: part.get_path().map(|path| path.to_owned()),
                     parent_path: Some(device_path.clone()),

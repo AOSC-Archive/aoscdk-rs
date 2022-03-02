@@ -189,12 +189,11 @@ fn make_partition_list(
     let mut disk_view = LinearLayout::vertical();
     let mut disk_list = RadioGroup::new();
     for part in &partitions {
-        let path_name;
-        if let Some(path) = &part.path {
-            path_name = path.to_string_lossy().to_string();
+        let path_name = if let Some(path) = &part.path {
+            path.to_string_lossy().to_string()
         } else {
-            path_name = "?".to_owned();
-        }
+            "?".to_owned()
+        };
         let radio = disk_list.button(
             part.clone(),
             format!(
@@ -781,6 +780,7 @@ fn set_timezone(
 }
 
 fn select_swap(siv: &mut Cursive, config: InstallConfig) {
+    let config_clone = config.clone();
     let partition_size = config.partition.as_ref().unwrap().size;
     let installed_size = config.variant.as_ref().unwrap().install_size;
     siv.pop_layer();
@@ -892,7 +892,12 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
             config.swap_size = Arc::new(swap_size);
             config.is_hibernation = is_hibernation_clone_2.clone();
             show_summary(s, config);
-        }),
+        })
+        .button("Back", move |s| {
+            s.pop_layer();
+            select_timezone(s, config_clone.clone());
+        })
+        .button("Exit", move |s| s.quit()),
     );
 }
 
@@ -908,8 +913,10 @@ fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
         .button("Yes", move |s| show_summary(s, config_copy.clone()))
         .button("No", move |s| {
             fs::remove_file(LAST_USER_CONFIG_FILE).ok();
-            let mut new_config = InstallConfig::default();
-            new_config.partition = config.clone().partition;
+            let new_config = InstallConfig {
+                partition: config.clone().partition,
+                ..Default::default()
+            };
             select_variant(s, new_config);
         })
         .button("Exit", |s| s.quit()),
