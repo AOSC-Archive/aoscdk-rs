@@ -40,7 +40,7 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     let fs_type = partition.fs_type.as_ref().unwrap_or(&default_fs);
     let mut command = Command::new(format!("mkfs.{}", fs_type));
     let cmd;
-    
+
     if fs_type == "ext4" {
         cmd = command.arg("-Fq");
     } else if fs_type == "fat32" {
