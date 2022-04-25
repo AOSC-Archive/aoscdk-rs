@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Sender},
+        mpsc::{self, Sender, Receiver},
         Arc,
     },
     thread,
@@ -76,7 +76,17 @@ fn begin_install(
     sender: Sender<InstallProgress>,
     config: InstallConfig,
     tempdir: PathBuf,
+    install_thread_rx: Receiver<bool>,
 ) -> Result<()> {
+    let (error_channel_tx, error_channel_rx) = mpsc::channel();
+    let error_channel_tx_clone = error_channel_tx.clone();
+    thread::spawn(move || {
+        let user_exit = install_thread_rx.recv().unwrap();
+        if user_exit {
+            let e = anyhow!("User interrup!");
+            send_error!(error_channel_tx_clone, e);
+        }
+    });
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
@@ -118,7 +128,6 @@ fn begin_install(
     let extract_done_copy = extract_done.clone();
     let download_done_copy = download_done.clone();
     let hasher_done_copy = hasher_done.clone();
-    let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
@@ -343,8 +352,9 @@ fn test_download_amd64() {
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
+    let (_tx2, rx2) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir).is_ok());
+    assert!(begin_install(tx, config, tempdir, rx2).is_ok());
 }
 
 #[test]
@@ -354,7 +364,8 @@ fn test_404() {
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir).is_err());
+    let (_tx2, rx2) = std::sync::mpsc::channel();
+    assert!(begin_install(tx, config, tempdir, rx2).is_err());
 }
 
 #[cfg(all(feature = "is_retro", target_arch = "x86"))]
@@ -365,5 +376,6 @@ fn test_download_i486() {
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir).is_ok());
+    let (_tx2, rx2) = std::sync::mpsc::channel();
+    assert!(begin_install(tx, config, tempdir, rx2).is_ok());
 }

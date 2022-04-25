@@ -998,6 +998,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let counter_clone = counter.clone();
     let mut status_message = TextView::new("");
     let status_text = Arc::new(status_message.get_shared_content());
+    let (install_thread_tx, install_thread_rx) = std::sync::mpsc::channel();
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
@@ -1009,9 +1010,12 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         "Installing",
         None,
     ).button("Cancel", move |s| {
+        let install_thread_tx_clone = install_thread_tx.clone();
         s.add_layer(wrap_in_dialog(TextView::new(
             "The installation is still in progress, are you sure you want to quit the installer?"), "AOSC OS Installer", None)
-            .button("Yes", |s| s.quit())
+            .button("Yes", move |_| {
+                install_thread_tx_clone.send(true).unwrap();
+            })
             .button("No", |s| s.cb_sink().send(Box::new(|s| {
                 s.pop_layer();
             }))
@@ -1025,7 +1029,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         .into_path();
     let tempdir_copy = tempdir.clone();
     let root_fd = install::get_dir_fd(PathBuf::from("/"));
-    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
+    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, install_thread_rx));
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
