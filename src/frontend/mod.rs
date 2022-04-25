@@ -26,6 +26,7 @@ pub use tui::tui_main;
 pub(crate) enum InstallProgress {
     Pending(String, usize),
     Finished,
+    UserInterrup,
 }
 
 macro_rules! send_error {
@@ -78,13 +79,11 @@ fn begin_install(
     tempdir: PathBuf,
     install_thread_rx: Receiver<bool>,
 ) -> Result<()> {
-    let (error_channel_tx, error_channel_rx) = mpsc::channel();
-    let error_channel_tx_clone = error_channel_tx.clone();
+    let sender_clone = sender.clone();
     thread::spawn(move || {
         let user_exit = install_thread_rx.recv().unwrap();
         if user_exit {
-            let e = anyhow!("User interrup!");
-            send_error!(error_channel_tx_clone, e);
+            sender_clone.send(InstallProgress::UserInterrup).unwrap();
         }
     });
     let refresh_interval = std::time::Duration::from_millis(30);
@@ -130,6 +129,7 @@ fn begin_install(
     let hasher_done_copy = hasher_done.clone();
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
+    let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();

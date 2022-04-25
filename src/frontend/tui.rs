@@ -1041,6 +1041,13 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
                     cb_sink.send(Box::new(show_finished)).unwrap();
                     return;
                 }
+                super::InstallProgress::UserInterrup => {
+                    cb_sink.send(Box::new(|s| show_error(s, "User interrup!"))).unwrap();
+                    if let Ok(root_fd) = root_fd {
+                        umount_all(&tempdir, root_fd);
+                    }
+                    return;
+                }
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
