@@ -1008,8 +1008,15 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             .child(status_message),
         "Installing",
         None,
-    ));
-
+    ).button("Cancel", move |s| {
+        s.add_layer(wrap_in_dialog(TextView::new(
+            "The installation is still in progress, are you sure you want to quit the installer?"), "AOSC OS Installer", None)
+            .button("Yes", |s| s.quit())
+            .button("No", |s| s.cb_sink().send(Box::new(|s| {
+                s.pop_layer();
+            }))
+            .unwrap()));
+    }));
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
