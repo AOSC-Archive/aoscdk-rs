@@ -792,6 +792,8 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
     let use_swap = Arc::new(AtomicBool::new(false));
     let use_swap_clone = use_swap.clone();
     let use_swap_clone_2 = use_swap.clone();
+    let swap_is_set = Arc::new(AtomicBool::new(false));
+    let swap_is_set_clone = swap_is_set.clone();
     let view = ListView::new().child(
         "Choose",
         SelectView::new()
@@ -802,18 +804,22 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
             .on_submit(move |s: &mut Cursive, c: &str| match c {
                 "Automatic" => {
                     let size = disks::get_recommand_swap_size();
+                    let swap_is_set_clone = swap_is_set.clone();
                     match size {
                         Ok(size) => {
                             if installed_size + size as u64 > partition_size {
                                 show_msg(s, "No space to create swap file!");
+                                swap_is_set_clone.store(false, Ordering::SeqCst);
                                 return;
                             }
                             swap_size_copy.replace(Some(size));
                             is_hibernation_clone.store(true, Ordering::SeqCst);
                             use_swap.store(true, Ordering::SeqCst);
+                            swap_is_set_clone.store(true, Ordering::SeqCst);
                         }
                         Err(e) => {
                             show_msg(s, &e.to_string());
+                            swap_is_set_clone.store(false, Ordering::SeqCst);
                         }
                     }
                 }
@@ -823,6 +829,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                     let use_swap_copy = use_swap_clone.clone();
                     let swap_size_temp = Rc::new(RefCell::new(String::new()));
                     let swap_size_temp_clone = Rc::clone(&swap_size_temp);
+                    let swap_is_set = swap_is_set.clone();
                     s.add_layer(
                         wrap_in_dialog(
                             LinearLayout::vertical()
@@ -845,6 +852,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                             let size = size.parse::<f64>();
                             if size.is_err() {
                                 show_msg(s, "size not a number!");
+                                swap_is_set.store(false, Ordering::SeqCst);
                                 return;
                             }
                             let is_hibernation_clone = is_hibernation_clone_2.clone();
@@ -858,9 +866,11 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                                     is_hibernation_clone.store(is_h, Ordering::SeqCst);
                                     swap_size_copy.replace(Some(size));
                                     use_swap_copy.store(true, Ordering::SeqCst);
+                                    swap_is_set.store(true, Ordering::SeqCst);
                                 }
                                 Err(e) => {
                                     show_msg(s, &e.to_string());
+                                    swap_is_set.store(false, Ordering::SeqCst);
                                     return;
                                 }
                             }
@@ -874,6 +884,8 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                 }
                 "No" => {
                     use_swap.store(false, Ordering::SeqCst);
+                    let swap_is_set = swap_is_set.clone();
+                    swap_is_set.store(true, Ordering::SeqCst);
                 }
                 _ => unreachable!(),
             }),
@@ -886,6 +898,10 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
             None,
         )
         .button("Continue", move |s| {
+            if !swap_is_set_clone.load(Ordering::SeqCst) {
+                show_msg(s, "You haven't set the swap option!");
+                return;
+            }
             let swap_size = swap_size.as_ref().to_owned().into_inner();
             let mut config = config.clone();
             config.use_swap = use_swap_clone_2.clone();
