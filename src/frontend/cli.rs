@@ -12,7 +12,7 @@ use tempfile::TempDir;
 use crate::{
     disks::{self, Partition},
     install::{self, umount_all},
-    network::{self, Mirror, VariantEntry, fetch_mirrors},
+    network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
 use super::{begin_install, InstallConfig};
@@ -108,7 +108,7 @@ fn list_locale() -> Result<()> {
     for i in locale_list {
         println!("{}", i);
     }
-    
+
     Ok(())
 }
 
@@ -194,19 +194,28 @@ fn get_mirror(mirror: &str) -> Mirror {
     mirror
 }
 
-fn get_swap(swap_size: Option<f64>) -> Result<(f64, bool)> {
-    let (size, is_hibernation) = if let Some(swap_size) = swap_size {
+fn get_swap(
+    swap_size: Option<f64>,
+    partition: &Partition,
+    variant: &VariantEntry,
+) -> Result<(bool, f64, bool)> {
+    let result = if let Some(swap_size) = swap_size {
         let size = swap_size * 1024.0 * 1024.0 * 1024.0;
         let is_hibernation = disks::is_enable_hibernation(size)?;
 
-        (size, is_hibernation)
+        (true, size, is_hibernation)
     } else {
         let size = disks::get_recommand_swap_size()?;
+        let use_swap = if partition.size > size as u64 + variant.install_size {
+            (true, size, true)
+        } else {
+            (false, size, false)
+        };
 
-        (size, true)
+        use_swap
     };
 
-    Ok((size, is_hibernation))
+    Ok(result)
 }
 
 fn start_install(ic: InstallCommand) -> Result<()> {
@@ -218,7 +227,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         .split_once('/')
         .ok_or_else(|| anyhow!("Can not parse timezone!"))?;
     let tc = if ic.use_rtc { "RTC" } else { "UTC" };
-    let (swap_size, is_hibernation) = get_swap(ic.swap_size)?;
+    let (use_swap, swap_size, is_hibernation) = get_swap(ic.swap_size, &partition, &variant)?;
 
     let install_config = InstallConfig {
         variant: Some(Arc::new(variant)),
@@ -231,7 +240,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         continent: Some(Arc::new(continent.to_string())),
         city: Some(Arc::new(city.to_string())),
         tc: Some(Arc::new(tc.to_string())),
-        use_swap: Arc::new(AtomicBool::new(!ic.no_swap)),
+        use_swap: Arc::new(AtomicBool::new(!ic.no_swap && use_swap)),
         swap_size: Arc::new(Some(swap_size)),
         is_hibernation: Arc::new(AtomicBool::new(is_hibernation)),
     };
