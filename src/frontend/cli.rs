@@ -1,7 +1,7 @@
 use std::{
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
-    thread,
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
+    thread, os::unix::prelude::AsRawFd,
 };
 
 use anyhow::{anyhow, Result};
@@ -183,8 +183,6 @@ fn get_mirror(mirror: &str) -> Mirror {
         format!("{}/", mirror)
     };
 
-    
-
     Mirror {
         name: s.to_string(),
         name_tr: s.to_string(),
@@ -206,7 +204,6 @@ fn get_swap(
         (true, size, is_hibernation)
     } else {
         let size = disks::get_recommand_swap_size()?;
-        
 
         if partition.size > size as u64 + variant.install_size {
             (true, size, true)
@@ -219,6 +216,8 @@ fn get_swap(
 }
 
 fn start_install(ic: InstallCommand) -> Result<()> {
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
     let variant = get_variant(&ic.tarball)?;
     let partition = get_partition(&ic.path, &variant)?;
     let mirror = get_mirror(&ic.mirror);
@@ -244,19 +243,25 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         swap_size: Arc::new(Some(swap_size)),
         is_hibernation: Arc::new(AtomicBool::new(is_hibernation)),
     };
-    let root_fd = install::get_dir_fd(PathBuf::from("/"));
+    let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();
     let (tx, rx) = std::sync::mpsc::channel();
-    let (install_thread_tx, install_thread_rx) = std::sync::mpsc::channel();
-    ctrlc::set_handler(move || install_thread_tx.send(true).unwrap())
-        .expect("Error setting SIGINT handler.");
     let tempdir = TempDir::new()
         .expect("Unable to create temporary directory")
         .into_path();
     let tempdir_clone = tempdir.clone();
+    let tempdir_clone_2 = tempdir.clone();
+    ctrlc::set_handler(move || {
+        umount_all(&tempdir, root_fd);
+        r.store(false, Ordering::SeqCst);
+    }).expect("Error setting SIGINT handler.");
     let install_thread =
-        thread::spawn(move || begin_install(tx, install_config, tempdir_clone, install_thread_rx));
+        thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
+    bar.enable_steady_tick(50);
     loop {
+        if !running.load(Ordering::SeqCst) {
+            return Err(anyhow!("User interrup!"));
+        }
         if let Ok(progress) = rx.recv() {
             match progress {
                 super::InstallProgress::Pending(msg, pct) => {
@@ -264,23 +269,12 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                 }
                 super::InstallProgress::Finished => {
                     println!("Install Finished!");
-
                     return Ok(());
-                }
-                super::InstallProgress::UserInterrup => {
-                    if let Ok(root_fd) = root_fd {
-                        umount_all(&tempdir, root_fd);
-                    }
-
-                    return Err(anyhow!("User interrup!"));
                 }
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            if let Ok(root_fd) = root_fd {
-                umount_all(&tempdir, root_fd);
-            }
-
+            umount_all(&tempdir_clone_2, root_fd);
             return Err(err);
         }
     }

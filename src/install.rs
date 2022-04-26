@@ -168,8 +168,8 @@ pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir> {
 }
 
 /// Escape the chroot context using the previously obtained `root_fd` as a trampoline
-pub fn escape_chroot(root_fd: Dir) -> Result<()> {
-    fchdir(root_fd.as_raw_fd())?;
+pub fn escape_chroot(root_fd: i32) -> Result<()> {
+    fchdir(root_fd)?;
     chroot(".")?;
     std::env::set_current_dir("/")?; // reset cwd (on host)
 
@@ -481,7 +481,7 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
 }
 
 /// Run umount -R
-pub fn umount_all(mount_path: &Path, root_fd: Dir) {
+pub fn umount_all(mount_path: &Path, root_fd: i32) {
     escape_chroot(root_fd).ok();
     let efi_path = mount_path.join("efi");
     if is_efi_booted() {

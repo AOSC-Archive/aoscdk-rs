@@ -17,9 +17,9 @@ use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use number_prefix::NumberPrefix;
-use std::rc::Rc;
 use std::{cell::RefCell, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
+use std::{os::unix::prelude::AsRawFd, rc::Rc};
 use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
@@ -998,7 +998,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let counter_clone = counter.clone();
     let mut status_message = TextView::new("");
     let status_text = Arc::new(status_message.get_shared_content());
-    let (install_thread_tx, install_thread_rx) = std::sync::mpsc::channel();
+    let (user_interrup_tx, user_interrup_rx) = std::sync::mpsc::channel();
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
@@ -1010,11 +1010,11 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         "Installing",
         None,
     ).button("Cancel", move |s| {
-        let install_thread_tx_clone = install_thread_tx.clone();
+        let user_interrup_tx = user_interrup_tx.clone();
         s.add_layer(wrap_in_dialog(TextView::new(
             "The installation is still in progress, are you sure you want to quit the installer?"), "AOSC OS Installer", None)
             .button("Yes", move |_| {
-                install_thread_tx_clone.send(true).unwrap();
+                user_interrup_tx.send(true).unwrap();
             })
             .button("No", |s| s.cb_sink().send(Box::new(|s| {
                 s.pop_layer();
@@ -1024,12 +1024,27 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
+    let cb_sink_clone = siv.cb_sink().clone();
     let tempdir = TempDir::new()
         .expect("Unable to create temporary directory")
         .into_path();
     let tempdir_copy = tempdir.clone();
-    let root_fd = install::get_dir_fd(PathBuf::from("/"));
-    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, install_thread_rx));
+    let tempdir_copy_2 = tempdir.clone();
+    let tempdir_copy_3 = tempdir.clone();
+    let root_fd = install::get_dir_fd(PathBuf::from("/"))
+        .and_then(|x| Ok(x.as_raw_fd()))
+        .expect("Can not get root fd!");
+    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
+    thread::spawn(move || {
+        let user_exit = user_interrup_rx.recv().unwrap();
+        if user_exit {
+            cb_sink_clone
+                .send(Box::new(|s| show_error(s, "User interrup!")))
+                .unwrap();
+            umount_all(&tempdir_copy_2, root_fd);
+            return;
+        }
+    });
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
@@ -1041,19 +1056,10 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
                     cb_sink.send(Box::new(show_finished)).unwrap();
                     return;
                 }
-                super::InstallProgress::UserInterrup => {
-                    cb_sink.send(Box::new(|s| show_error(s, "User interrup!"))).unwrap();
-                    if let Ok(root_fd) = root_fd {
-                        umount_all(&tempdir, root_fd);
-                    }
-                    return;
-                }
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            if let Ok(root_fd) = root_fd {
-                umount_all(&tempdir, root_fd);
-            }
+            umount_all(&tempdir_copy_3, root_fd);
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(s, &err.to_string());

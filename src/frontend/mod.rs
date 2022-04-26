@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Sender, Receiver},
+        mpsc::{self, Sender},
         Arc,
     },
     thread,
@@ -28,7 +28,6 @@ pub use cli::*;
 pub(crate) enum InstallProgress {
     Pending(String, usize),
     Finished,
-    UserInterrup,
 }
 
 macro_rules! send_error {
@@ -79,15 +78,7 @@ fn begin_install(
     sender: Sender<InstallProgress>,
     config: InstallConfig,
     tempdir: PathBuf,
-    install_thread_rx: Receiver<bool>,
 ) -> Result<()> {
-    let sender_clone = sender.clone();
-    thread::spawn(move || {
-        let user_exit = install_thread_rx.recv().unwrap();
-        if user_exit {
-            sender_clone.send(InstallProgress::UserInterrup).unwrap();
-        }
-    });
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
@@ -231,14 +222,14 @@ fn begin_install(
     loop {
         let tarball_downloaded_size = counter.get() as f64;
         let count = (tarball_downloaded_size / file_size * 100.0) as usize;
+        if let Ok(err) = error_channel_rx.try_recv() {
+            return Err(anyhow!(err));
+        }
         sender.send(InstallProgress::Pending(
             "Step 2 of 8: Downloading system release ...".to_string(),
             count,
         ))?;
         std::thread::sleep(refresh_interval);
-        if let Ok(err) = error_channel_rx.try_recv() {
-            return Err(anyhow!(err));
-        }
         if download_done.load(Ordering::SeqCst) {
             break;
         }
@@ -336,7 +327,7 @@ fn begin_install(
             install::create_swapfile(*swap_size, use_swap)?;
         }
     }
-    install::escape_chroot(escape_vector)?;
+    install::escape_chroot(escape_vector.as_raw_fd())?;
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path)?;
     }
@@ -354,27 +345,25 @@ fn test_download_amd64() {
     let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
-    let (_tx2, rx2) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir, rx2).is_ok());
+    assert!(begin_install(tx, config, tempdir).is_ok());
 }
 
 #[test]
 fn test_404() {
     use tempfile::TempDir;
-    let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-i486/base/aosc-os_base_20200620.1_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
+    let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-i486/base/aosc-os_base_20200620.1_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC","use_swap":false,"swap_size":null,"is_hibernation":false}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();
-    let (_tx2, rx2) = std::sync::mpsc::channel();
-    assert!(begin_install(tx, config, tempdir, rx2).is_err());
+    assert!(begin_install(tx, config, tempdir).is_err());
 }
 
 #[cfg(all(feature = "is_retro", target_arch = "x86"))]
 #[test]
 fn test_download_i486() {
     use tempfile::TempDir;
-    let json = r#"{"variant":{"name":"Base","size":97613332,"install_size":448060928,"date":"20220128","sha256sum":"2b691be7f14c4948fac7e1533bd5a19e78ee72640f666b64f2c1fae2216ab708","url":"os-i486/base/aosc-os_base_20220128_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"C.UTF-8","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
+    let json = r#"{"variant":{"name":"Base","size":97613332,"install_size":448060928,"date":"20220128","sha256sum":"2b691be7f14c4948fac7e1533bd5a19e78ee72640f666b64f2c1fae2216ab708","url":"os-i486/base/aosc-os_base_20220128_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"C.UTF-8","continent":"Asia","city":"Shanghai","tc":"UTC","use_swap":false,"swap_size":null,"is_hibernation":false}}"#;
     let config = serde_json::from_str(json).unwrap();
     let (tx, _rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new().unwrap().into_path();

@@ -2,6 +2,7 @@
 name = "aoscdk-rs"
 version = "0.3.7-alpha.0"
 authors = ["liushuyu <liushuyu011@gmail.com>"]
+
 edition = "2018"
 
 
