@@ -12,12 +12,13 @@ use tempfile::TempDir;
 use crate::{
     disks::{self, Partition},
     install::{self, umount_all},
-    network::{self, Mirror, VariantEntry},
+    network::{self, Mirror, VariantEntry, fetch_mirrors},
 };
 
 use super::{begin_install, InstallConfig};
 
 #[derive(Parser, Debug)]
+#[clap(about, version, author)]
 pub struct Args {
     #[clap(subcommand)]
     subcommand: DeployKitCliCommand,
@@ -29,33 +30,54 @@ enum DeployKitCliCommand {
     Install(InstallCommand),
     /// List of mirror
     ListMirror(ListMirror),
+    /// List of locale
+    ListLocale(ListLocale),
+    /// List of timezone
+    ListTimezone(ListTimezone),
 }
 
 #[derive(Parser, Debug)]
 struct ListMirror;
 
 #[derive(Parser, Debug)]
+struct ListLocale;
+
+#[derive(Parser, Debug)]
+struct ListTimezone;
+
+#[derive(Parser, Debug)]
 struct InstallCommand {
+    /// Variant name, like: Base, KDE ...
     #[clap(long, default_value = "Base")]
     tarball: String,
+    /// Mirror url
     #[clap(long, default_value = "https://repo.aosc.io")]
     mirror: String,
+    /// Install AOSC OS to path, like: /dev/sda1
     #[clap(long)]
     path: String,
+    /// Set username
     #[clap(long)]
     user: String,
+    /// Set password
     #[clap(long)]
     password: String,
+    /// Set hostname
     #[clap(long, default_value = "aosc")]
     hostname: String,
+    /// Set timezone
     #[clap(long, default_value = "Asia/Shanghai")]
     timezone: String,
+    /// Set locale
     #[clap(long, default_value = "C.UTF-8")]
     locale: String,
+    /// Use RTC as system time
     #[clap(long)]
     use_rtc: bool,
+    /// Dont use swap
     #[clap(long, conflicts_with = "swap-size")]
     no_swap: bool,
+    /// Custom swap size
     #[clap(long)]
     swap_size: Option<f64>,
 }
@@ -63,7 +85,39 @@ struct InstallCommand {
 pub fn execute(args: Args) -> Result<()> {
     match args.subcommand {
         DeployKitCliCommand::Install(ic) => start_install(ic)?,
-        DeployKitCliCommand::ListMirror(ListMirror) => todo!(),
+        DeployKitCliCommand::ListMirror(ListMirror) => list_mirror()?,
+        DeployKitCliCommand::ListLocale(ListLocale) => list_locale()?,
+        DeployKitCliCommand::ListTimezone(ListTimezone) => list_timezone()?,
+    }
+
+    Ok(())
+}
+
+fn list_mirror() -> Result<()> {
+    let recipe = network::fetch_recipe()?;
+    let mirrors = fetch_mirrors(&recipe);
+    for i in mirrors {
+        println!("{:<40}{}", i.name, i.url);
+    }
+
+    Ok(())
+}
+
+fn list_locale() -> Result<()> {
+    let locale_list = install::get_locale_list()?;
+    for i in locale_list {
+        println!("{}", i);
+    }
+    
+    Ok(())
+}
+
+fn list_timezone() -> Result<()> {
+    let timezone_list = install::get_zoneinfo_list()?;
+    for (continent, city) in timezone_list {
+        for c in city {
+            println!("{}/{}", continent, c);
+        }
     }
 
     Ok(())
