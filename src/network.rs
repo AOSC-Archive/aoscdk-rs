@@ -45,7 +45,7 @@ pub struct Tarball {
     pub sha256sum: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Variant {
     name: String,
     retro: bool,
@@ -55,7 +55,7 @@ pub struct Variant {
     tarballs: Vec<Tarball>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Bulletin {
     #[serde(rename = "type")]
     pub type_: String,
@@ -67,7 +67,7 @@ pub struct Bulletin {
     pub body_tr: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Recipe {
     pub version: usize,
     pub bulletin: Bulletin,

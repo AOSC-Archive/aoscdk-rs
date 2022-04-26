@@ -19,9 +19,11 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 mod tui;
+mod cli;
 
 use sha2::{Digest, Sha256};
 pub use tui::tui_main;
+pub use cli::*;
 
 pub(crate) enum InstallProgress {
     Pending(String, usize),
