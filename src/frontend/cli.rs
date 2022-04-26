@@ -27,7 +27,7 @@ pub struct Args {
 #[derive(Subcommand, Debug)]
 enum DeployKitCliCommand {
     /// Install System
-    Install(InstallCommand),
+    Install(Box<InstallCommand>),
     /// List of mirror
     ListMirror(ListMirror),
     /// List of locale
@@ -84,7 +84,7 @@ struct InstallCommand {
 
 pub fn execute(args: Args) -> Result<()> {
     match args.subcommand {
-        DeployKitCliCommand::Install(ic) => start_install(ic)?,
+        DeployKitCliCommand::Install(ic) => start_install(*ic)?,
         DeployKitCliCommand::ListMirror(ListMirror) => list_mirror()?,
         DeployKitCliCommand::ListLocale(ListLocale) => list_locale()?,
         DeployKitCliCommand::ListTimezone(ListTimezone) => list_timezone()?,
@@ -183,15 +183,15 @@ fn get_mirror(mirror: &str) -> Mirror {
         format!("{}/", mirror)
     };
 
-    let mirror = Mirror {
+    
+
+    Mirror {
         name: s.to_string(),
         name_tr: s.to_string(),
         loc: s.to_string(),
         loc_tr: s.to_string(),
         url: mirror,
-    };
-
-    mirror
+    }
 }
 
 fn get_swap(
@@ -206,13 +206,13 @@ fn get_swap(
         (true, size, is_hibernation)
     } else {
         let size = disks::get_recommand_swap_size()?;
-        let use_swap = if partition.size > size as u64 + variant.install_size {
+        
+
+        if partition.size > size as u64 + variant.install_size {
             (true, size, true)
         } else {
             (false, size, false)
-        };
-
-        use_swap
+        }
     };
 
     Ok(result)
