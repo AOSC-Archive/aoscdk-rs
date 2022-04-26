@@ -51,7 +51,7 @@ struct InstallCommand {
     #[clap(long, default_value = "Base")]
     tarball: String,
     /// Mirror url
-    #[clap(long, default_value = "https://repo.aosc.io")]
+    #[clap(long, default_value = "https://repo.aosc.io/aosc-os")]
     mirror: String,
     /// Install AOSC OS to path, like: /dev/sda1
     #[clap(long)]
