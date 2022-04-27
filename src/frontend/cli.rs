@@ -1,7 +1,7 @@
 use std::{
     path::{Path, PathBuf},
     sync::{atomic::{AtomicBool, Ordering}, Arc},
-    thread, os::unix::prelude::AsRawFd,
+    thread, os::unix::prelude::AsRawFd
 };
 
 use anyhow::{anyhow, Result};
@@ -268,7 +268,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                     bar.set_message(format!("{} ({}/100)", msg, pct));
                 }
                 super::InstallProgress::Finished => {
-                    println!("Install Finished!");
+                    bar.finish_with_message("Install finished! Changed your house to dungeon.");
                     return Ok(());
                 }
             }
