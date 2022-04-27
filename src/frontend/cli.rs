@@ -268,7 +268,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                     bar.set_message(format!("{} ({}/100)", msg, pct));
                 }
                 super::InstallProgress::Finished => {
-                    bar.finish_with_message("Install finished! Changed your house to dungeon.");
+                    bar.finish_with_message("Install finished! You are now a dungeon master :)");
                     return Ok(());
                 }
             }
