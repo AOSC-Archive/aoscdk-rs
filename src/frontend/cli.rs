@@ -273,7 +273,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                 }
             }
         } else {
-            let err = install_thread.join().unwrap().unwrap_err();
+            let err = install_thread.join().map_err(|_| anyhow!("Join thread failed! Why"))?.unwrap_err();
             umount_all(&tempdir_clone_2, root_fd);
             return Err(err);
         }
