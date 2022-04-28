@@ -15,7 +15,7 @@ use crate::{
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
-use super::{begin_install, InstallConfig};
+use super::{begin_install, InstallConfig, tui_main};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -26,6 +26,8 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 enum DeployKitCliCommand {
+    /// Start Deploykit tui
+    Tui(Tui),
     /// Install System
     Install(Box<InstallCommand>),
     /// List of mirror
@@ -35,6 +37,9 @@ enum DeployKitCliCommand {
     /// List of timezone
     ListTimezone(ListTimezone),
 }
+
+#[derive(Parser, Debug)]
+struct Tui;
 
 #[derive(Parser, Debug)]
 struct ListMirror;
@@ -84,6 +89,7 @@ struct InstallCommand {
 
 pub fn execute(args: Args) -> Result<()> {
     match args.subcommand {
+        DeployKitCliCommand::Tui(Tui) => tui_main(),
         DeployKitCliCommand::Install(ic) => start_install(*ic)?,
         DeployKitCliCommand::ListMirror(ListMirror) => list_mirror()?,
         DeployKitCliCommand::ListLocale(ListLocale) => list_locale()?,
@@ -128,7 +134,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
     let variants = network::find_variant_candidates(recipe)?;
     let index = variants
         .iter()
-        .position(|x| x.name == tarball || x.name.to_lowercase() == tarball);
+        .position(|x| x.name.to_lowercase() == tarball.to_lowercase());
     if let Some(index) = index {
         return Ok(variants[index].to_owned());
     }

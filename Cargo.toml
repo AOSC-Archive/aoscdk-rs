@@ -12,7 +12,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
-nix = "0.23"
+nix = "0.24"
 libparted = "0.1"
 cursive = "=0.16"
 cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view", rev = "55eca64ef0e9bbcd75970d98f12b023bb635c522" }
@@ -30,6 +30,7 @@ rand = "0.8"
 ctrlc = { version = "3.2", features = ["termination"] }
 fstab-generate = "0.1"
 disk-types = "0.1"
+sysinfo = "0.23"
 sys-info = "0.9"
 clap = { version = "3.1", features = ["derive"]}
 indicatif = "0.16"
