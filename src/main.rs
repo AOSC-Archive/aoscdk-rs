@@ -17,6 +17,10 @@ mod parser;
 const LOCK: &str = "/run/lock/aoscdk.lock";
 
 fn main() {
+    if let Err(e) = create_lock() {
+        eprintln!("Can not get lock! why: {}", e);
+        std::process::exit(1);
+    }
     if let Err(e) = execute() {
         eprintln!("{}", e);
         remove_lock().ok();
@@ -27,7 +31,6 @@ fn main() {
 }
 
 fn execute() -> Result<()> {
-    create_lock()?;
     let args = std::env::args();
     if args.len() < 2 {
         frontend::tui_main();
