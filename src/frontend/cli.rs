@@ -1,7 +1,11 @@
 use std::{
+    os::unix::prelude::AsRawFd,
     path::{Path, PathBuf},
-    sync::{atomic::{AtomicBool, Ordering}, Arc},
-    thread, os::unix::prelude::AsRawFd
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
 };
 
 use anyhow::{anyhow, Result};
@@ -15,7 +19,7 @@ use crate::{
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
-use super::{begin_install, InstallConfig, tui_main};
+use super::{begin_install, tui_main, InstallConfig};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -52,37 +56,37 @@ struct ListTimezone;
 
 #[derive(Parser, Debug)]
 struct InstallCommand {
-    /// Variant name, like: Base, KDE ...
+    /// Select AOSC OS variant to install (e.g., Workstation, Server, Base)
     #[clap(long, default_value = "Base")]
     tarball: String,
-    /// Mirror url
+    /// Set URL for download source
     #[clap(long, default_value = "https://repo.aosc.io/aosc-os")]
     mirror: String,
-    /// Install AOSC OS to path, like: /dev/sda1
+    /// Set target partition to install AOSC OS to (e.g., /dev/sda1)
     #[clap(long)]
     path: String,
-    /// Set username
+    /// Set name of the default user
     #[clap(long)]
     user: String,
-    /// Set password
+    /// Set password for default user
     #[clap(long)]
     password: String,
-    /// Set hostname
+    /// Set device hostname
     #[clap(long, default_value = "aosc")]
     hostname: String,
-    /// Set timezone
-    #[clap(long, default_value = "Asia/Shanghai")]
+    /// Set default timezone
+    #[clap(long, default_value = "UTC")]
     timezone: String,
-    /// Set locale
+    /// Set default locale (affects display language, units, time/date format etc.)
     #[clap(long, default_value = "C.UTF-8")]
     locale: String,
-    /// Use RTC as system time
+    /// Toggle using RTC (real time clock) time as local time
     #[clap(long)]
     use_rtc: bool,
-    /// Dont use swap
+    /// Disable swapfile
     #[clap(long, conflicts_with = "swap-size")]
     no_swap: bool,
-    /// Custom swap size
+    /// Set custom swapfile size
     #[clap(long)]
     swap_size: Option<f64>,
 }
@@ -140,7 +144,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
     }
 
     Err(anyhow!(
-        "Could not find variant at tarball name: {}",
+        "AOSC OS Installer could not find tarball for specified variant {}.",
         tarball
     ))
 }
@@ -164,7 +168,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
         let partition = list_part[index].to_owned();
         if partition.size < required_size {
             let s = format!(
-                "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
+                "The specified partition does not contain enough space to install AOSC OS release!\n\nAvailable space: {:.3}GiB\nRequired space: {:.3}GiB", 
                 partition.size as f32 / 1024.0 / 1024.0 / 1024.0,
                 required_size as f32 / 1024.0 / 1024.0 / 1024.0
             );
@@ -176,7 +180,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
     }
 
     Err(anyhow!(
-        "Could not find partition in path: {}",
+        "AOSC OS Installer could not find the specified partition: {}\nDid you partition your target disk?",
         path.display()
     ))
 }
@@ -230,7 +234,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let (continent, city) = ic
         .timezone
         .split_once('/')
-        .ok_or_else(|| anyhow!("Can not parse timezone!"))?;
+        .ok_or_else(|| anyhow!("You have specified an invalid timezone!"))?;
     let tc = if ic.use_rtc { "RTC" } else { "UTC" };
     let (use_swap, swap_size, is_hibernation) = get_swap(ic.swap_size, &partition, &variant)?;
 
@@ -252,21 +256,20 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();
     let (tx, rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new()
-        .expect("Unable to create temporary directory")
+        .expect("AOSC OS Installer could not create temporary directory for installation.")
         .into_path();
     let tempdir_clone = tempdir.clone();
     let tempdir_clone_2 = tempdir.clone();
     ctrlc::set_handler(move || {
         umount_all(&tempdir, root_fd);
         r.store(false, Ordering::SeqCst);
-    }).expect("Error setting SIGINT handler.");
-    let install_thread =
-        thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
+    }).expect("AOSC OS Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
+    let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(50);
     loop {
         if !running.load(Ordering::SeqCst) {
-            return Err(anyhow!("User interrup!"));
+            return Err(anyhow!("AOSC OS installation has been aborted."));
         }
         if let Ok(progress) = rx.recv() {
             match progress {
@@ -274,12 +277,12 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                     bar.set_message(format!("{} ({}/100)", msg, pct));
                 }
                 super::InstallProgress::Finished => {
-                    bar.finish_with_message("Install finished! You are now a dungeon master :)");
+                    bar.finish_with_message("AOSC OS installation has successfully completed! Good luck to you, Dungeon Master :)");
                     return Ok(());
                 }
             }
         } else {
-            let err = install_thread.join().map_err(|_| anyhow!("Join thread failed! Why"))?.unwrap_err();
+            let err = install_thread.join().map_err(|_| anyhow!("AOSC OS Installer has encountered an unexpected error. Please restart your insatllation environment."))?.unwrap_err();
             umount_all(&tempdir_clone_2, root_fd);
             return Err(err);
         }

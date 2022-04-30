@@ -50,10 +50,13 @@ fn create_lock() -> Result<()> {
         lock_file.read_to_string(&mut buf)?;
         let old_pid = buf
             .parse::<i32>()
-            .map_err(|_| anyhow!("Lock file is broken!"))?;
+            .map_err(|_| anyhow!("Invalid or corrupted lock file!"))?;
         let s = System::new_all();
         if s.process(Pid::from(old_pid)).is_some() {
-            return Err(anyhow!("AOSC Deploykit (pid: {}) still running!", old_pid));
+            return Err(anyhow!(
+                "Another instance of AOSC OS Installer (pid: {}) is still running!",
+                old_pid
+            ));
         } else {
             remove_lock()?;
         }

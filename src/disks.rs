@@ -53,12 +53,12 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
             partition
                 .path
                 .as_ref()
-                .ok_or_else(|| anyhow!("Path not found"))?,
+                .ok_or_else(|| anyhow!("AOSC OS Installer cannot find the specified partition.\nDid you partition your target disk?"))?,
         )
         .output()?;
     if !output.status.success() {
         return Err(anyhow!(
-            "Failed to create filesystem: \n{}\n{}",
+            "AOSC OS Installer failed to format the specified partition: \n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         ));
@@ -97,9 +97,9 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
                 } else {
                     None
                 };
-                let path = part
-                    .get_path()
-                    .ok_or_else(|| anyhow!("Unable to get the device file for ESP partition"))?;
+                let path = part.get_path().ok_or_else(|| {
+                    anyhow!("AOSC OS Installer could not detect the EFI system partition.")
+                })?;
                 return Ok(Partition {
                     path: Some(path.to_owned()),
                     parent_path: None,
@@ -110,7 +110,9 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
         }
     }
 
-    Err(anyhow!("ESP partition not found."))
+    Err(anyhow!(
+        "AOSC OS Installer could not detect the EFI system partition."
+    ))
 }
 
 pub fn list_partitions() -> Vec<Partition> {
@@ -152,7 +154,7 @@ pub fn fstab_entries(
     fs_type: &str,
     mount_path: Option<&Path>,
 ) -> Result<OsString> {
-    let target = device_path.ok_or_else(|| anyhow!("Cannot get your device path!"))?;
+    let target = device_path.ok_or_else(|| anyhow!("AOSC OS Installer cannot detect the corresponding device file for the specified partition!"))?;
     let (fs_type, option) = match fs_type {
         "fat32" => (FileSystem::Fat32, "defaults"),
         "ext4" => (FileSystem::Ext4, "defaults"),
@@ -160,10 +162,14 @@ pub fn fstab_entries(
         "xfs" => (FileSystem::Xfs, "defaults"),
         "f2fs" => (FileSystem::F2fs, "defaults"),
         "swap" => (FileSystem::Swap, "sw"),
-        _ => return Err(anyhow!("Unsupport fs type!")),
+        _ => return Err(anyhow!("Unsupported filesystem type!")),
     };
-    let root_id = BlockInfo::get_partition_id(target, fs_type)
-        .ok_or_else(|| anyhow!("Could not get partition uuid!"))?;
+    let root_id = BlockInfo::get_partition_id(target, fs_type).ok_or_else(|| {
+        anyhow!(
+            "AOSC OS Installer cannot obtain partition UUID for {}!",
+            target.display()
+        )
+    })?;
     let root = BlockInfo::new(root_id, fs_type, mount_path, option);
     let fstab = &mut OsString::new();
     root.write_entry(fstab);
@@ -198,7 +204,8 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
         return Ok(true);
     }
 
-    Err(anyhow!("Size too small!"))
+    // Round back to GiB for display message.
+    Err(anyhow!("The specified swapfile size is too small, AOSC OS Installer recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
 }
 
 #[test]

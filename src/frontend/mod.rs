@@ -18,12 +18,12 @@ use nix::fcntl::FallocateFlags;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
-mod tui;
 mod cli;
+mod tui;
 
+pub use cli::*;
 use sha2::{Digest, Sha256};
 pub use tui::tui_main;
-pub use cli::*;
 
 pub(crate) enum InstallProgress {
     Pending(String, usize),
@@ -115,7 +115,9 @@ fn begin_install(
         url = format!("{}{}", mirror_url, variant.url);
         right_sha256 = variant.sha256sum.clone();
     } else {
-        return Err(anyhow!("Internal error: no variant field found."));
+        return Err(anyhow!(
+            "AOSC OS Installer could not parse release metadata: `variant` field not found."
+        ));
     }
     let extract_done_copy = extract_done.clone();
     let download_done_copy = download_done.clone();
@@ -141,11 +143,11 @@ fn begin_install(
                     0,
                     file_size.try_into().unwrap(),
                 ) {
-                    let e = anyhow!("Failed to create a file using fallocate! {}", e);
+                    let e = anyhow!("AOSC OS Installer failed to create temporary file for the download process:\n\n{}", e);
                     send_error!(error_channel_tx_copy, e);
                 }
                 if let Err(e) = output.flush() {
-                    let e = anyhow!("Failed to fallocate flush! {}", e);
+                    let e = anyhow!("AOSC OS Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
                     send_error!(error_channel_tx_copy, e);
                 }
                 let mut tarball_size = 0;
@@ -159,7 +161,8 @@ fn begin_install(
                     };
                     tarball_size += reader_size;
                     if let Err(e) = output.write_all(&buf[..reader_size]) {
-                        let e = anyhow!("Failed to write file! {}", e);
+                        let e =
+                            anyhow!("AOSC OS Installer failed to write system release:\n\n{}", e);
                         send_error!(error_channel_tx_copy, e);
                     }
                     sha256_work_tx.send((buf, reader_size)).unwrap();
@@ -178,7 +181,10 @@ fn begin_install(
                 }
             }
             Err(e) => {
-                let e = anyhow!("Failed to Download tarball!, why: {}", e);
+                let e = anyhow!(
+                    "AOSC OS Installer failed to download system release:\n\n{}",
+                    e
+                );
                 send_error!(error_channel_tx_copy, e);
             }
         }
@@ -186,13 +192,16 @@ fn begin_install(
         match std::fs::File::open(tarball_file.clone()) {
             Ok(file) => output = file,
             Err(e) => {
-                let e = anyhow!("Failed to open tarball! {}", e);
+                let e = anyhow!("AOSC OS Installer failed to read system release:\n\n{}", e);
                 send_error!(error_channel_tx_copy, e);
             }
         }
         let reader = ProgressReader::new(counter_clone, output);
         if let Err(e) = install::extract_tar_xz(reader, &mount_path) {
-            let e = anyhow!("Failed to extract tarball! {}", e);
+            let e = anyhow!(
+                "AOSC OS Installer failed to unpack system release:\n\n{}",
+                e
+            );
             send_error!(error_channel_tx_copy, e);
         }
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
@@ -211,7 +220,10 @@ fn begin_install(
             };
             let (buf, reader_size) = rx;
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
-                let e = anyhow!("Failed to write hasher! {}", e);
+                let e = anyhow!(
+                    "AOSC OS Installer failed to calculate checksum for system release:\n\n{}",
+                    e
+                );
                 send_error!(error_channel_tx, e);
             }
         }
@@ -245,7 +257,7 @@ fn begin_install(
             let final_hash = hex::encode(hasher.finalize());
             if final_hash != right_sha256 {
                 return Err(anyhow!(
-                    "Network error: checksum do not match! \nright hash: {}\nfinal hash: {}",
+                    "AOSC OS Installer detected a checksum mismatch in downloaded system release.\n\nExpected hash: {}\n\nCalculated hash: {}",
                     right_sha256,
                     final_hash
                 ));

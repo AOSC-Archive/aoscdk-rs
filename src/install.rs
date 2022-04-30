@@ -37,7 +37,8 @@ pub fn get_locale_list() -> Result<Vec<String>> {
     } else {
         BUNDLED_LOCALE_GEN.to_vec()
     };
-    let names = locale_names(&data).map_err(|_| anyhow!("Could not parse system locale list"))?;
+    let names = locale_names(&data)
+        .map_err(|_| anyhow!("AOSC OS Installer failed to gather available locales."))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
 
     Ok(names)
@@ -56,7 +57,7 @@ fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
 pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
     let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
     let mut zoneinfo_list = list_zoneinfo(&data)
-        .map_err(|_| anyhow!("Could not parse zoneinfo list"))?
+        .map_err(|_| anyhow!("AOSC OS Installer failed to gather available timezones"))?
         .1;
     if zoneinfo_list.is_empty() {
         return Err(anyhow!("zoneinfo list is empty!"));
@@ -110,7 +111,9 @@ pub fn sync_and_reboot() -> Result<()> {
 /// Mount the filesystem
 pub fn mount_root_path(partition: &Partition, target: &Path) -> Result<()> {
     if partition.fs_type.is_none() || partition.path.is_none() {
-        return Err(anyhow!("Path not specified."));
+        return Err(anyhow!(
+            "AOSC OS Installer failed to determine user-specified partition."
+        ));
     }
     let source = partition.path.as_ref();
     let mut fs_type = partition.fs_type.as_ref().unwrap().as_str();
@@ -134,10 +137,11 @@ pub fn genfstab_to_file(partition: &Partition, root_path: &Path, mount_path: &Pa
     if cfg!(debug_assertions) {
         return Ok(());
     }
-    let fs_type = partition
-        .fs_type
-        .as_ref()
-        .ok_or_else(|| anyhow!("Could get partition Object!"))?;
+    let fs_type = partition.fs_type.as_ref().ok_or_else(|| {
+        anyhow!(
+            "AOSC OS Installer has failed to detect filesystem type for the specified partition."
+        )
+    })?;
     let s = fstab_entries(partition.parent_path.as_ref(), fs_type, Some(mount_path))?;
     let mut f = std::fs::OpenOptions::new()
         .write(true)
@@ -223,7 +227,7 @@ pub fn execute_dracut() -> Result<()> {
     let output = Command::new("/usr/bin/update-initramfs").output()?;
     if !output.status.success() {
         return Err(anyhow!(
-            "Failed to execute dracut: \n{}\n{}",
+            "AOSC OS Installer failed to execute dracut: \n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         ));
@@ -247,7 +251,7 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
     let index = locale_gen_list
         .iter()
         .position(|x| x.starts_with(&format!("#{}", locale)))
-        .ok_or_else(|| anyhow!("Cannot get this locale from list!"))?;
+        .ok_or_else(|| anyhow!("AOSC OS could not find the specified locale!"))?;
     let selected_locale = &locale_gen_list[index];
     let split_selected_locale = selected_locale.split_once(".");
     if split_selected_locale.is_some() {
@@ -269,7 +273,7 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
     let output = Command::new("/usr/bin/locale-gen").output()?;
     if !output.status.success() {
         return Err(anyhow!(
-            "Failed to execute locale-gen: \n{}\n{}",
+            "AOSC OS failed to generate locale data: \n\n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         ));
@@ -306,7 +310,7 @@ pub fn gen_ssh_key() -> Result<()> {
     let output = Command::new("ssh-keygen").arg("-A").output()?;
     if !output.status.success() {
         return Err(anyhow!(
-            "Failed to execute ssh-keygen: \n{}\n{}",
+            "AOSC OS Installer to generate SSH host keys: \n\n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         ));
@@ -366,7 +370,7 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
             let command = Command::new("hwclock").arg("-wu").output()?;
             if !command.status.success() {
                 return Err(anyhow!(
-                    "Failed to set UTC: {}",
+                    "AOSC OS Installer failed to set local time as UTC: {}",
                     String::from_utf8_lossy(&command.stderr)
                 ));
             }
@@ -377,7 +381,7 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
         let command = Command::new("hwclock").arg("-wl").output()?;
         if !command.status.success() {
             return Err(anyhow!(
-                "Failed to set RTC: {}",
+                "AOSC OS Installer failed to set local time as RTC: {}",
                 String::from_utf8_lossy(&command.stderr)
             ));
         }
@@ -394,7 +398,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
         .output()?;
     if !command.status.success() {
         return Err(anyhow!(
-            "Failed to add a new user: {}",
+            "AOSC OS Installer failed to create the default user: {}",
             String::from_utf8_lossy(&command.stderr)
         ));
     }
@@ -403,7 +407,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
         .output()?;
     if !command.status.success() {
         return Err(anyhow!(
-            "Failed to add a new user: {}",
+            "AOSC OS Installer failed to configure the default user: {}",
             String::from_utf8_lossy(&command.stderr)
         ));
     }
@@ -430,7 +434,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let process = cmd.output()?;
     if !process.status.success() {
         return Err(anyhow!(
-            "Failed to execute grub-install: {}",
+            "AOSC OS Installer failed to install GRUB: {}",
             String::from_utf8_lossy(&process.stderr)
         ));
     }
@@ -440,7 +444,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
         .output()?;
     if !process.status.success() {
         return Err(anyhow!(
-            "Failed to execute grub-mkconfig: {}",
+            "AOSC OS Installer failed to generate GRUB menu: {}",
             String::from_utf8_lossy(&process.stderr)
         ));
     }
@@ -466,7 +470,7 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
     let mkswap = Command::new("mkswap").arg("/swapfile").output()?;
     if !mkswap.status.success() {
         return Err(anyhow!(
-            "Error: mkswap failed! why: {}\n{}",
+            "AOSC OS Installer failed to create swap signature on swapfile: {}\n{}",
             String::from_utf8_lossy(&mkswap.stderr),
             String::from_utf8_lossy(&mkswap.stdout)
         ));

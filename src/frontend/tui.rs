@@ -60,24 +60,25 @@ impl TableViewItem<VariantColumn> for network::VariantEntry {
 
 macro_rules! SUMMARY_TEXT {
     () => {
-        "The following actions will be performed:\n- {} will be erased and formatted as {}.\n- AOSC OS {} variant will be installed using {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as system time."
+        "AOSC OS Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time."
     };
 }
 macro_rules! SURE_FS_TYPE_INFO {
     () => {
-        "The current partition format is {}, do you want to use this partition format? We recommend that you use ext4 as the partition format, as it is generally trouble-free."
+        "AOSC OS Installation has detected that the specified partition is currently formatted {}, would you like to format this partition using the original filesystem? For its proven reliability, we recommend formatting your system partition as ext4."
     };
 }
-const ADVANCED_METHOD_INFO: &str = "Deploykit detects that you are using an unsupported file system format, if you click \"Ok\", Ext4 will be used as your file system format, if you insist on using the file system format of your choice, please use the \"Advanced Installation Method\"";
-const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS installer!
+const ADVANCED_METHOD_INFO: &str = "AOSC OS Installer detected an unsupported filesystem format in your system partition. If you proceed, the installer will format your system partition using the ext4 filesystem. Please refer to the manual installation guides if you prefer to use an unsupported filesystem.";
+const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS Installer!
 
-In the following pages, the installer will guide you through selection of distribution, download sources, partitioning, and other system configurations. The installation process should only take a few minutes, but will require more time on slower hardware."#;
-const VARIANT_TEXT: &str = "Shown below is a list of available distributions for your computer.";
+In the following pages, AOSC OS Installer will guide you through the variant selection, partitioning, and other installation steps. The installation process should only take a few minutes, but will require more time on slower hardware."#;
+const VARIANT_TEXT: &str =
+    "Shown below is a list of available AOSC OS distributions for your device.";
 const ENTER_USER_PASSWORD_TEXT: &str = r#"Please enter and confirm your desired username and password. Please note that your username must start with a lower-cased alphabetical letter (a-z), and contain only lower-cased letters a-z, numbers 0-0, and dash ("-").
 "#;
 const ENTER_HOSTNAME_TEXT: &str = r#"Now, please input your desired hostname. A hostname may only consist letters a-z, numbers 0-9, and dash ("-")"#;
 const ENTER_TIMEZONE_TEXT: &str = r#"Finally, please select your locale, timezone, and your clock preferences. Your locale setting will affect your installation's display language. UTC system time is the default setting for Linux systems, but may result in time discrepancy with your other operating systems, such as Windows. If you wish to prevent this from happening, please select local time as system time."#;
-const BENCHMARK_TEXT: &str = "DeployKit will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes.";
+const BENCHMARK_TEXT: &str = "AOSC OS Installer will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes.";
 const FINISHED_TEXT: &str = r#"AOSC OS has been successfully installed on your device.
 
 You may reboot to your installed system by choosing "Reboot," or return to LiveKit by selecting "Exit to LiveKit.""#;
@@ -93,8 +94,11 @@ macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $e:tt, $f:block) => {{
         $siv.pop_layer();
         $siv.add_layer(
-            Dialog::around(TextView::new(format!("{}\nThis can take a while ...", $m)))
-                .title("Progress"),
+            Dialog::around(TextView::new(format!(
+                "{}\nThis may take a few minutes ...",
+                $m
+            )))
+            .title("Installation Progress"),
         );
         $siv.refresh();
         let ret = { $f };
@@ -108,8 +112,11 @@ macro_rules! show_fetch_progress {
     ($siv:ident, $m:tt, $f:block) => {{
         $siv.pop_layer();
         $siv.add_layer(
-            Dialog::around(TextView::new(format!("{}\nThis can take a while ...", $m)))
-                .title("Progress"),
+            Dialog::around(TextView::new(format!(
+                "{}\nThis may take a few minutes ...",
+                $m
+            )))
+            .title("Installation Progress"),
         );
         // $siv.refresh();
         let ret = { $f };
@@ -130,7 +137,7 @@ fn show_error(siv: &mut Cursive, msg: &str) {
 fn show_msg(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
         Dialog::around(TextView::new(msg))
-            .title("Message")
+            .title("AOSC OS Installer")
             .button("OK", |s| {
                 s.pop_layer();
             })
@@ -141,7 +148,7 @@ fn show_msg(siv: &mut Cursive, msg: &str) {
 fn show_blocking_message(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
         Dialog::around(TextView::new(msg))
-            .title("Message")
+            .title("AOSC OS Installer")
             .padding_lrtb(2, 2, 1, 1),
     );
 }
@@ -149,7 +156,7 @@ fn show_blocking_message(siv: &mut Cursive, msg: &str) {
 fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallConfig)) {
     if env::var("DISPLAY").is_ok() {
         return ("Open GParted", &|s, _| {
-            show_blocking_message(s, "Waiting for GParted Partitioning Program to finish ...");
+            show_blocking_message(s, "Waiting for GParted Partitioning Program to exit ...");
             let cb_sink = s.cb_sink().clone();
             thread::spawn(move || {
                 Command::new("gparted").output().ok();
@@ -212,7 +219,10 @@ fn make_partition_list(
             fs_type: None,
             size: 0,
         };
-        disk_view.add_child(disk_list.button(dummy_partition, "No partition selected"));
+        disk_view.add_child(disk_list.button(
+            dummy_partition,
+            "Please select a system partition for AOSC OS.",
+        ));
     }
 
     (disk_list, disk_view.with_name("part_list"))
@@ -254,7 +264,7 @@ fn build_variant_list(
     let mut config_view = LinearLayout::vertical();
 
     let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
-        .column(VariantColumn::Name, "Available Distribution", |c| {
+        .column(VariantColumn::Name, "Available Distributions", |c| {
             c.width(60)
         })
         .column(VariantColumn::Date, "Last Updated", |c| c.width(20))
@@ -303,14 +313,14 @@ fn select_mirror_view_base(mirrors: &[Mirror]) -> (LinearLayout, RadioGroup<Mirr
     let mirror_list = &*mirrors;
     let mut repo_view = LinearLayout::vertical()
         .child(TextView::new(
-            "Please select a mirror from which you would like to download AOSC OS and the extra components you specified. Generally, a mirror closest to you geographically would be the best bet for download speeds.",
+            "Please select a mirror to download AOSC OS. Generally, a mirror closest to you geographically would be the best bet for download speeds.",
         ))
         .child(DummyView {});
     for mirror in mirror_list {
         let radio = repo_list.button(mirror.clone(), format!("{} ({})", mirror.name, mirror.loc));
         repo_view.add_child(radio);
     }
-    let repo_view = Panel::new(repo_view).title("Repositories");
+    let repo_view = Panel::new(repo_view).title("Mirrors");
     config_view.add_child(repo_view);
     config_view.add_child(DummyView {});
 
@@ -344,7 +354,7 @@ fn select_mirrors_view(
             s.pop_layer();
             s.add_layer(
                 Dialog::around(TextView::new(BENCHMARK_TEXT).max_width(80))
-                    .title("Message")
+                    .title("AOSC OS Installer")
                     .button("OK", move |s| {
                         let config_clone_3 = config_clone_2.clone();
                         let mirrors_clone_2 = mirrors_clone.clone();
@@ -389,12 +399,12 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     siv.set_user_data(disk_list);
     let dest_view = LinearLayout::vertical()
     .child(TextView::new(
-        "Please select a partition to which you would like to install AOSC OS onto. If you would like to make changes to your partitions, please click on \"Open GParted.\"",
+        "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open GParted.\"",
     ))
     .child(DummyView {})
     .child(disk_view);
     let config_view = LinearLayout::vertical()
-        .child(Panel::new(dest_view).title("Destination"))
+        .child(Panel::new(dest_view).title("Select System Partition"))
         .child(DummyView {});
     let (btn_label, btn_cb) = partition_button();
     let config_copy = config.clone();
@@ -419,7 +429,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     disk_list.selection()
                 };
                 if current_partition.parent_path.is_none() && current_partition.size == 0 {
-                    show_msg(s, "Please specify a partition.");
+                    show_msg(s, "Please specify a system partition.");
                     // s.refresh();
                     return;
                 }
@@ -427,7 +437,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     show_msg(
                         s,
                         &format!(
-                            "The selected partition is not enough to install this tarball!\nCurrent disk size: {:.3}GiB\nDisk size required: {:.3}GiB", 
+                            "The specified partition does not contain enough space to install AOSC OS release!\n\nAvailable space: {:.3}GiB\nRequired space: {:.3}GiB", 
                             current_partition.size as f32 / 1024.0 / 1024.0 / 1024.0,
                             required_size as f32 / 1024.0 / 1024.0 / 1024.0
                         ));
@@ -570,7 +580,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
             fill_in_all_the_fields!(s);
         }
         if password != password_confirm {
-            show_msg(s, "Password and confirm password do not match.");
+            show_msg(s, "Passwords password do not match.");
             return;
         }
         let mut config = config.clone();
@@ -753,10 +763,10 @@ fn set_timezone(
                             })
                             .min_width(20),
                     ),
-                    "Set city",
+                    "Select city",
                     None,
                 )
-                .button("Ok", |s| {
+                .button("OK", |s| {
                     s.cb_sink()
                         .send(Box::new(|s| {
                             s.pop_layer();
@@ -774,7 +784,7 @@ fn set_timezone(
                 }),
             )
         }),
-        "Set continent",
+        "Select continent",
         None,
     )
 }
@@ -795,11 +805,11 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
     let swap_is_set = Arc::new(AtomicBool::new(false));
     let swap_is_set_clone = swap_is_set.clone();
     let view = ListView::new().child(
-        "Choose",
+        "Swapfile Size",
         SelectView::new()
             .popup()
             .autojump()
-            .with_all_str(vec!["Automatic", "Specify size", "No"])
+            .with_all_str(vec!["Automatic", "Custom", "Disabled"])
             .selected(0)
             .on_submit(move |s: &mut Cursive, c: &str| match c {
                 "Automatic" => {
@@ -808,7 +818,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                     match size {
                         Ok(size) => {
                             if installed_size + size as u64 > partition_size {
-                                show_msg(s, "No space to create swap file!");
+                                show_msg(s, &format!("There is not enough available space in the system partition to create a swapfile! Default swapfile size: {} GiB", size));
                                 swap_is_set_clone.store(false, Ordering::SeqCst);
                                 return;
                             }
@@ -823,7 +833,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                         }
                     }
                 }
-                "Specify size" => {
+                "Custom" => {
                     let is_hibernation_clone_2 = is_hibernation_clone.clone();
                     let swap_size_copy = swap_size_copy.clone();
                     let use_swap_copy = use_swap_clone.clone();
@@ -834,7 +844,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                         wrap_in_dialog(
                             LinearLayout::vertical()
                                 .child(TextView::new(
-                                    "Please enter the swap size you want to set (GiB)",
+                                    "Please enter your desired swapfile size (GiB): ",
                                 ))
                                 .child(
                                     EditView::new()
@@ -844,21 +854,21 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                                         .min_width(20)
                                         .with_name("size"),
                                 ),
-                            "Set swap size",
+                            "Customize Swapfile Size",
                             None,
                         )
-                        .button("Ok", move |s| {
+                        .button("OK", move |s| {
                             let size = swap_size_temp.as_ref().to_owned().into_inner();
                             let size = size.parse::<f64>();
                             if size.is_err() {
-                                show_msg(s, "size not a number!");
+                                show_msg(s, "Invalid custom swapfile size!");
                                 swap_is_set.store(false, Ordering::SeqCst);
                                 return;
                             }
                             let is_hibernation_clone = is_hibernation_clone_2.clone();
                             let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
                             if installed_size + size as u64 > partition_size {
-                                show_msg(s, "No space to create swap file!");
+                                show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB", size));
                                 return;
                             }
                             match disks::is_enable_hibernation(size) {
@@ -890,7 +900,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                 _ => unreachable!(),
             }),
     );
-    let textview = TextView::new("Would you like to allocate swap space?");
+    let textview = TextView::new("Would you like to create a swapfile?\n");
     siv.add_layer(
         wrap_in_dialog(
             LinearLayout::vertical().child(textview).child(view),
@@ -899,7 +909,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
         )
         .button("Continue", move |s| {
             if !swap_is_set_clone.load(Ordering::SeqCst) {
-                show_msg(s, "You haven't set the swap option!");
+                show_msg(s, "Please select an option for swapfile creation!");
                 return;
             }
             let swap_size = swap_size.as_ref().to_owned().into_inner();
@@ -922,7 +932,9 @@ fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
     let config_copy = config.clone();
     siv.add_layer(
         wrap_in_dialog(
-            TextView::new("Using the last configuration?"),
+            TextView::new(
+                "Would you like to load your previous AOSC OS installation configuration?",
+            ),
             "AOSC OS Installer",
             None,
         )
@@ -965,20 +977,20 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                 format_args!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
                 config.tc.unwrap()
             )),
-            "Confirmation",
+            "Pre-Installation Confirmation",
             None,
         )
-        .button("Install", move |s| {
+        .button("Proceed", move |s| {
             s.pop_layer();
             start_install(s, config_copy.clone());
         })
-        .button("Save Config", move |s| {
+        .button("Save Configuration", move |s| {
             if let Err(e) = save_user_config_to_file(config_copy_2.clone(), SAVE_USER_CONFIG_FILE) {
                 show_error(s, &e.to_string())
             } else {
                 show_msg(
                     s,
-                    &format!("Success saved, path: {}!", SAVE_USER_CONFIG_FILE),
+                    &format!("AOSC OS Installer has successfully saved your installation configuration: {}.", SAVE_USER_CONFIG_FILE),
                 )
             }
         })
@@ -991,7 +1003,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
-    ctrlc::set_handler(|| {}).expect("Error setting SIGINT handler.");
+    ctrlc::set_handler(|| {}).expect("AOSC OS Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
@@ -1002,7 +1014,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
-                "Please wait while the installation takes place. This may take minutes or in extreme cases, hours, depending on your device's performance.",
+                "Please wait while the installation takes place. This may take minutes or in extreme cases, hours, depending on your device performance.",
             ))
             .child(DummyView {})
             .child(ProgressBar::new().max(100).with_value(counter))
@@ -1012,7 +1024,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     ).button("Cancel", move |s| {
         let user_interrup_tx = user_interrup_tx.clone();
         s.add_layer(wrap_in_dialog(TextView::new(
-            "The installation is still in progress, are you sure you want to quit the installer?"), "AOSC OS Installer", None)
+            "AOSC OS Installer has not yet completed the installation process. Are you sure that you would like to abort the installation?"), "AOSC OS Installer", None)
             .button("Yes", move |_| {
                 user_interrup_tx.send(true).unwrap();
             })
@@ -1026,12 +1038,12 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let cb_sink = siv.cb_sink().clone();
     let cb_sink_clone = siv.cb_sink().clone();
     let tempdir = TempDir::new()
-        .expect("Unable to create temporary directory")
+        .expect("AOSC OS Installer failed to create temporary file for the download process.")
         .into_path();
     let tempdir_copy = tempdir.clone();
     let tempdir_copy_2 = tempdir.clone();
     let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
-        .expect("Can not get root fd!");
+        .expect("AOSC OS Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || {
         let user_exit = user_interrup_rx.recv().unwrap();
@@ -1040,7 +1052,6 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             cb_sink_clone
                 .send(Box::new(|s| s.quit()))
                 .unwrap();
-            
         }
     });
     thread::spawn(move || loop {
@@ -1089,7 +1100,7 @@ fn read_user_config_on_file() -> Result<InstallConfig> {
 fn show_finished(siv: &mut Cursive) {
     siv.pop_layer();
     siv.add_layer(
-        wrap_in_dialog(TextView::new(FINISHED_TEXT), "All Done", None)
+        wrap_in_dialog(TextView::new(FINISHED_TEXT), "Installation Complete", None)
             .button("Reboot", |s| {
                 install::sync_and_reboot().ok();
                 s.quit();
@@ -1119,7 +1130,7 @@ pub fn tui_main() {
         let dump = siv.take_user_data::<cursive::Dump>();
         if let Some(dump) = dump {
             drop(siv);
-            println!("You can use tools like cfdisk or gdisk to modify your partitions.\nExit the shell to return to the installer.");
+            println!("You may use tools like cfdisk or gdisk to modify your partitions.\nExit the shell (command prompt) to return to the installer.");
             std::process::Command::new("bash")
                 .spawn()
                 .unwrap()
