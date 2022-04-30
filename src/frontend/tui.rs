@@ -1030,9 +1030,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         .into_path();
     let tempdir_copy = tempdir.clone();
     let tempdir_copy_2 = tempdir.clone();
-    let tempdir_copy_3 = tempdir.clone();
-    let root_fd = install::get_dir_fd(PathBuf::from("/"))
-        .and_then(|x| Ok(x.as_raw_fd()))
+    let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
         .expect("Can not get root fd!");
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || {
@@ -1042,7 +1040,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             cb_sink_clone
                 .send(Box::new(|s| s.quit()))
                 .unwrap();
-            return;
+            
         }
     });
     thread::spawn(move || loop {
@@ -1059,7 +1057,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
-            umount_all(&tempdir_copy_3, root_fd);
+            umount_all(&tempdir, root_fd);
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(s, &err.to_string());
