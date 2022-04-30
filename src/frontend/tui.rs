@@ -818,7 +818,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                     match size {
                         Ok(size) => {
                             if installed_size + size as u64 > partition_size {
-                                show_msg(s, &format!("There is not enough available space in the system partition to create a swapfile! Default swapfile size: {} GiB", size));
+                                show_msg(s, &format!("There is not enough available space in the system partition to create a swapfile! Default swapfile size: {} GiB", (size / 1024.0 / 1024.0 / 1024.0).round()));
                                 swap_is_set_clone.store(false, Ordering::SeqCst);
                                 return;
                             }
@@ -892,7 +892,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                         }),
                     )
                 }
-                "No" => {
+                "Disabled" => {
                     use_swap.store(false, Ordering::SeqCst);
                     let swap_is_set = swap_is_set.clone();
                     swap_is_set.store(true, Ordering::SeqCst);
@@ -1049,9 +1049,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         let user_exit = user_interrup_rx.recv().unwrap();
         if user_exit {
             umount_all(&tempdir_copy_2, root_fd);
-            cb_sink_clone
-                .send(Box::new(|s| s.quit()))
-                .unwrap();
+            cb_sink_clone.send(Box::new(|s| s.quit())).unwrap();
         }
     });
     thread::spawn(move || loop {
