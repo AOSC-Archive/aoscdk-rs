@@ -142,7 +142,7 @@ pub fn genfstab_to_file(partition: &Partition, root_path: &Path, mount_path: &Pa
             "AOSC OS Installer has failed to detect filesystem type for the specified partition."
         )
     })?;
-    let s = fstab_entries(partition.parent_path.as_ref(), fs_type, Some(mount_path))?;
+    let s = fstab_entries(partition.path.as_ref(), fs_type, Some(mount_path))?;
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .append(true)
