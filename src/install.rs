@@ -432,7 +432,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             Some("arm64") => "--target=arm64-efi",
             Some("ppc64el") | Some("ppc64") | Some("powerpc") => "--platform=powerpc-ieee1257",
             Some("riscv64") => "--target=riscv64-efi",
-            _ => return Ok(())
+            _ => return Ok(()),
         };
         command
             .arg(target)
