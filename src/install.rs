@@ -430,7 +430,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
         let target = match network::get_arch_name() {
             Some("amd64") => "--target=x86_64-efi",
             Some("arm64") => "--target=arm64-efi",
-            Some("ppc64el") | Some("ppc64") | Some("powerpc") => "--platform=powerpc-ieee1257",
+            Some("ppc64el") | Some("ppc64") | Some("powerpc") => "--target=powerpc-ieee1257",
             Some("riscv64") => "--target=riscv64-efi",
             _ => return Ok(()),
         };
