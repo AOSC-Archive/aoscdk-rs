@@ -13,6 +13,7 @@ use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
 
 use crate::disks::{fstab_entries, is_efi_booted, Partition};
+use crate::network;
 use crate::parser::{list_zoneinfo, locale_names};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
@@ -426,8 +427,15 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let cmd = if let Some(mbr_dev) = mbr_dev {
         command.arg("--target=i386-pc").arg(mbr_dev)
     } else {
+        let target = match network::get_arch_name() {
+            Some("amd64") => "--target=x86_64-efi",
+            Some("arm64") => "--target=arm64-efi",
+            Some("ppc64el") | Some("ppc64") | Some("powerpc") => "--platform=powerpc-ieee1257",
+            Some("riscv64") => "--target=riscv64-efi",
+            _ => return Ok(())
+        };
         command
-            .arg("--target=x86_64-efi")
+            .arg(target)
             .arg("--bootloader-id=AOSC OS")
             .arg("--efi-directory=/efi")
     };

@@ -93,8 +93,29 @@ pub fn fetch_mirrors(recipe: &Recipe) -> Vec<Mirror> {
     recipe.mirrors.clone()
 }
 
+/// AOSC OS specific architecture mapping for ppc64
+#[cfg(target_arch = "powerpc64")]
 #[inline]
-fn get_arch_name() -> Option<&'static str> {
+pub(crate) fn get_arch_name() -> Option<&'static str> {
+    let mut endian: libc::c_int = -1;
+    let result;
+    unsafe {
+        result = libc::prctl(libc::PR_GET_ENDIAN, &mut endian as *mut libc::c_int);
+    }
+    if result < 0 {
+        return None;
+    }
+    match endian {
+        libc::PR_ENDIAN_LITTLE | libc::PR_ENDIAN_PPC_LITTLE => Some("ppc64el"),
+        libc::PR_ENDIAN_BIG => Some("ppc64"),
+        _ => None,
+    }
+}
+
+/// AOSC OS specific architecture mapping table
+#[cfg(not(target_arch = "powerpc64"))]
+#[inline]
+pub(crate) fn get_arch_name() -> Option<&'static str> {
     match ARCH {
         "x86_64" => Some("amd64"),
         "x86" => Some("i486"),
