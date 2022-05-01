@@ -3,7 +3,6 @@ use reqwest::{self, Client, Url};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    env::consts::ARCH,
     io::Write,
     sync::mpsc,
     thread,
@@ -117,6 +116,7 @@ pub(crate) fn get_arch_name() -> Option<&'static str> {
 #[cfg(not(target_arch = "powerpc64"))]
 #[inline]
 pub(crate) fn get_arch_name() -> Option<&'static str> {
+    use std::env::consts::ARCH;
     match ARCH {
         "x86_64" => Some("amd64"),
         "x86" => Some("i486"),
