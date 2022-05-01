@@ -430,15 +430,14 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
         let (target, is_efi) = match network::get_arch_name() {
             Some("amd64") => ("--target=x86_64-efi", true),
             Some("arm64") => ("--target=arm64-efi", true),
-            Some("ppc64el") | Some("ppc64") | Some("powerpc") => ("--target=powerpc-ieee1275", false),
+            Some("ppc64el") | Some("ppc64") | Some("powerpc") => {
+                ("--target=powerpc-ieee1275", false)
+            }
             Some("riscv64") => ("--target=riscv64-efi", true),
             _ => return Ok(()),
         };
         let efi = if is_efi { "--efi-directory=/efi" } else { "" };
-        command
-            .arg(target)
-            .arg("--bootloader-id=AOSC OS")
-            .arg(efi)
+        command.arg(target).arg("--bootloader-id=AOSC OS").arg(efi)
     };
     let process = cmd.output()?;
     if !process.status.success() {
