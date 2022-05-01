@@ -156,7 +156,7 @@ pub fn fstab_entries(
 ) -> Result<OsString> {
     let target = device_path.ok_or_else(|| anyhow!("AOSC OS Installer cannot detect the corresponding device file for the specified partition!"))?;
     let (fs_type, option) = match fs_type {
-        "vfat" => (FileSystem::Fat32, "defaults"),
+        "vfat" | "fat16" | "fat32" => (FileSystem::Fat32, "defaults"),
         "ext4" => (FileSystem::Ext4, "defaults"),
         "btrfs" => (FileSystem::Btrfs, "defaults"),
         "xfs" => (FileSystem::Xfs, "defaults"),
