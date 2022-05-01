@@ -43,7 +43,7 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
 
     if fs_type == "ext4" {
         cmd = command.arg("-Fq");
-    } else if fs_type == "fat32" {
+    } else if fs_type == "vfat" {
         cmd = command.arg("-F32");
     } else {
         cmd = command.arg("-f");
@@ -156,7 +156,7 @@ pub fn fstab_entries(
 ) -> Result<OsString> {
     let target = device_path.ok_or_else(|| anyhow!("AOSC OS Installer cannot detect the corresponding device file for the specified partition!"))?;
     let (fs_type, option) = match fs_type {
-        "fat32" => (FileSystem::Fat32, "defaults"),
+        "vfat" => (FileSystem::Fat32, "defaults"),
         "ext4" => (FileSystem::Ext4, "defaults"),
         "btrfs" => (FileSystem::Btrfs, "defaults"),
         "xfs" => (FileSystem::Xfs, "defaults"),
