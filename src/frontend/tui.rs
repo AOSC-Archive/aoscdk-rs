@@ -1046,10 +1046,12 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         .expect("AOSC OS Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || {
-        let user_exit = user_interrup_rx.recv().unwrap();
-        if user_exit {
-            umount_all(&tempdir_copy_2, root_fd);
-            cb_sink_clone.send(Box::new(|s| s.quit())).unwrap();
+        let user_exit = user_interrup_rx.recv();
+        if let Ok(user_exit) = user_exit {
+            if user_exit {
+                umount_all(&tempdir_copy_2, root_fd);
+                cb_sink_clone.send(Box::new(|s| s.quit())).unwrap();
+            }
         }
     });
     thread::spawn(move || loop {
