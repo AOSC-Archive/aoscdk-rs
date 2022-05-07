@@ -139,9 +139,7 @@ pub fn genfstab_to_file(partition: &Partition, root_path: &Path, mount_path: &Pa
         return Ok(());
     }
     let fs_type = partition.fs_type.as_ref().ok_or_else(|| {
-        anyhow!(
-            "Installer failed to detect filesystem type for the specified partition."
-        )
+        anyhow!("Installer failed to detect filesystem type for the specified partition.")
     })?;
     let s = fstab_entries(partition.path.as_ref(), fs_type, Some(mount_path))?;
     let mut f = std::fs::OpenOptions::new()
@@ -488,6 +486,12 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
         .append(true)
         .open("/etc/fstab")?;
     fstab.write_all(s.as_bytes())?;
+
+    Ok(())
+}
+
+pub fn disable_hibernate() -> Result<()> {
+    std::os::unix::fs::symlink("/etc/systemd/system/hibernate.target", "/dev/null")?;
 
     Ok(())
 }
