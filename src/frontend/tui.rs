@@ -60,7 +60,7 @@ impl TableViewItem<VariantColumn> for network::VariantEntry {
 
 macro_rules! SUMMARY_TEXT {
     () => {
-        "Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time. - A {}GiB swapfile will be created and enabled ({})."
+        "Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time.\n"
     };
 }
 macro_rules! SURE_FS_TYPE_INFO {
@@ -976,11 +976,15 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             fs = fs_type.clone();
         }
     }
-    let swap_size = config.swap_size.unwrap();
+    let swap_size = if let Some(swap_size) = *config.swap_size {
+        swap_size
+    } else {
+        0.0
+    };
     let swap_str;
     match disks::get_recommand_swap_size() {
         Ok(rs) => {
-            if rs == swap_size {
+            if swap_size == rs {
                 swap_str = "installer default"
             } else if swap_size == 0.0 {
                 swap_str = "No swapfile will be created."
@@ -993,21 +997,29 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             return;
         }
     };
+    let s = format!(
+        SUMMARY_TEXT!(),
+        path,
+        fs,
+        config.variant.unwrap().name,
+        config.mirror.unwrap().name,
+        config.user.unwrap(),
+        config.locale.unwrap(),
+        format_args!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
+        config.tc.unwrap(),
+    );
+    let swap_s = if swap_size != 0.0 {
+        format!(
+            "- A {}GiB swapfile will be created and enabled ({}).",
+            (swap_size / 1024.0 / 1024.0 / 1024.0).round(),
+            swap_str
+        )
+    } else {
+        format!("- {}", swap_str)
+    };
     siv.add_layer(
         wrap_in_dialog(
-            TextView::new(format!(
-                SUMMARY_TEXT!(),
-                path,
-                fs,
-                config.variant.unwrap().name,
-                config.mirror.unwrap().name,
-                config.user.unwrap(),
-                config.locale.unwrap(),
-                format_args!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
-                config.tc.unwrap(),
-                (swap_size / 1024.0 / 1024.0 / 1024.0).round(),
-                swap_str
-            )),
+            TextView::new(format!("{}{}", s, swap_s)),
             "Pre-Installation Confirmation",
             None,
         )
