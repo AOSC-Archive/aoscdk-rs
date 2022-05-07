@@ -9,7 +9,7 @@ use cursive::{
     views::{
         Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar,
         RadioGroup, ResizedView, ScrollView, SelectView, TextContent, TextView,
-    }
+    },
 };
 use cursive::{traits::*, utils::Counter};
 use cursive::{view::SizeConstraint, views::Button};
@@ -60,7 +60,7 @@ impl TableViewItem<VariantColumn> for network::VariantEntry {
 
 macro_rules! SUMMARY_TEXT {
     () => {
-        "Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time."
+        "Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time. - A {}GiB swapfile will be created and enabled ({})."
     };
 }
 macro_rules! SURE_FS_TYPE_INFO {
@@ -206,7 +206,9 @@ fn make_partition_list(
             format!(
                 "{} ({}, {})",
                 path_name,
-                part.fs_type.as_ref().unwrap_or(&"Unknown/Unformatted".to_owned()),
+                part.fs_type
+                    .as_ref()
+                    .unwrap_or(&"Unknown/Unformatted".to_owned()),
                 human_size(part.size)
             ),
         );
@@ -974,6 +976,23 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             fs = fs_type.clone();
         }
     }
+    let swap_size = config.swap_size.unwrap();
+    let swap_str;
+    match disks::get_recommand_swap_size() {
+        Ok(rs) => {
+            if rs == swap_size {
+                swap_str = "installer default"
+            } else if swap_size == 0.0 {
+                swap_str = "No swapfile will be created."
+            } else {
+                swap_str = "custom size"
+            };
+        }
+        Err(e) => {
+            show_error(siv, &e.to_string());
+            return;
+        }
+    };
     siv.add_layer(
         wrap_in_dialog(
             TextView::new(format!(
@@ -985,7 +1004,9 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                 config.user.unwrap(),
                 config.locale.unwrap(),
                 format_args!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
-                config.tc.unwrap()
+                config.tc.unwrap(),
+                (swap_size / 1024.0 / 1024.0 / 1024.0).round(),
+                swap_str
             )),
             "Pre-Installation Confirmation",
             None,
@@ -1000,7 +1021,10 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             } else {
                 show_msg(
                     s,
-                    &format!("Installer has successfully saved your installation configuration: {}.", SAVE_USER_CONFIG_FILE),
+                    &format!(
+                        "Installer has successfully saved your installation configuration: {}.",
+                        SAVE_USER_CONFIG_FILE
+                    ),
                 )
             }
         })
