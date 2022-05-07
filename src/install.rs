@@ -491,7 +491,11 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
 }
 
 pub fn disable_hibernate() -> Result<()> {
-    std::os::unix::fs::symlink("/etc/systemd/system/hibernate.target", "/dev/null")?;
+    let path = "/etc/systemd/system/hibernate.target";
+    if Path::new(path).exists() {
+        std::fs::remove_file(path)?;
+    }
+    std::os::unix::fs::symlink(path, "/dev/null")?;
 
     Ok(())
 }
