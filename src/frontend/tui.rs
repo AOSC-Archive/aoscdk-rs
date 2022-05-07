@@ -451,7 +451,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 if let Err(e) = disks::right_combine(current_partition.parent_path.as_ref()) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
                     .child(TextView::new(e.to_string())), "AOSC OS Installer", None)
-                    .button("Ok", |s| {
+                    .button("OK", |s| {
                         s.pop_layer();
                     })
                     .button("Exit", |s| s.quit());
@@ -490,7 +490,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     } else if !ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
                         .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
-                        .button("Ok", move |s| {
+                        .button("OK", move |s| {
                             let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
                             let mut config_clone = config_copy.clone();
                             config_clone.partition = Some(Arc::new(new_part));
