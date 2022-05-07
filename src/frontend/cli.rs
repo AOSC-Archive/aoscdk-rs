@@ -175,6 +175,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
             return Err(anyhow!(s));
         }
         let partition = disks::fill_fs_type(&partition, false);
+        disks::right_combine(partition.parent_path.as_ref())?;
 
         return Ok(partition);
     }
