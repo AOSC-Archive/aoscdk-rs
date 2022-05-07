@@ -159,6 +159,7 @@ fn partition_is_gpt(device_path: Option<&PathBuf>) -> Result<bool> {
     Ok(false)
 }
 
+#[cfg(not(target_arch = "powerpc64"))]
 pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
     let is_gpt = partition_is_gpt(device_path)?;
     let is_efi_booted = is_efi_booted();
@@ -170,6 +171,23 @@ pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
     }
 
     Err(anyhow!("AOSC OS Installer has detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", gpt_mbr_s, bios_efi_s, right, bios_efi_s))
+}
+
+#[cfg(target_arch = "powerpc64")]
+pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
+    use crate::network;
+    let is_gpt = partition_is_gpt(device_path)?;
+    let arch_name = network::get_arch_name();
+
+    if !is_gpt {
+        return Err(anyhow!(match arch_name {
+            Some("ppc64el") => "AOSC OS Installer detected an unsupported partition map for your device. Please use a GPT partition map for your POWER/CHRP-based device.",
+            Some("ppc64") => "AOSC OS Installer detected an unsupported partition map for your device. Please use an Apple Partition Map partition map for your PowerPC-based Macintosh.",
+            _ => unreachable!(),
+        }));
+    }
+
+    Ok(())
 }
 
 pub fn fstab_entries(
