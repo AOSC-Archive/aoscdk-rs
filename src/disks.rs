@@ -179,12 +179,8 @@ pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
     let is_gpt = partition_is_gpt(device_path)?;
     let arch_name = network::get_arch_name();
 
-    if !is_gpt {
-        return Err(anyhow!(match arch_name {
-            Some("ppc64el") => "AOSC OS Installer detected an unsupported partition map for your device. Please use a GPT partition map for your POWER/CHRP-based device.",
-            Some("ppc64") => "AOSC OS Installer detected an unsupported partition map for your device. Please use an Apple Partition Map partition map for your PowerPC-based Macintosh.",
-            _ => unreachable!(),
-        }));
+    if arch_name == Some("ppc64el") && !is_gpt {
+        return Err(anyhow!("AOSC OS Installer detected an unsupported partition map for your device. Please use a GPT partition map for your POWER/CHRP-based device."));
     }
 
     Ok(())
