@@ -18,7 +18,7 @@ const LOCK: &str = "/run/lock/aoscdk.lock";
 
 fn main() {
     if let Err(e) = create_lock() {
-        eprintln!("Can not get lock! why: {}", e);
+        eprintln!("AOSC OS Installer failed to obtain the instance lock: {}", e);
         std::process::exit(1);
     }
     if let Err(e) = execute() {
