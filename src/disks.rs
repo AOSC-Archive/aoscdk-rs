@@ -53,12 +53,12 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
             partition
                 .path
                 .as_ref()
-                .ok_or_else(|| anyhow!("AOSC OS Installer cannot find the specified partition.\nDid you partition your target disk?"))?,
+                .ok_or_else(|| anyhow!("Installer could not find the specified partition.\nDid you partition your target disk?"))?,
         )
         .output()?;
     if !output.status.success() {
         return Err(anyhow!(
-            "AOSC OS Installer failed to format the specified partition: \n{}\n{}",
+            "Installer failed to format the specified partition: \n{}\n{}",
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         ));
@@ -98,7 +98,7 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
                     None
                 };
                 let path = part.get_path().ok_or_else(|| {
-                    anyhow!("AOSC OS Installer could not detect the EFI system partition.")
+                    anyhow!("Installer could not detect the EFI system partition.")
                 })?;
                 return Ok(Partition {
                     path: Some(path.to_owned()),
@@ -111,7 +111,7 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
     }
 
     Err(anyhow!(
-        "AOSC OS Installer could not detect the EFI system partition."
+        "Installer could not detect the EFI system partition."
     ))
 }
 
@@ -150,7 +150,7 @@ pub fn list_partitions() -> Vec<Partition> {
 }
 
 fn partition_is_gpt(device_path: Option<&PathBuf>) -> Result<bool> {
-    let target = device_path.ok_or_else(|| anyhow!("AOSC OS Installer cannot detect the corresponding device file for the specified partition!"))?;
+    let target = device_path.ok_or_else(|| anyhow!("Installer could not detect the corresponding device file for the specified partition!"))?;
     let mut device = std::fs::File::open(target)?;
     if gptman::GPT::find_from(&mut device).is_ok() {
         return Ok(true);
@@ -170,7 +170,7 @@ pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
         return Ok(());
     }
 
-    Err(anyhow!("AOSC OS Installer has detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", gpt_mbr_s, bios_efi_s, right, bios_efi_s))
+    Err(anyhow!("Installer detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", gpt_mbr_s, bios_efi_s, right, bios_efi_s))
 }
 
 #[cfg(target_arch = "powerpc64")]
@@ -180,7 +180,7 @@ pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
     let arch_name = network::get_arch_name();
 
     if arch_name == Some("ppc64el") && !is_gpt {
-        return Err(anyhow!("AOSC OS Installer detected an unsupported partition map for your device. Please use a GPT partition map for your POWER/CHRP-based device."));
+        return Err(anyhow!("Installer detected an unsupported partition map for your device. Please use a GPT partition map for your POWER/CHRP-based device."));
     }
 
     Ok(())
@@ -191,7 +191,7 @@ pub fn fstab_entries(
     fs_type: &str,
     mount_path: Option<&Path>,
 ) -> Result<OsString> {
-    let target = device_path.ok_or_else(|| anyhow!("AOSC OS Installer cannot detect the corresponding device file for the specified partition!"))?;
+    let target = device_path.ok_or_else(|| anyhow!("Installer could not detect the corresponding device file for the specified partition!"))?;
     let (fs_type, option) = match fs_type {
         "vfat" | "fat16" | "fat32" => (FileSystem::Fat32, "defaults"),
         "ext4" => (FileSystem::Ext4, "defaults"),
@@ -203,7 +203,7 @@ pub fn fstab_entries(
     };
     let root_id = BlockInfo::get_partition_id(target, fs_type).ok_or_else(|| {
         anyhow!(
-            "AOSC OS Installer cannot obtain partition UUID for {}!",
+            "Installer could not obtain partition UUID for {}!",
             target.display()
         )
     })?;
@@ -242,7 +242,7 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     }
 
     // Round back to GiB for display message.
-    Err(anyhow!("The specified swapfile size is too small, AOSC OS Installer recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
+    Err(anyhow!("The specified swapfile size is too small, AOSC OS recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
 }
 
 #[test]

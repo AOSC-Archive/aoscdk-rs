@@ -144,7 +144,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
     }
 
     Err(anyhow!(
-        "AOSC OS Installer could not find tarball for specified variant {}.",
+        "Installer could not find tarball for specified variant {}.",
         tarball
     ))
 }
@@ -183,7 +183,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
     }
 
     Err(anyhow!(
-        "AOSC OS Installer could not find the specified partition: {}\nDid you partition your target disk?",
+        "Installer could not find the specified partition: {}\nDid you partition your target disk?",
         path.display()
     ))
 }
@@ -259,14 +259,14 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();
     let (tx, rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new()
-        .expect("AOSC OS Installer could not create temporary directory for installation.")
+        .expect("Installer could not create temporary directory for installation.")
         .into_path();
     let tempdir_clone = tempdir.clone();
     let tempdir_clone_2 = tempdir.clone();
     ctrlc::set_handler(move || {
         umount_all(&tempdir, root_fd);
         r.store(false, Ordering::SeqCst);
-    }).expect("AOSC OS Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
+    }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
     let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(50);
@@ -285,7 +285,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                 }
             }
         } else {
-            let err = install_thread.join().map_err(|_| anyhow!("AOSC OS Installer has encountered an unexpected error. Please restart your insatllation environment."))?.unwrap_err();
+            let err = install_thread.join().map_err(|_| anyhow!("Installer has encountered an unexpected error. Please restart your insatllation environment."))?.unwrap_err();
             umount_all(&tempdir_clone_2, root_fd);
             return Err(err);
         }

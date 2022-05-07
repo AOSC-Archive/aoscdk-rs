@@ -60,7 +60,7 @@ impl TableViewItem<VariantColumn> for network::VariantEntry {
 
 macro_rules! SUMMARY_TEXT {
     () => {
-        "AOSC OS Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time."
+        "Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time."
     };
 }
 macro_rules! SURE_FS_TYPE_INFO {
@@ -68,17 +68,17 @@ macro_rules! SURE_FS_TYPE_INFO {
         "AOSC OS Installation has detected that the specified partition is currently formatted {}, would you like to format this partition using the original filesystem? For its proven reliability, we recommend formatting your system partition as ext4."
     };
 }
-const ADVANCED_METHOD_INFO: &str = "AOSC OS Installer detected an unsupported filesystem format in your system partition. If you proceed, the installer will format your system partition using the ext4 filesystem. Please refer to the manual installation guides if you prefer to use an unsupported filesystem.";
-const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS Installer!
+const ADVANCED_METHOD_INFO: &str = "Installer detected an unsupported filesystem format in your system partition. If you proceed, the installer will format your system partition using the ext4 filesystem. Please refer to the manual installation guides if you prefer to use an unsupported filesystem.";
+const WELCOME_TEXT: &str = r#"Welcome to the Installer!
 
-In the following pages, AOSC OS Installer will guide you through the variant selection, partitioning, and other installation steps. The installation process should only take a few minutes, but will require more time on slower hardware."#;
+In the following pages, Installer will guide you through the variant selection, partitioning, and other installation steps. The installation process should only take a few minutes, but will require more time on slower hardware."#;
 const VARIANT_TEXT: &str =
     "Shown below is a list of available AOSC OS distributions for your device.";
 const ENTER_USER_PASSWORD_TEXT: &str = r#"Please enter and confirm your desired username and password. Please note that your username must start with a lower-cased alphabetical letter (a-z), and contain only lower-cased letters a-z, numbers 0-0, and dash ("-").
 "#;
 const ENTER_HOSTNAME_TEXT: &str = r#"Now, please input your desired hostname. A hostname may only consist letters a-z, numbers 0-9, and dash ("-")"#;
 const ENTER_TIMEZONE_TEXT: &str = r#"Finally, please select your locale, timezone, and your clock preferences. Your locale setting will affect your installation's display language. UTC system time is the default setting for Linux systems, but may result in time discrepancy with your other operating systems, such as Windows. If you wish to prevent this from happening, please select local time as system time."#;
-const BENCHMARK_TEXT: &str = "AOSC OS Installer will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes.";
+const BENCHMARK_TEXT: &str = "Installer will now test all mirrors for download speed, and rank them from the fastest (top) to the slowest (bottom). This may take a few minutes.";
 const FINISHED_TEXT: &str = r#"AOSC OS has been successfully installed on your device.
 
 You may reboot to your installed system by choosing "Reboot," or return to LiveKit by selecting "Exit to LiveKit.""#;
@@ -1000,7 +1000,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             } else {
                 show_msg(
                     s,
-                    &format!("AOSC OS Installer has successfully saved your installation configuration: {}.", SAVE_USER_CONFIG_FILE),
+                    &format!("Installer has successfully saved your installation configuration: {}.", SAVE_USER_CONFIG_FILE),
                 )
             }
         })
@@ -1013,7 +1013,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
-    ctrlc::set_handler(|| {}).expect("AOSC OS Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
+    ctrlc::set_handler(|| {}).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
@@ -1034,7 +1034,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     ).button("Cancel", move |s| {
         let user_interrup_tx = user_interrup_tx.clone();
         s.add_layer(wrap_in_dialog(TextView::new(
-            "AOSC OS Installer has not yet completed the installation process. Are you sure that you would like to abort the installation?"), "AOSC OS Installer", None)
+            "Installer has not yet completed the installation process. Are you sure that you would like to abort the installation?"), "AOSC OS Installer", None)
             .button("Yes", move |_| {
                 user_interrup_tx.send(true).unwrap();
             })
@@ -1048,12 +1048,12 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let cb_sink = siv.cb_sink().clone();
     let cb_sink_clone = siv.cb_sink().clone();
     let tempdir = TempDir::new()
-        .expect("AOSC OS Installer failed to create temporary file for the download process.")
+        .expect("Installer failed to create temporary file for the download process.")
         .into_path();
     let tempdir_copy = tempdir.clone();
     let tempdir_copy_2 = tempdir.clone();
     let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
-        .expect("AOSC OS Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
+        .expect("Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || {
         let user_exit = user_interrup_rx.recv();

@@ -116,7 +116,7 @@ fn begin_install(
         right_sha256 = variant.sha256sum.clone();
     } else {
         return Err(anyhow!(
-            "AOSC OS Installer could not parse release metadata: `variant` field not found."
+            "Installer could not parse release metadata: `variant` field not found."
         ));
     }
     let extract_done_copy = extract_done.clone();
@@ -143,11 +143,11 @@ fn begin_install(
                     0,
                     file_size.try_into().unwrap(),
                 ) {
-                    let e = anyhow!("AOSC OS Installer failed to create temporary file for the download process:\n\n{}", e);
+                    let e = anyhow!("Installer failed to create temporary file for the download process:\n\n{}", e);
                     send_error!(error_channel_tx_copy, e);
                 }
                 if let Err(e) = output.flush() {
-                    let e = anyhow!("AOSC OS Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
+                    let e = anyhow!("Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
                     send_error!(error_channel_tx_copy, e);
                 }
                 let mut tarball_size = 0;
@@ -162,7 +162,7 @@ fn begin_install(
                     tarball_size += reader_size;
                     if let Err(e) = output.write_all(&buf[..reader_size]) {
                         let e =
-                            anyhow!("AOSC OS Installer failed to write system release:\n\n{}", e);
+                            anyhow!("Installer failed to write system release:\n\n{}", e);
                         send_error!(error_channel_tx_copy, e);
                     }
                     sha256_work_tx.send((buf, reader_size)).unwrap();
@@ -182,7 +182,7 @@ fn begin_install(
             }
             Err(e) => {
                 let e = anyhow!(
-                    "AOSC OS Installer failed to download system release:\n\n{}",
+                    "Installer failed to download system release:\n\n{}",
                     e
                 );
                 send_error!(error_channel_tx_copy, e);
@@ -192,14 +192,14 @@ fn begin_install(
         match std::fs::File::open(tarball_file.clone()) {
             Ok(file) => output = file,
             Err(e) => {
-                let e = anyhow!("AOSC OS Installer failed to read system release:\n\n{}", e);
+                let e = anyhow!("Installer failed to read system release:\n\n{}", e);
                 send_error!(error_channel_tx_copy, e);
             }
         }
         let reader = ProgressReader::new(counter_clone, output);
         if let Err(e) = install::extract_tar_xz(reader, &mount_path) {
             let e = anyhow!(
-                "AOSC OS Installer failed to unpack system release:\n\n{}",
+                "Installer failed to unpack system release:\n\n{}",
                 e
             );
             send_error!(error_channel_tx_copy, e);
@@ -221,7 +221,7 @@ fn begin_install(
             let (buf, reader_size) = rx;
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
                 let e = anyhow!(
-                    "AOSC OS Installer failed to calculate checksum for system release:\n\n{}",
+                    "Installer failed to calculate checksum for system release:\n\n{}",
                     e
                 );
                 send_error!(error_channel_tx, e);
@@ -257,7 +257,7 @@ fn begin_install(
             let final_hash = hex::encode(hasher.finalize());
             if final_hash != right_sha256 {
                 return Err(anyhow!(
-                    "AOSC OS Installer detected a checksum mismatch in downloaded system release.\n\nExpected hash: {}\n\nCalculated hash: {}",
+                    "Installer detected a checksum mismatch in downloaded system release.\n\nExpected hash: {}\n\nCalculated hash: {}",
                     right_sha256,
                     final_hash
                 ));

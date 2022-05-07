@@ -18,7 +18,7 @@ const LOCK: &str = "/run/lock/aoscdk.lock";
 
 fn main() {
     if let Err(e) = create_lock() {
-        eprintln!("AOSC OS Installer failed to obtain the instance lock: {}", e);
+        eprintln!("Installer failed to obtain the instance lock: {}", e);
         std::process::exit(1);
     }
     if let Err(e) = execute() {
@@ -54,7 +54,7 @@ fn create_lock() -> Result<()> {
         let s = System::new_all();
         if s.process(Pid::from(old_pid)).is_some() {
             return Err(anyhow!(
-                "Another instance of AOSC OS Installer (pid: {}) is still running!",
+                "Another instance of Installer (pid: {}) is still running!",
                 old_pid
             ));
         } else {
