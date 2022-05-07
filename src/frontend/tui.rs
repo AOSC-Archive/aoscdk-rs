@@ -9,7 +9,7 @@ use cursive::{
     views::{
         Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar,
         RadioGroup, ResizedView, ScrollView, SelectView, TextContent, TextView,
-    },
+    }
 };
 use cursive::{traits::*, utils::Counter};
 use cursive::{view::SizeConstraint, views::Button};
@@ -69,7 +69,7 @@ macro_rules! SURE_FS_TYPE_INFO {
     };
 }
 const ADVANCED_METHOD_INFO: &str = "Installer detected an unsupported filesystem format in your system partition. If you proceed, the installer will format your system partition using the ext4 filesystem. Please refer to the manual installation guides if you prefer to use an unsupported filesystem.";
-const WELCOME_TEXT: &str = r#"Welcome to the Installer!
+const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS Installer!
 
 In the following pages, Installer will guide you through the variant selection, partitioning, and other installation steps. The installation process should only take a few minutes, but will require more time on slower hardware."#;
 const VARIANT_TEXT: &str =
