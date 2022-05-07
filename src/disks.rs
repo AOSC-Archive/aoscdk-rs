@@ -149,6 +149,29 @@ pub fn list_partitions() -> Vec<Partition> {
     partitions
 }
 
+fn partition_is_gpt(device_path: Option<&PathBuf>) -> Result<bool> {
+    let target = device_path.ok_or_else(|| anyhow!("AOSC OS Installer cannot detect the corresponding device file for the specified partition!"))?;
+    let mut device = std::fs::File::open(target)?;
+    if gptman::GPT::find_from(&mut device).is_ok() {
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
+    let is_gpt = partition_is_gpt(device_path)?;
+    let is_efi_booted = is_efi_booted();
+    let gpt_mbr_s = if is_gpt { "GPT" } else { "MBR" };
+    let bios_efi_s = if is_efi_booted { "EFI" } else { "BIOS" };
+    let right = if is_efi_booted { "GPT" } else { "BIOS" };
+    if (is_gpt && is_efi_booted) || (!is_efi_booted && !is_gpt) {
+        return Ok(());
+    }
+
+    Err(anyhow!("AOSC OS Installer has detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", gpt_mbr_s, bios_efi_s, right, bios_efi_s))
+}
+
 pub fn fstab_entries(
     device_path: Option<&PathBuf>,
     fs_type: &str,

@@ -448,6 +448,14 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let config_copy_2 = config.clone();
                 let fs_type = current_partition.fs_type.as_ref();
                 let current_partition_clone = current_partition.clone();
+                if let Err(e) = disks::right_combine(current_partition.parent_path.as_ref()) {
+                    let view = wrap_in_dialog(LinearLayout::vertical().child(TextView::new(e.to_string())), "AOSC OS Installer", None)
+                    .button("Cancel", |s| {
+                        s.pop_layer();
+                    })
+                    .button("Exit", |s| s.quit());
+                    s.add_layer(view);
+                }
                 if let Some(fs_type) = fs_type {
                     if fs_type != "ext4" && ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
