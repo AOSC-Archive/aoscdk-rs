@@ -206,7 +206,7 @@ fn make_partition_list(
             format!(
                 "{} ({}, {})",
                 path_name,
-                part.fs_type.as_ref().unwrap_or(&"?".to_owned()),
+                part.fs_type.as_ref().unwrap_or(&"Unknown/Unformatted".to_owned()),
                 human_size(part.size)
             ),
         );
