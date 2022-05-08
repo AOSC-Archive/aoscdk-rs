@@ -338,10 +338,9 @@ fn begin_install(
         if let Some(swap_size) = config.swap_size.as_ref() {
             install::create_swapfile(*swap_size, use_swap)?;
         }
-        if !config.is_hibernation.load(Ordering::SeqCst) {
-            install::disable_hibernate()?;
-        }
     }
+    // The swapfile offset reading problem is not solved yet, so hibernation is temporarily closed.
+    install::disable_hibernate()?;
     install::escape_chroot(escape_vector.as_raw_fd())?;
     if disks::is_efi_booted() {
         install::umount_root_path(&efi_path)?;
