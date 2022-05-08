@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 
 use disk_types::FileSystem;
 use fstab_generate::BlockInfo;
+use libparted::DiskType;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::path::Path;
@@ -150,13 +151,34 @@ pub fn list_partitions() -> Vec<Partition> {
 }
 
 fn partition_is_gpt(device_path: Option<&PathBuf>) -> Result<bool> {
-    let target = device_path.ok_or_else(|| anyhow!("Installer could not detect the corresponding device file for the specified partition!"))?;
+    let target = device_path.ok_or_else(|| {
+        anyhow!(
+            "Installer could not detect the corresponding device file for the specified partition!"
+        )
+    })?;
     let mut device = std::fs::File::open(target)?;
     if gptman::GPT::find_from(&mut device).is_ok() {
         return Ok(true);
     }
 
     Ok(false)
+}
+
+pub fn new_partition_table() -> Result<()> {
+    let t = if is_efi_booted() { "gpt" } else { "msdos" };
+    for mut i in libparted::Device::devices(true) {
+        if libparted::Disk::new(&mut i).is_err() {
+            let disk = libparted::Disk::new_fresh(
+                &mut i,
+                DiskType::get(t).ok_or_else(|| anyhow!("Unsupport partition table type!"))?,
+            );
+            if let Ok(mut disk) = disk {
+                disk.commit_to_dev().ok();
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(not(target_arch = "powerpc64"))]
@@ -191,7 +213,11 @@ pub fn fstab_entries(
     fs_type: &str,
     mount_path: Option<&Path>,
 ) -> Result<OsString> {
-    let target = device_path.ok_or_else(|| anyhow!("Installer could not detect the corresponding device file for the specified partition!"))?;
+    let target = device_path.ok_or_else(|| {
+        anyhow!(
+            "Installer could not detect the corresponding device file for the specified partition!"
+        )
+    })?;
     let (fs_type, option) = match fs_type {
         "vfat" | "fat16" | "fat32" => (FileSystem::Fat32, "defaults"),
         "ext4" => (FileSystem::Ext4, "defaults"),
