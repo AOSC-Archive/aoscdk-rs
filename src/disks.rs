@@ -153,7 +153,7 @@ pub fn list_partitions() -> Vec<Partition> {
     partitions
 }
 
-fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<&str> {
+fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
     fn cvt<T: IsZero>(t: T) -> io::Result<T> {
         if t.is_zero() {
             Err(io::Error::last_os_error())
@@ -170,10 +170,12 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<&str> {
     let device = libparted::Device::new(target)?;
     let partition_t = cvt(unsafe { libparted_sys::ped_disk_probe(device.ped_device()) });
     if let Ok(partition_t) = partition_t {
-        let partition_t = unsafe { CStr::from_ptr((*partition_t).name) };
-        let partition_t = partition_t.to_str()?;
+        if let Ok(partition_t_name) = unsafe { cvt((*partition_t).name) } {
+            let partition_t = unsafe { CStr::from_ptr(partition_t_name) };
+            let partition_t = partition_t.to_str()?.to_string();
 
-        return Ok(partition_t);
+            return Ok(partition_t);
+        }
     }
 
     Err(anyhow!("Unsupport format!"))
