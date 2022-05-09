@@ -181,6 +181,7 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
     Err(anyhow!("Unsupport format!"))
 }
 
+#[cfg(not(target_arch = "powerpc64"))]
 pub fn new_partition_table() -> Result<()> {
     let t = if is_efi_booted() { "gpt" } else { "msdos" };
     for mut i in libparted::Device::devices(true) {
@@ -192,6 +193,24 @@ pub fn new_partition_table() -> Result<()> {
             if let Ok(mut disk) = disk {
                 disk.commit_to_dev().ok();
             }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_arch = "powerpc64")]
+pub fn new_partition_table() -> Result<()> {
+    use crate::network;
+
+    let arch_name = network::get_arch_name();
+    if libparted::Disk::new(&mut i).is_err() && arch_name == Some("ppc64el") {
+        let disk = libparted::Disk::new_fresh(
+            &mut i,
+            DiskType::get("gpt").ok_or_else(|| anyhow!("Unsupport partition table type!"))?,
+        );
+        if let Ok(mut disk) = disk {
+            disk.commit_to_dev().ok();
         }
     }
 
