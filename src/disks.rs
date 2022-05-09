@@ -202,9 +202,9 @@ pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
     let is_efi_booted = is_efi_booted();
     let bios_efi_s = if is_efi_booted { "EFI" } else { "BIOS" };
     let right = if is_efi_booted { "GPT" } else { "BIOS" };
-    if partition_table_t == "gpt" && is_efi_booted {
-        return Ok(());
-    } else if partition_table_t == "msdos" && !is_efi_booted {
+    if (partition_table_t == "gpt" && is_efi_booted)
+        || (partition_table_t == "msdos" && !is_efi_booted)
+    {
         return Ok(());
     }
 
