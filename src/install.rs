@@ -495,7 +495,7 @@ pub fn disable_hibernate() -> Result<()> {
     if Path::new(path).exists() {
         std::fs::remove_file(path)?;
     }
-    std::os::unix::fs::symlink(path, "/dev/null")?;
+    std::os::unix::fs::symlink("/dev/null", path)?;
 
     Ok(())
 }
