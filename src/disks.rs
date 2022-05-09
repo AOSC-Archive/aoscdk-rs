@@ -3,8 +3,11 @@ use anyhow::{anyhow, Result};
 use disk_types::FileSystem;
 use fstab_generate::BlockInfo;
 use libparted::DiskType;
+use libparted::IsZero;
 use serde::{Deserialize, Serialize};
+use std::ffi::CStr;
 use std::ffi::OsString;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -150,18 +153,30 @@ pub fn list_partitions() -> Vec<Partition> {
     partitions
 }
 
-fn partition_is_gpt(device_path: Option<&PathBuf>) -> Result<bool> {
+fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<&str> {
+    fn cvt<T: IsZero>(t: T) -> io::Result<T> {
+        if t.is_zero() {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(t)
+        }
+    }
+
     let target = device_path.ok_or_else(|| {
         anyhow!(
             "Installer could not detect the corresponding device file for the specified partition!"
         )
     })?;
-    let mut device = std::fs::File::open(target)?;
-    if gptman::GPT::find_from(&mut device).is_ok() {
-        return Ok(true);
+    let device = libparted::Device::new(target)?;
+    let partition_t = cvt(unsafe { libparted_sys::ped_disk_probe(device.ped_device()) });
+    if let Ok(partition_t) = partition_t {
+        let partition_t = unsafe { CStr::from_ptr((*partition_t).name) };
+        let partition_t = partition_t.to_str()?;
+
+        return Ok(partition_t);
     }
 
-    Ok(false)
+    Err(anyhow!("Unsupport format!"))
 }
 
 pub fn new_partition_table() -> Result<()> {
@@ -183,16 +198,17 @@ pub fn new_partition_table() -> Result<()> {
 
 #[cfg(not(target_arch = "powerpc64"))]
 pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
-    let is_gpt = partition_is_gpt(device_path)?;
+    let partition_table_t = get_partition_table_type(device_path)?;
     let is_efi_booted = is_efi_booted();
-    let gpt_mbr_s = if is_gpt { "GPT" } else { "MBR" };
     let bios_efi_s = if is_efi_booted { "EFI" } else { "BIOS" };
     let right = if is_efi_booted { "GPT" } else { "BIOS" };
-    if (is_gpt && is_efi_booted) || (!is_efi_booted && !is_gpt) {
+    if partition_table_t == "gpt" && is_efi_booted {
+        return Ok(());
+    } else if partition_table_t == "msdos" && !is_efi_booted {
         return Ok(());
     }
 
-    Err(anyhow!("Installer detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", gpt_mbr_s, bios_efi_s, right, bios_efi_s))
+    Err(anyhow!("Installer detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", partition_table_t, bios_efi_s, right, bios_efi_s))
 }
 
 #[cfg(target_arch = "powerpc64")]
