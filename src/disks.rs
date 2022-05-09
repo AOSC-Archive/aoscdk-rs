@@ -204,13 +204,15 @@ pub fn new_partition_table() -> Result<()> {
     use crate::network;
 
     let arch_name = network::get_arch_name();
-    if libparted::Disk::new(&mut i).is_err() && arch_name == Some("ppc64el") {
-        let disk = libparted::Disk::new_fresh(
-            &mut i,
-            DiskType::get("gpt").ok_or_else(|| anyhow!("Unsupport partition table type!"))?,
-        );
-        if let Ok(mut disk) = disk {
-            disk.commit_to_dev().ok();
+    for mut i in libparted::Device::devices(true) {
+        if libparted::Disk::new(&mut i).is_err() && arch_name == Some("ppc64el") {
+            let disk = libparted::Disk::new_fresh(
+                &mut i,
+                DiskType::get("gpt").ok_or_else(|| anyhow!("Unsupport partition table type!"))?,
+            );
+            if let Ok(mut disk) = disk {
+                disk.commit_to_dev().ok();
+            }
         }
     }
 
