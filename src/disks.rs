@@ -216,10 +216,10 @@ pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
 #[cfg(target_arch = "powerpc64")]
 pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
     use crate::network;
-    let is_gpt = partition_is_gpt(device_path)?;
+    let partition_table_t = get_partition_table_type(device_path)?;
     let arch_name = network::get_arch_name();
 
-    if arch_name == Some("ppc64el") && !is_gpt {
+    if arch_name == Some("ppc64el") && partition_table_t != "gpt" {
         return Err(anyhow!("Installer detected an unsupported partition map for your device. Please use a GPT partition map for your POWER/CHRP-based device."));
     }
 
