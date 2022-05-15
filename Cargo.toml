@@ -14,8 +14,8 @@ anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 nix = "0.24"
 libparted = "0.1"
-cursive = "=0.16"
-cursive_table_view = { git = "https://github.com/BonsaiDen/cursive_table_view", rev = "55eca64ef0e9bbcd75970d98f12b023bb635c522" }
+cursive = "0.18"
+cursive_table_view = "0.14"
 lazy_static = "1.4"
 number_prefix = "0.4"
 xz2 = "0.1"
@@ -23,7 +23,7 @@ tar = { git = "https://github.com/eatradish/tar-rs", rev = "d169fb24f80fbf626c87
 sha2 = "0.10"
 hex = "0.4"
 tempfile = "3.2"
-cursive-async-view = "=0.5"
+cursive-async-view = "0.6"
 tokio = { version = "1.15", features = ["rt", "rt-multi-thread"]}
 futures = "0.3"
 rand = "0.8"

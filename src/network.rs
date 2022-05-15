@@ -138,12 +138,9 @@ pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
         tx.send(resp).unwrap();
     });
     worker.join().unwrap();
-    let resp_result = rx.recv_timeout(Duration::from_secs(30)).map_err(|e| {
-        anyhow!(
-            "Installer detected a network response timeout: {}",
-            e
-        )
-    })?;
+    let resp_result = rx
+        .recv_timeout(Duration::from_secs(30))
+        .map_err(|e| anyhow!("Installer detected a network response timeout: {}", e))?;
     let resp = resp_result?.error_for_status()?;
 
     Ok(resp)
@@ -225,7 +222,9 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
         sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
         if sorted_tarballs.is_empty() {
             if all_empty && index == right_recipes_len - 1 {
-                return Err(anyhow!("Installer could not find any available system release for your device."));
+                return Err(anyhow!(
+                    "Installer could not find any available system release for your device."
+                ));
             }
             continue;
         }
