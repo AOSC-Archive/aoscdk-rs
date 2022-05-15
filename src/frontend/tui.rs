@@ -884,7 +884,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                             let is_hibernation_clone = is_hibernation_clone_2.clone();
                             let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
                             if installed_size + size as u64 > partition_size {
-                                show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB", size));
+                                show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB",  (size / 1024.0 / 1024.0 / 1024.0).round()));
                                 return;
                             }
                             match disks::is_enable_hibernation(size) {
