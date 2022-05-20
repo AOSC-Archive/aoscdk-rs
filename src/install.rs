@@ -402,7 +402,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
         ));
     }
     let command = Command::new("usermod")
-        .args(&["-aG", "audio,cdrom,video,wheel", name])
+        .args(&["-aG", "audio,cdrom,video,wheel,plugdev", name])
         .output()?;
     if !command.status.success() {
         return Err(anyhow!(
