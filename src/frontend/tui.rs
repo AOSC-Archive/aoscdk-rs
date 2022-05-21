@@ -26,7 +26,7 @@ use std::{
 };
 use tempfile::TempDir;
 
-use super::{begin_install, InstallConfig, games::start_mines};
+use super::{begin_install, games::start_mines, InstallConfig};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";

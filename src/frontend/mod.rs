@@ -19,8 +19,8 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 mod cli;
-mod tui;
 mod games;
+mod tui;
 
 pub use cli::*;
 use sha2::{Digest, Sha256};
@@ -47,7 +47,7 @@ struct InstallConfig {
     password: Option<Arc<String>>,
     hostname: Option<String>,
     locale: Option<Arc<String>>,
-   timezone: Option<Arc<String>>,
+    timezone: Option<Arc<String>>,
     tc: Option<Arc<String>>,
     use_swap: Arc<AtomicBool>,
     swap_size: Arc<Option<f64>>,
