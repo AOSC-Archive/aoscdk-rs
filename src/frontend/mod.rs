@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 mod cli;
 mod tui;
+mod games;
 
 pub use cli::*;
 use sha2::{Digest, Sha256};
