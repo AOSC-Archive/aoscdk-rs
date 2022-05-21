@@ -748,10 +748,7 @@ fn set_timezone(
     };
 
     // Filter cities with names containing query string. You can implement your own logic here!
-    fn search_fn<T: std::iter::IntoIterator<Item = String>>(
-        items: T,
-        query: &str,
-    ) -> Vec<String> {
+    fn search_fn<T: std::iter::IntoIterator<Item = String>>(items: T, query: &str) -> Vec<String> {
         items
             .into_iter()
             .filter(|item| {
