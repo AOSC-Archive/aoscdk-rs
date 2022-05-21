@@ -239,15 +239,6 @@ fn make_locale_list(locales: Vec<String>) -> SelectView {
     locale_view
 }
 
-fn make_continent_list(zoneinfo: Vec<(String, Vec<String>)>) -> SelectView {
-    SelectView::new().popup().autojump().with_all_str(
-        zoneinfo
-            .into_iter()
-            .map(|(con, _)| con)
-            .collect::<Vec<String>>(),
-    )
-}
-
 fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
     Dialog::around(ResizedView::new(
         SizeConstraint::AtMost(width.unwrap_or(64)),
@@ -661,10 +652,8 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     // locale default is C.UTF-8
     let locale = Rc::new(RefCell::new(String::from("C.UTF-8")));
     let locale_copy = Rc::clone(&locale);
-    let continent = Rc::new(RefCell::new(String::new()));
-    let continent_copy = Rc::clone(&continent);
-    let city = Rc::new(RefCell::new(String::new()));
-    let city_copy = Rc::clone(&city);
+    let timezone = Rc::new(RefCell::new(String::new()));
+    let timezone_copy = Rc::clone(&timezone);
     // RTC/UTC default is UTC
     let tc = Rc::new(RefCell::new(String::from("UTC")));
     let tc_copy = Rc::clone(&tc);
@@ -677,12 +666,9 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
             "Timezone",
             Button::new("Set Timezone", move |s| {
                 let zoneinfo = install::get_zoneinfo_list().unwrap();
-                let city_clone = Rc::clone(&city_copy);
-                let continent_copy_copy = Rc::clone(&continent_copy);
                 s.add_layer(set_timezone(
                     zoneinfo,
-                    city_clone,
-                    continent_copy_copy,
+                    timezone_copy.clone(),
                     status_text.clone(),
                 ))
             }),
@@ -723,16 +709,14 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     )
     .button("Continue", move |s| {
         let locale = locale.as_ref().to_owned().into_inner();
-        let continent = continent.as_ref().to_owned().into_inner();
-        let city = city.as_ref().to_owned().into_inner();
+        let timezone = timezone.as_ref().to_owned().into_inner();
         let tc = tc.as_ref().to_owned().into_inner();
-        if locale.is_empty() || continent.is_empty() || city.is_empty() || tc.is_empty() {
+        if locale.is_empty() || timezone.is_empty() || tc.is_empty() {
             fill_in_all_the_fields!(s);
         }
         let mut config = config.clone();
         config.locale = Some(Arc::new(locale));
-        config.continent = Some(Arc::new(continent));
-        config.city = Some(Arc::new(city));
+        config.timezone = Some(Arc::new(timezone));
         config.tc = Some(Arc::new(tc));
         // show_summary(s, config);
         select_swap(s, config);
@@ -747,60 +731,90 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn set_timezone(
-    zoneinfo: Vec<(String, Vec<String>)>,
-    city_clone: Rc<RefCell<String>>,
-    continent_copy_copy: Rc<RefCell<String>>,
+    zoneinfo: Vec<String>,
+    timezone: Rc<RefCell<String>>,
     status_text: Arc<TextContent>,
 ) -> Dialog {
+    let zoneinfo_clone = zoneinfo.clone();
+    let timezone_clone = timezone.clone();
+    let status_text_clone = status_text.clone();
+    let on_edit = move |siv: &mut Cursive, query: &str, _cursor: usize| {
+        let matches = search_fn(zoneinfo_clone.clone(), query);
+        // Update the `matches` view with the filtered array of cities
+        siv.call_on_name("matches", |v: &mut SelectView| {
+            v.clear();
+            v.add_all_str(matches);
+        });
+    };
+
+    // Filter cities with names containing query string. You can implement your own logic here!
+    fn search_fn<'a, 'b, T: std::iter::IntoIterator<Item = String>>(
+        items: T,
+        query: &'b str,
+    ) -> Vec<String> {
+        items
+            .into_iter()
+            .filter(|item| {
+                let item = item.to_lowercase();
+                let query = query.to_lowercase();
+                item.contains(&query)
+            })
+            .collect()
+    }
+
+    fn replace_item(
+        siv: &mut Cursive,
+        item: &str,
+        timezone: Rc<RefCell<String>>,
+        status_text: Arc<TextContent>,
+    ) {
+        siv.pop_layer();
+        timezone.replace(item.to_string());
+        status_text.set_content(item);
+    }
+
+    fn on_submit(
+        siv: &mut Cursive,
+        query: &str,
+        timezone_clone: Rc<RefCell<String>>,
+        status_text: Arc<TextContent>,
+    ) {
+        let matches = siv.find_name::<SelectView>("matches").unwrap();
+        if matches.is_empty() {
+            // not all people live in big cities. If none of the cities in the list matches, use the value of the query.
+            replace_item(siv, query, timezone_clone, status_text);
+        } else {
+            // pressing "Enter" without moving the focus into the `matches` view will submit the first match result
+            let item = &*matches.selection().unwrap();
+            replace_item(siv, item, timezone_clone, status_text);
+        };
+    }
+
     wrap_in_dialog(
-        make_continent_list(zoneinfo.clone()).on_submit(move |s, c: &String| {
-            let zoneinfo_clone = zoneinfo.clone();
-            let index = zoneinfo.iter().position(|(x, _)| x == c).unwrap();
-            let citys = &zoneinfo[index].1;
-            let city_clone_clone = Rc::clone(&city_clone);
-            let city_clone_3 = Rc::clone(&city_clone_clone);
-            let continent_clone_3 = Rc::clone(&continent_copy_copy);
-            let status_text_copy = status_text.clone();
-            status_text_copy.set_content("");
-            status_text_copy.append(format!("{}/", c));
-            let status_text_copy_copy = status_text_copy.clone();
-            continent_copy_copy.replace(c.to_string());
-            s.pop_layer();
-            s.add_layer(
-                wrap_in_dialog(
-                    LinearLayout::vertical().child(
-                        SelectView::new()
-                            .autojump()
-                            .popup()
-                            .with_all_str(citys.iter())
-                            .on_submit(move |_, c: &String| {
-                                city_clone_clone.replace(c.to_string());
-                                status_text_copy.append(c.to_string());
-                            })
-                            .min_width(20),
-                    ),
-                    "Select city",
-                    None,
-                )
-                .button("OK", |s| {
-                    s.cb_sink()
-                        .send(Box::new(|s| {
-                            s.pop_layer();
-                        }))
-                        .unwrap()
-                })
-                .button("Cancel", move |s| {
-                    s.pop_layer();
-                    s.add_layer(set_timezone(
-                        zoneinfo_clone.clone(),
-                        Rc::clone(&city_clone_3),
-                        Rc::clone(&continent_clone_3),
-                        status_text_copy_copy.clone(),
-                    ));
-                }),
+        LinearLayout::vertical()
+            .child(TextView::new("Search timezone"))
+            .child(
+                EditView::new()
+                    // update results every time the query changes
+                    .on_edit(on_edit)
+                    // submit the focused (first) item of the matches
+                    .on_submit(move |s: &mut Cursive, c| {
+                        on_submit(s, c, timezone_clone.clone(), status_text.clone())
+                    })
+                    .with_name("query"),
             )
-        }),
-        "Select continent",
+            .child(DummyView {})
+            .child(
+                SelectView::new()
+                    .with_all_str(zoneinfo)
+                    .on_submit(move |s: &mut Cursive, item| {
+                        replace_item(s, item, timezone.clone(), status_text_clone.clone())
+                    })
+                    .with_name("matches")
+                    .scrollable(),
+            )
+            .fixed_height(10),
+        "Select timezone",
         None,
     )
 }
@@ -1009,7 +1023,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         config.mirror.unwrap().name,
         config.user.unwrap(),
         config.locale.unwrap(),
-        format_args!("{}/{}", config.continent.unwrap(), config.city.unwrap()),
+        config.timezone.unwrap(),
         config.tc.unwrap(),
     );
     let swap_s = if swap_size != 0.0 {

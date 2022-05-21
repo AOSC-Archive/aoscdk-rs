@@ -124,10 +124,8 @@ fn list_locale() -> Result<()> {
 
 fn list_timezone() -> Result<()> {
     let timezone_list = install::get_zoneinfo_list()?;
-    for (continent, city) in timezone_list {
-        for c in city {
-            println!("{}/{}", continent, c);
-        }
+    for i in timezone_list {
+        println!("{}", i);
     }
 
     Ok(())
@@ -234,10 +232,6 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let variant = get_variant(&ic.tarball)?;
     let partition = get_partition(&ic.path, &variant)?;
     let mirror = get_mirror(&ic.mirror);
-    let (continent, city) = ic
-        .timezone
-        .split_once('/')
-        .ok_or_else(|| anyhow!("You have specified an invalid timezone!"))?;
     let tc = if ic.use_rtc { "RTC" } else { "UTC" };
     let (use_swap, swap_size, is_hibernation) = get_swap(ic.swap_size, &partition, &variant)?;
 
@@ -249,8 +243,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         password: Some(Arc::new(ic.password)),
         hostname: Some(ic.hostname),
         locale: Some(Arc::new(ic.locale)),
-        continent: Some(Arc::new(continent.to_string())),
-        city: Some(Arc::new(city.to_string())),
+        timezone: Some(Arc::new(ic.timezone)),
         tc: Some(Arc::new(tc.to_string())),
         use_swap: Arc::new(AtomicBool::new(!ic.no_swap && use_swap)),
         swap_size: Arc::new(Some(swap_size)),

@@ -55,7 +55,7 @@ fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
 }
 
 /// Get the list of available timezone
-pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
+pub fn get_zoneinfo_list() -> Result<Vec<String>> {
     let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
     let mut zoneinfo_list = list_zoneinfo(&data)
         .map_err(|_| anyhow!("Installer failed to gather available timezones"))?
@@ -64,22 +64,8 @@ pub fn get_zoneinfo_list() -> Result<Vec<(String, Vec<String>)>> {
         return Err(anyhow!("zoneinfo list is empty!"));
     }
     zoneinfo_list.sort();
-    let mut last_continent = zoneinfo_list[0].split_once('/').unwrap().0;
-    let mut result = Vec::new();
-    let mut last_city = Vec::new();
-    for i in &zoneinfo_list {
-        let (continent, city) = i.split_once('/').unwrap();
-        if continent == last_continent {
-            last_city.push(city.to_string());
-        } else {
-            result.push((last_continent.to_string(), last_city.clone()));
-            last_city.clear();
-            last_city.push(city.to_string());
-            last_continent = continent;
-        }
-    }
 
-    Ok(result)
+    Ok(zoneinfo_list)
 }
 
 /// Extract the given .tar.xz stream and preserve all the file attributes

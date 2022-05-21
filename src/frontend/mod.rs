@@ -46,8 +46,7 @@ struct InstallConfig {
     password: Option<Arc<String>>,
     hostname: Option<String>,
     locale: Option<Arc<String>>,
-    continent: Option<Arc<String>>,
-    city: Option<Arc<String>>,
+   timezone: Option<Arc<String>>,
     tc: Option<Arc<String>>,
     use_swap: Arc<AtomicBool>,
     swap_size: Arc<Option<f64>>,
@@ -64,8 +63,7 @@ impl Default for InstallConfig {
             password: None,
             hostname: None,
             locale: None,
-            continent: None,
-            city: None,
+            timezone: None,
             tc: None,
             use_swap: Arc::new(AtomicBool::new(false)),
             swap_size: Arc::new(None),
@@ -316,9 +314,7 @@ fn begin_install(
         "Step 8 of 8: Finalising installation ...".to_string(),
         fake_counter,
     ))?;
-    install::set_zoneinfo(
-        format!("{}/{}", &config.continent.unwrap(), &config.city.unwrap()).as_str(),
-    )?;
+    install::set_zoneinfo(&config.timezone.unwrap())?;
     install::set_hwclock_tc(match config.tc.unwrap().as_str() {
         "UTC" => true,
         "RTC" => false,
