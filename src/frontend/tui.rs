@@ -26,7 +26,7 @@ use std::{
 };
 use tempfile::TempDir;
 
-use super::{begin_install, games::start_mines, InstallConfig};
+use super::{begin_install, games::{start_mines, start_sudoku, start_game}, InstallConfig};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
@@ -1066,6 +1066,12 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     siv.add_global_callback('m', |s| {
         start_mines(s);
+    });
+    siv.add_global_callback('s', |s| {
+        start_sudoku(s);
+    });
+    siv.add_global_callback('g', |s| {
+        start_game(s);
     });
     ctrlc::set_handler(|| {}).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();

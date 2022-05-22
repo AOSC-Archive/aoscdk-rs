@@ -35,6 +35,9 @@ sys-info = "0.9"
 clap = { version = "3.1", features = ["derive"]}
 indicatif = "0.16"
 libparted-sys = "0.3"
+clock-core = "0.0.7"
+hhmmss = "0.1.0"
+sudoku = "0.7"
 
 [features]
 is_retro = []
