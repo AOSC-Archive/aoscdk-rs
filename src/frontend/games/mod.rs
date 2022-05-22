@@ -1,8 +1,8 @@
 use cursive::Cursive;
 
-use self::minesweapers::start_mines_inner;
+use self::minesweeper::start_mines_inner;
 
-mod minesweapers;
+mod minesweeper;
 
 pub fn start_mines(siv: &mut Cursive) {
     start_mines_inner(siv);
