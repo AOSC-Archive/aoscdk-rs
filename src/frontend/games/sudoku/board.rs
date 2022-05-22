@@ -7,12 +7,12 @@ use clock_core::stopwatch::Stopwatch;
 use cursive::{
     event::{Event, EventResult, Key, MouseEvent},
     theme::ColorStyle,
-    view::{View, CannotFocus},
+    view::{CannotFocus, View},
     Printer, Vec2,
 };
 use hhmmss::Hhmmss;
 
-use super::sudoku::MySudoku;
+use super::sudokumod::MySudoku;
 
 // type SudokuMatrix = [u8; 81];
 type SudokuMatrix = [[u8; 9]; 9];
@@ -43,7 +43,7 @@ impl SudokuBoard {
     pub fn new() -> Self {
         let ans_ = sudoku::Sudoku::generate_filled().to_bytes();
         let sudoku_ =
-            sudoku::Sudoku::generate_unique_from(sudoku::Sudoku::from_bytes(ans_.clone()).unwrap())
+            sudoku::Sudoku::generate_unique_from(sudoku::Sudoku::from_bytes(ans_).unwrap())
                 .to_bytes();
         let mut ans = [[0u8; 9]; 9];
         for i in 0..9 {
@@ -242,7 +242,7 @@ impl SudokuBoard {
             }
         }
 
-        if avail.len() > 0 {
+        if !avail.is_empty() {
             self.hints += 1;
             let coord = avail[rand::random::<usize>() % avail.len()];
             let [i, j] = coord;

@@ -47,10 +47,8 @@ impl MySudoku {
             Some(coord)
         } else if let Some(coord) = self.conflict_col(v, coord) {
             Some(coord)
-        } else if let Some(coord) = self.conflict_box(v, coord) {
-            Some(coord)
         } else {
-            None
+            self.conflict_box(v, coord)
         }
     }
 
