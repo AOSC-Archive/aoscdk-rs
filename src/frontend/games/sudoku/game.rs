@@ -1,4 +1,4 @@
-use crate::frontend::games::{sudoku::board::SudokuBoard, add_callback};
+use crate::frontend::games::{add_callback, sudoku::board::SudokuBoard};
 use cursive::{
     traits::*,
     views::{Button, Dialog, DummyView, LinearLayout, TextView},
