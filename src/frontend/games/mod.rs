@@ -9,15 +9,17 @@ use self::{minesweeper::start_mines_inner, sudoku::start_sudoku_inner};
 mod minesweeper;
 mod sudoku;
 
-pub fn start_mines(siv: &mut Cursive) {
+fn start_mines(siv: &mut Cursive) {
+    clear_callback(siv);
     start_mines_inner(siv);
 }
 
-pub fn start_sudoku(siv: &mut Cursive) {
+fn start_sudoku(siv: &mut Cursive) {
+    clear_callback(siv);
     start_sudoku_inner(siv);
 }
 
-pub fn start_game(siv: &mut Cursive) {
+fn start_game(siv: &mut Cursive) {
     siv.add_layer(
         Dialog::around(ResizedView::new(
             SizeConstraint::AtMost(64),
@@ -44,4 +46,22 @@ pub fn start_game(siv: &mut Cursive) {
                 .unwrap()
         }),
     );
+}
+
+fn clear_callback(siv: &mut Cursive) {
+    siv.clear_global_callbacks('m');
+    siv.clear_global_callbacks('s');
+    siv.clear_global_callbacks('g');
+}
+
+pub fn add_callback(siv: &mut Cursive) {
+    siv.add_global_callback('m', |s| {
+        start_mines(s);
+    });
+    siv.add_global_callback('s', |s| {
+        start_sudoku(s);
+    });
+    siv.add_global_callback('g', |s| {
+        start_game(s);
+    });
 }
