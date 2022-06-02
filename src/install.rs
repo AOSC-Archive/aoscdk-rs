@@ -235,6 +235,12 @@ pub fn execute_locale_gen(locale: &str) -> Result<()> {
     let mut locale_gen_list = buf.split("\n").map(|x| x.into()).collect::<Vec<String>>();
     let index = locale_gen_list
         .iter()
+        .position(|x| x.starts_with(&format!("{}", locale)));
+    if index.is_some() {
+        return Ok(());
+    }
+    let index = locale_gen_list
+        .iter()
         .position(|x| x.starts_with(&format!("#{}", locale)))
         .ok_or_else(|| anyhow!("AOSC OS could not find the specified locale!"))?;
     let selected_locale = &locale_gen_list[index];
@@ -455,7 +461,7 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
         swapfile.as_raw_fd(),
         FallocateFlags::empty(),
         0,
-        size as i64,
+        size as i32,
     )?;
     swapfile.flush()?;
     std::fs::set_permissions("/swapfile", std::fs::Permissions::from_mode(0o600))?;
