@@ -461,7 +461,7 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
         swapfile.as_raw_fd(),
         FallocateFlags::empty(),
         0,
-        size as i32,
+        (size as i32).into(),
     )?;
     swapfile.flush()?;
     std::fs::set_permissions("/swapfile", std::fs::Permissions::from_mode(0o600))?;
