@@ -20,6 +20,10 @@ fn start_sudoku(siv: &mut Cursive) {
 }
 
 fn start_game(siv: &mut Cursive) {
+    let mut game = vec!["Sudoku"];
+    if std::env::var("DISPLAY").is_ok() {
+        game.push("Minesweeper");
+    }
     siv.add_layer(
         Dialog::around(ResizedView::new(
             SizeConstraint::AtMost(64),
@@ -27,7 +31,7 @@ fn start_game(siv: &mut Cursive) {
             ScrollView::new(
                 LinearLayout::vertical().child(
                     SelectView::new()
-                        .with_all_str(vec!["Sudoku", "Minesweeper"])
+                        .with_all_str(game)
                         .on_submit(|s: &mut Cursive, c| match c {
                             "Sudoku" => start_sudoku(s),
                             "Minesweeper" => start_mines(s),
