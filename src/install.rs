@@ -521,14 +521,13 @@ pub fn is_acceptable_username(username: &str) -> bool {
     if username.is_empty() || username.starts_with('-') {
         return false;
     }
-    if username.to_lowercase() != username {
-        return false;
-    }
+
     if username == "root" {
         return false;
     }
+
     for c in username.as_bytes() {
-        if c.is_ascii_whitespace() || *c == b'/' || *c == b'\\' || *c == b':' {
+        if c.is_ascii_whitespace() || !c.is_ascii_lowercase() || *c == b'/' || *c == b'\\' || *c == b':' {
             return false;
         }
     }
