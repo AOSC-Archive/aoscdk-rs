@@ -524,6 +524,9 @@ pub fn is_acceptable_username(username: &str) -> bool {
     if username.to_lowercase() != username {
         return false;
     }
+    if username == "root" {
+        return false;
+    }
     for c in username.as_bytes() {
         if c.is_ascii_whitespace() || *c == b'/' || *c == b'\\' || *c == b':' {
             return false;
@@ -547,7 +550,8 @@ fn test_hostname_validation() {
 fn test_username_validation() {
     assert_eq!(is_acceptable_username("foo"), true);
     assert_eq!(is_acceptable_username("老白"), true);
-    assert_eq!(is_acceptable_username("BAIMINGCONGHAHAHAHAHAHAHA"), false);
+    assert_eq!(is_acceptable_username("BAIMINGCONG"), false);
+    assert_eq!(is_acceptable_username("root"), false);
     assert_eq!(is_acceptable_username("/root"), false);
     assert_eq!(is_acceptable_username("root:root"), false);
     assert_eq!(is_acceptable_username("root\n"), false);
