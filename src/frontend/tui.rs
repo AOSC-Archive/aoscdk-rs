@@ -583,6 +583,10 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         let password = password.as_ref().to_owned().into_inner();
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
         let name = name.as_ref().to_owned().into_inner();
+        if !install::is_acceptable_username(&name) {
+            show_msg(s, "Username is not acceptable!");
+            return;
+        }
         if password.is_empty() || password_confirm.is_empty() || name.is_empty() {
             fill_in_all_the_fields!(s);
         }
@@ -633,6 +637,10 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
         let hostname = hostname.as_ref().to_owned().into_inner();
         if hostname.is_empty() {
             fill_in_all_the_fields!(s);
+        }
+        if !install::is_valid_hostname(&hostname) {
+            show_msg(s, "Hostname is not vaild!");
+            return;
         }
         let mut config = config.clone();
         config.hostname = Some(hostname);
