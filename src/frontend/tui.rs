@@ -667,7 +667,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     let tc_copy = Rc::clone(&tc);
     let locales = install::get_locale_list().unwrap();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
-    let mut timezone_selected_status = TextView::new("N/A");
+    let mut timezone_selected_status = TextView::new("UTC");
     let status_text = Arc::new(timezone_selected_status.get_shared_content());
     let timezone_view = ListView::new()
         .child(
