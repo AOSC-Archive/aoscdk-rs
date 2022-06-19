@@ -230,15 +230,6 @@ fn make_partition_list(
     (disk_list, disk_view.with_name("part_list"))
 }
 
-fn make_locale_list(locales: Vec<String>) -> SelectView {
-    let locale_view = SelectView::new()
-        .popup()
-        .autojump()
-        .with_all_str(locales.iter());
-
-    locale_view
-}
-
 fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
     Dialog::around(ResizedView::new(
         SizeConstraint::AtMost(width.unwrap_or(64)),
@@ -668,28 +659,34 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     let locales = install::get_locale_list().unwrap();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
     let mut timezone_selected_status = TextView::new("UTC");
-    let status_text = Arc::new(timezone_selected_status.get_shared_content());
+    let timezone_status_text = Arc::new(timezone_selected_status.get_shared_content());
+    let mut locale_selected_status = TextView::new("C.UTF-8");
+    let locale_status_text = Arc::new(locale_selected_status.get_shared_content());
+
     let timezone_view = ListView::new()
         .child(
             "Timezone",
-            Button::new("Set Timezone", move |s| {
+            Button::new("Select timezone", move |s| {
                 let zoneinfo = install::get_zoneinfo_list().unwrap();
                 s.add_layer(set_timezone(
                     zoneinfo,
                     timezone_copy.clone(),
-                    status_text.clone(),
+                    timezone_status_text.clone(),
                 ))
             }),
         )
         .child("Selected Timezone", timezone_selected_status.center())
         .child(
             "Locale",
-            make_locale_list(locales)
-                .on_submit(move |_, c: &String| {
-                    locale_copy.replace(c.to_owned());
-                })
-                .min_width(20),
-        )
+            Button::new("Select locale", move |s| {
+                s.add_layer(set_locales(
+                    locales.clone(),
+                    locale_copy.clone(),
+                    locale_status_text.clone(),
+                ))
+            }
+        ))
+        .child("Selected locale",locale_selected_status.center())
         .child(
             "RTC Timezone",
             SelectView::new()
@@ -738,16 +735,57 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(timezone_dialog);
 }
 
-fn set_timezone(
-    zoneinfo: Vec<String>,
+// Filter cities with names containing query string. You can implement your own logic here!
+fn search_fn<T: std::iter::IntoIterator<Item = String>>(items: T, query: &str) -> Vec<String> {
+    items
+        .into_iter()
+        .filter(|item| {
+            let item = item.to_lowercase();
+            let query = query.to_lowercase();
+            item.contains(&query)
+        })
+        .collect()
+}
+
+fn replace_item(
+    siv: &mut Cursive,
+    item: &str,
     timezone: Rc<RefCell<String>>,
     status_text: Arc<TextContent>,
+) {
+    siv.pop_layer();
+    timezone.replace(item.to_string());
+    status_text.set_content(item);
+}
+
+fn on_submit(
+    siv: &mut Cursive,
+    query: &str,
+    timezone_clone: Rc<RefCell<String>>,
+    status_text: Arc<TextContent>,
+) {
+    let matches = siv.find_name::<SelectView>("matches").unwrap();
+    if matches.is_empty() {
+        // not all people live in big cities. If none of the cities in the list matches, use the value of the query.
+        replace_item(siv, query, timezone_clone, status_text);
+    } else {
+        // pressing "Enter" without moving the focus into the `matches` view will submit the first match result
+        let item = &*matches.selection().unwrap();
+        replace_item(siv, item, timezone_clone, status_text);
+    };
+}
+
+fn seatch_select_view(
+    list: Vec<String>,
+    status_text: Arc<TextContent>,
+    result: Rc<RefCell<String>>,
+    search_name: &str,
 ) -> Dialog {
-    let zoneinfo_clone = zoneinfo.clone();
-    let timezone_clone = timezone.clone();
+    let list_clone = list.clone();
+    let locale_clone = result.clone();
     let status_text_clone = status_text.clone();
     let on_edit = move |siv: &mut Cursive, query: &str, _cursor: usize| {
-        let matches = search_fn(zoneinfo_clone.clone(), query);
+        let matches = search_fn(list.clone(), query);
         // Update the `matches` view with the filtered array of cities
         siv.call_on_name("matches", |v: &mut SelectView| {
             v.clear();
@@ -755,65 +793,25 @@ fn set_timezone(
         });
     };
 
-    // Filter cities with names containing query string. You can implement your own logic here!
-    fn search_fn<T: std::iter::IntoIterator<Item = String>>(items: T, query: &str) -> Vec<String> {
-        items
-            .into_iter()
-            .filter(|item| {
-                let item = item.to_lowercase();
-                let query = query.to_lowercase();
-                item.contains(&query)
-            })
-            .collect()
-    }
-
-    fn replace_item(
-        siv: &mut Cursive,
-        item: &str,
-        timezone: Rc<RefCell<String>>,
-        status_text: Arc<TextContent>,
-    ) {
-        siv.pop_layer();
-        timezone.replace(item.to_string());
-        status_text.set_content(item);
-    }
-
-    fn on_submit(
-        siv: &mut Cursive,
-        query: &str,
-        timezone_clone: Rc<RefCell<String>>,
-        status_text: Arc<TextContent>,
-    ) {
-        let matches = siv.find_name::<SelectView>("matches").unwrap();
-        if matches.is_empty() {
-            // not all people live in big cities. If none of the cities in the list matches, use the value of the query.
-            replace_item(siv, query, timezone_clone, status_text);
-        } else {
-            // pressing "Enter" without moving the focus into the `matches` view will submit the first match result
-            let item = &*matches.selection().unwrap();
-            replace_item(siv, item, timezone_clone, status_text);
-        };
-    }
-
     wrap_in_dialog(
         LinearLayout::vertical()
-            .child(TextView::new("Search timezone"))
+            .child(TextView::new(search_name))
             .child(
                 EditView::new()
                     // update results every time the query changes
                     .on_edit(on_edit)
                     // submit the focused (first) item of the matches
                     .on_submit(move |s: &mut Cursive, c| {
-                        on_submit(s, c, timezone_clone.clone(), status_text.clone())
+                        on_submit(s, c, locale_clone.clone(), status_text.clone())
                     })
                     .with_name("query"),
             )
             .child(DummyView {})
             .child(
                 SelectView::new()
-                    .with_all_str(zoneinfo)
+                    .with_all_str(list_clone)
                     .on_submit(move |s: &mut Cursive, item| {
-                        replace_item(s, item, timezone.clone(), status_text_clone.clone())
+                        replace_item(s, item, result.clone(), status_text_clone.clone())
                     })
                     .with_name("matches")
                     .scrollable(),
@@ -822,6 +820,19 @@ fn set_timezone(
         "Select timezone",
         None,
     )
+}
+
+fn set_timezone(
+    zoneinfo: Vec<String>,
+    timezone_result: Rc<RefCell<String>>,
+    status_text: Arc<TextContent>,
+) -> Dialog {
+    seatch_select_view(zoneinfo, status_text, timezone_result, "Search timezone")
+}
+
+fn set_locales(locales: Vec<String>, locale_result:  Rc<RefCell<String>>, status_text: Arc<TextContent>) -> Dialog {
+    seatch_select_view(locales, status_text, locale_result, "Search locale")
+
 }
 
 fn select_swap(siv: &mut Cursive, config: InstallConfig) {
