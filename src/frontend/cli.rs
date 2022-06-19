@@ -75,7 +75,7 @@ struct InstallCommand {
     #[clap(long, default_value = "aosc")]
     hostname: String,
     /// Set default timezone
-    #[clap(long, default_value = "Asia/Shanghai")]
+    #[clap(long, default_value = "UTC")]
     timezone: String,
     /// Set default locale (affects display language, units, time/date format etc.)
     #[clap(long, default_value = "C.UTF-8")]

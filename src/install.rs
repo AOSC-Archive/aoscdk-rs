@@ -60,10 +60,13 @@ pub fn get_zoneinfo_list() -> Result<Vec<String>> {
     let mut zoneinfo_list = list_zoneinfo(&data)
         .map_err(|_| anyhow!("Installer failed to gather available timezones"))?
         .1;
+
     if zoneinfo_list.is_empty() {
         return Err(anyhow!("zoneinfo list is empty!"));
     }
+
     zoneinfo_list.sort();
+    zoneinfo_list.insert(0, "UTC".to_string());
 
     Ok(zoneinfo_list)
 }
@@ -333,6 +336,7 @@ pub fn set_zoneinfo(zone: &str) -> Result<()> {
     if Path::new("/etc/localtime").exists() {
         std::fs::remove_file("/etc/localtime")?;
     }
+
     std::os::unix::fs::symlink(format!("/usr/share/zoneinfo/{}", zone), "/etc/localtime")?;
 
     Ok(())

@@ -660,7 +660,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     // locale default is C.UTF-8
     let locale = Rc::new(RefCell::new(String::from("C.UTF-8")));
     let locale_copy = Rc::clone(&locale);
-    let timezone = Rc::new(RefCell::new(String::new()));
+    let timezone = Rc::new(RefCell::new(String::from("UTC")));
     let timezone_copy = Rc::clone(&timezone);
     // RTC/UTC default is UTC
     let tc = Rc::new(RefCell::new(String::from("UTC")));
