@@ -29,15 +29,13 @@ fn start_game(siv: &mut Cursive) {
             SizeConstraint::AtMost(64),
             SizeConstraint::Free,
             ScrollView::new(
-                LinearLayout::vertical().child(
-                    SelectView::new()
-                        .with_all_str(game)
-                        .on_submit(|s: &mut Cursive, c| match c {
-                            "Sudoku" => start_sudoku(s),
-                            "Minesweeper" => start_mines(s),
-                            _ => unreachable!(),
-                        }),
-                ),
+                LinearLayout::vertical().child(SelectView::new().with_all_str(game).on_submit(
+                    |s: &mut Cursive, c| match c {
+                        "Sudoku" => start_sudoku(s),
+                        "Minesweeper" => start_mines(s),
+                        _ => unreachable!(),
+                    },
+                )),
             ),
         ))
         .padding_lrtb(2, 2, 1, 1)

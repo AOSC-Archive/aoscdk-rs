@@ -684,9 +684,9 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
                     locale_copy.clone(),
                     locale_status_text.clone(),
                 ))
-            }
-        ))
-        .child("Selected locale",locale_selected_status.center())
+            }),
+        )
+        .child("Selected locale", locale_selected_status.center())
         .child(
             "RTC Timezone",
             SelectView::new()
@@ -830,9 +830,12 @@ fn set_timezone(
     seatch_select_view(zoneinfo, status_text, timezone_result, "Search timezone")
 }
 
-fn set_locales(locales: Vec<String>, locale_result:  Rc<RefCell<String>>, status_text: Arc<TextContent>) -> Dialog {
+fn set_locales(
+    locales: Vec<String>,
+    locale_result: Rc<RefCell<String>>,
+    status_text: Arc<TextContent>,
+) -> Dialog {
     seatch_select_view(locales, status_text, locale_result, "Search locale")
-
 }
 
 fn select_swap(siv: &mut Cursive, config: InstallConfig) {

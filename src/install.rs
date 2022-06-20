@@ -531,7 +531,12 @@ pub fn is_acceptable_username(username: &str) -> bool {
     }
 
     for c in username.as_bytes() {
-        if c.is_ascii_whitespace() || !c.is_ascii_lowercase() || *c == b'/' || *c == b'\\' || *c == b':' {
+        if c.is_ascii_whitespace()
+            || !c.is_ascii_lowercase()
+            || *c == b'/'
+            || *c == b'\\'
+            || *c == b':'
+        {
             return false;
         }
     }
