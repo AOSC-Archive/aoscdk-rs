@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::{
     disks::{self, Partition},
-    install::{self, umount_all},
+    install::{self, umount_all, is_valid_hostname, is_acceptable_username},
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
@@ -235,6 +235,14 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let tc = if ic.use_rtc { "RTC" } else { "UTC" };
     let (use_swap, swap_size, is_hibernation) = get_swap(ic.swap_size, &partition, &variant)?;
 
+    if !is_valid_hostname(&ic.hostname) {
+        return Err(anyhow!("hostname {} is not valid!", ic.hostname))
+    }
+
+    if !is_acceptable_username(&ic.user) {
+        return Err(anyhow!("username {} is not acceptable!", ic.user))
+    }
+
     let install_config = InstallConfig {
         variant: Some(Arc::new(variant)),
         partition: Some(Arc::new(partition)),
@@ -249,6 +257,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         swap_size: Arc::new(Some(swap_size)),
         is_hibernation: Arc::new(AtomicBool::new(is_hibernation)),
     };
+
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();
     let (tx, rx) = std::sync::mpsc::channel();
     let tempdir = TempDir::new()
@@ -263,6 +272,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(50);
+
     loop {
         if !running.load(Ordering::SeqCst) {
             return Err(anyhow!("AOSC OS installation has been aborted."));
