@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::{
     disks::{self, Partition},
-    install::{self, umount_all, is_valid_hostname, is_acceptable_username},
+    install::{self, is_acceptable_username, is_valid_hostname, umount_all},
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
@@ -40,6 +40,8 @@ enum DeployKitCliCommand {
     ListLocale(ListLocale),
     /// List of timezone
     ListTimezone(ListTimezone),
+    /// List of tarball
+    ListTarball(ListTarball),
 }
 
 #[derive(Parser, Debug)]
@@ -53,6 +55,9 @@ struct ListLocale;
 
 #[derive(Parser, Debug)]
 struct ListTimezone;
+
+#[derive(Parser, Debug)]
+struct ListTarball;
 
 #[derive(Parser, Debug)]
 struct InstallCommand {
@@ -98,6 +103,7 @@ pub fn execute(args: Args) -> Result<()> {
         DeployKitCliCommand::ListMirror(ListMirror) => list_mirror()?,
         DeployKitCliCommand::ListLocale(ListLocale) => list_locale()?,
         DeployKitCliCommand::ListTimezone(ListTimezone) => list_timezone()?,
+        DeployKitCliCommand::ListTarball(ListTarball) => list_tarball()?,
     }
 
     Ok(())
@@ -131,9 +137,24 @@ fn list_timezone() -> Result<()> {
     Ok(())
 }
 
-fn get_variant(tarball: &str) -> Result<VariantEntry> {
+fn list_tarball() -> Result<()> {
+    let variants = get_variants()?;
+    for i in variants {
+        println!("{}", i.name);
+    }
+
+    Ok(())
+}
+
+fn get_variants() -> Result<Vec<VariantEntry>> {
     let recipe = network::fetch_recipe()?;
     let variants = network::find_variant_candidates(recipe)?;
+
+    Ok(variants)
+}
+
+fn get_variant(tarball: &str) -> Result<VariantEntry> {
+    let variants = get_variants()?;
     let index = variants
         .iter()
         .position(|x| x.name.to_lowercase() == tarball.to_lowercase());
@@ -236,11 +257,11 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let (use_swap, swap_size, is_hibernation) = get_swap(ic.swap_size, &partition, &variant)?;
 
     if !is_valid_hostname(&ic.hostname) {
-        return Err(anyhow!("hostname {} is not valid!", ic.hostname))
+        return Err(anyhow!("hostname {} is not valid!", ic.hostname));
     }
 
     if !is_acceptable_username(&ic.user) {
-        return Err(anyhow!("username {} is not acceptable!", ic.user))
+        return Err(anyhow!("username {} is not acceptable!", ic.user));
     }
 
     let install_config = InstallConfig {
@@ -293,4 +314,9 @@ fn start_install(ic: InstallCommand) -> Result<()> {
             return Err(err);
         }
     }
+}
+
+#[test]
+fn test() {
+    dbg!(list_tarball().unwrap());
 }
