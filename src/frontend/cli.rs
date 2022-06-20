@@ -138,7 +138,7 @@ fn list_timezone() -> Result<()> {
 }
 
 fn list_tarball() -> Result<()> {
-    let variants = get_variants()?;
+    let variants = network::get_variants()?;
     for i in variants {
         println!("{}", i.name);
     }
@@ -146,15 +146,8 @@ fn list_tarball() -> Result<()> {
     Ok(())
 }
 
-fn get_variants() -> Result<Vec<VariantEntry>> {
-    let recipe = network::fetch_recipe()?;
-    let variants = network::find_variant_candidates(recipe)?;
-
-    Ok(variants)
-}
-
 fn get_variant(tarball: &str) -> Result<VariantEntry> {
-    let variants = get_variants()?;
+    let variants = network::get_variants()?;
     let index = variants
         .iter()
         .position(|x| x.name.to_lowercase() == tarball.to_lowercase());

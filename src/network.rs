@@ -92,6 +92,13 @@ pub fn fetch_mirrors(recipe: &Recipe) -> Vec<Mirror> {
     recipe.mirrors.clone()
 }
 
+pub fn get_variants() -> Result<Vec<VariantEntry>> {
+    let recipe = fetch_recipe()?;
+    let variants = find_variant_candidates(recipe)?;
+
+    Ok(variants)
+}
+
 /// AOSC OS specific architecture mapping for ppc64
 #[cfg(target_arch = "powerpc64")]
 #[inline]
