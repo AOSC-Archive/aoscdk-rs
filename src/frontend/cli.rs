@@ -66,10 +66,10 @@ struct InstallCommand {
     #[clap(long)]
     path: String,
     /// Set name of the default user
-    #[clap(long)]
+    #[clap(long, default_value = "aosc")]
     user: String,
     /// Set password for default user
-    #[clap(long)]
+    #[clap(long, default_value = "aosc")]
     password: String,
     /// Set device hostname
     #[clap(long, default_value = "aosc")]
