@@ -156,7 +156,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
     }
 
     Err(anyhow!(
-        "Installer could not find tarball for specified variant {}.",
+        "Installer could not find tarball for specified variant {}.\nMaybe you can use --list-tarball and choose one?",
         tarball
     ))
 }
