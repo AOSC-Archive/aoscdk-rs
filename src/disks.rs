@@ -164,7 +164,7 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
 
     let target = device_path.ok_or_else(|| {
         anyhow!(
-            "Installer could not detect the corresponding device file for the specified partition!"
+            "Installer could not detect the corresponding block device node for the specified partition!"
         )
     })?;
     let device = libparted::Device::new(target)?;
