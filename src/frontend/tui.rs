@@ -1232,4 +1232,3 @@ pub fn tui_main() {
         }
     }
 }
-

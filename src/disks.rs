@@ -178,7 +178,9 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
         }
     }
 
-    Err(anyhow!("Installer does support the specified partition map for your device."))
+    Err(anyhow!(
+        "Installer does support the specified partition map for your device."
+    ))
 }
 
 #[cfg(not(target_arch = "powerpc64"))]

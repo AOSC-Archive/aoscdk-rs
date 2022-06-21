@@ -62,7 +62,9 @@ pub fn get_zoneinfo_list() -> Result<Vec<String>> {
         .1;
 
     if zoneinfo_list.is_empty() {
-        return Err(anyhow!("Installer could not parse the zoneinfo database! Empty timezone data (tzdata)?"));
+        return Err(anyhow!(
+            "Installer could not parse the zoneinfo database! Empty timezone data (tzdata)?"
+        ));
     }
 
     zoneinfo_list.sort();
