@@ -58,11 +58,11 @@ fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
 pub fn get_zoneinfo_list() -> Result<Vec<String>> {
     let data = read_system_zoneinfo_list().unwrap_or_else(|_| BUNDLED_ZONEINFO_LIST.to_vec());
     let mut zoneinfo_list = list_zoneinfo(&data)
-        .map_err(|_| anyhow!("Installer failed to gather available timezones"))?
+        .map_err(|_| anyhow!("Installer failed to gather available timezones."))?
         .1;
 
     if zoneinfo_list.is_empty() {
-        return Err(anyhow!("zoneinfo list is empty!"));
+        return Err(anyhow!("Installer could not parse the zoneinfo database! Empty timezone data (tzdata)?"));
     }
 
     zoneinfo_list.sort();

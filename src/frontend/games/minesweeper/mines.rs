@@ -18,9 +18,9 @@ pub fn _start_mines_inner(siv: &mut Cursive) {
             .padding_lrtb(2, 2, 1, 1)
             .content(
                 LinearLayout::vertical()
-                    .child(Button::new_raw("  New game   ", show_options))
-                    .child(Button::new_raw(" Best scores ", |s| {
-                        s.add_layer(Dialog::info("Not yet!").title("Scores"))
+                    .child(Button::new_raw("  New Game   ", show_options))
+                    .child(Button::new_raw(" Best Scores ", |s| {
+                        s.add_layer(Dialog::info("None").title("Best Scores"))
                     }))
                     .child(Button::new_raw("    Exit     ", |s| {
                         s.cb_sink()
@@ -37,25 +37,25 @@ pub fn _start_mines_inner(siv: &mut Cursive) {
 fn show_options(siv: &mut Cursive) {
     siv.add_layer(
         Dialog::new()
-            .title("Select difficulty")
+            .title("Select Difficulty")
             .content(
                 SelectView::new()
                     .item(
-                        "Easy:      8x8,   10 mines",
+                        "Easy:      8x8,   10 Mines",
                         game::Options {
                             size: Vec2::new(8, 8),
                             mines: 10,
                         },
                     )
                     .item(
-                        "Medium:    16x16, 40 mines",
+                        "Medium:    16x16, 40 Mines",
                         game::Options {
                             size: Vec2::new(16, 16),
                             mines: 40,
                         },
                     )
                     .item(
-                        "Difficult: 24x24, 99 mines",
+                        "Difficult: 24x24, 99 Mines",
                         game::Options {
                             size: Vec2::new(24, 24),
                             mines: 99,
@@ -134,7 +134,7 @@ impl BoardView {
             match self.board.cells[i] {
                 game::Cell::Bomb => {
                     return EventResult::with_cb(|s| {
-                        s.add_layer(Dialog::text("BOOOM").button("Ok", |s| {
+                        s.add_layer(Dialog::text("BOOM!").button("OK", |s| {
                             s.pop_layer();
                             s.pop_layer();
                         }));
@@ -275,7 +275,7 @@ fn new_game(siv: &mut Cursive, options: game::Options) {
         Dialog::new()
             .title("Minesweeper")
             .content(LinearLayout::horizontal().child(Panel::new(BoardView::new(options))))
-            .button("Quit game", |s| {
+            .button("Quit Game", |s| {
                 s.pop_layer();
             }),
     );

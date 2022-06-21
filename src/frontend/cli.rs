@@ -156,7 +156,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
     }
 
     Err(anyhow!(
-        "Installer could not find tarball for specified variant {}.\nMaybe you can use `aoscdk-rs list-tarball` and choose one?",
+        "Installer could not find tarball for specified variant {}.\nPlease refer to the `aoscdk-rs list-tarball` output for a list of available tarballs.",
         tarball
     ))
 }
@@ -302,7 +302,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
                 }
             }
         } else {
-            let err = install_thread.join().map_err(|_| anyhow!("Installer has encountered an unexpected error. Please restart your insatllation environment."))?.unwrap_err();
+            let err = install_thread.join().map_err(|_| anyhow!("Installer has encountered an unexpected error. Please restart your installation environment."))?.unwrap_err();
             umount_all(&tempdir_clone_2, root_fd);
             return Err(err);
         }

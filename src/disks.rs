@@ -178,7 +178,7 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
         }
     }
 
-    Err(anyhow!("Unsupport format!"))
+    Err(anyhow!("Installer does support the specified partition map for your device."))
 }
 
 #[cfg(not(target_arch = "powerpc64"))]
@@ -188,7 +188,7 @@ pub fn new_partition_table() -> Result<()> {
         if libparted::Disk::new(&mut i).is_err() {
             let disk = libparted::Disk::new_fresh(
                 &mut i,
-                DiskType::get(t).ok_or_else(|| anyhow!("Unsupport partition table type!"))?,
+                DiskType::get(t).ok_or_else(|| anyhow!("Installer does support the specified partition map for your device (supported partition maps: GPT (for EFI systems) and MBR/MS-DOS (for BIOS systems)."))?,
             );
             if let Ok(mut disk) = disk {
                 disk.commit_to_dev().ok();
@@ -208,7 +208,7 @@ pub fn new_partition_table() -> Result<()> {
         if libparted::Disk::new(&mut i).is_err() && arch_name == Some("ppc64el") {
             let disk = libparted::Disk::new_fresh(
                 &mut i,
-                DiskType::get("gpt").ok_or_else(|| anyhow!("Unsupport partition table type!"))?,
+                DiskType::get("gpt").ok_or_else(|| anyhow!("Installer does support the specified partition map for your device (supported partition map: GPT)."))?,
             );
             if let Ok(mut disk) = disk {
                 disk.commit_to_dev().ok();

@@ -817,7 +817,7 @@ fn seatch_select_view(
                     .scrollable(),
             )
             .fixed_height(10),
-        "Select timezone",
+        "Select Your Timezone",
         None,
     )
 }
@@ -1232,3 +1232,4 @@ pub fn tui_main() {
         }
     }
 }
+
