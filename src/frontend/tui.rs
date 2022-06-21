@@ -779,7 +779,7 @@ fn seatch_select_view(
     list: Vec<String>,
     status_text: Arc<TextContent>,
     result: Rc<RefCell<String>>,
-    search_name: &str,
+    name: &str,
 ) -> Dialog {
     let list_clone = list.clone();
     let locale_clone = result.clone();
@@ -795,7 +795,7 @@ fn seatch_select_view(
 
     wrap_in_dialog(
         LinearLayout::vertical()
-            .child(TextView::new(search_name))
+            .child(TextView::new(format!("Search {}", name)))
             .child(
                 EditView::new()
                     // update results every time the query changes
@@ -817,7 +817,7 @@ fn seatch_select_view(
                     .scrollable(),
             )
             .fixed_height(10),
-        "Select Your Timezone",
+        format!("Select Your {}", name),
         None,
     )
 }
@@ -827,7 +827,7 @@ fn set_timezone(
     timezone_result: Rc<RefCell<String>>,
     status_text: Arc<TextContent>,
 ) -> Dialog {
-    seatch_select_view(zoneinfo, status_text, timezone_result, "Search timezone")
+    seatch_select_view(zoneinfo, status_text, timezone_result, "timezone")
 }
 
 fn set_locales(
@@ -835,7 +835,7 @@ fn set_locales(
     locale_result: Rc<RefCell<String>>,
     status_text: Arc<TextContent>,
 ) -> Dialog {
-    seatch_select_view(locales, status_text, locale_result, "Search locale")
+    seatch_select_view(locales, status_text, locale_result, "locale")
 }
 
 fn select_swap(siv: &mut Cursive, config: InstallConfig) {
