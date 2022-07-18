@@ -26,7 +26,7 @@ use std::{
 };
 use tempfile::TempDir;
 
-use super::{begin_install, games::add_callback, InstallConfig, DEFAULT_EMPTY_SIZE};
+use super::{begin_install, games::add_callback, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
@@ -402,7 +402,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Continue", move |s| {
             let disk_list = s.user_data::<RadioGroup<disks::Partition>>();
-            let required_size = config_clone_3.variant.as_ref().unwrap().install_size;
+            let required_size = config_clone_3.variant.as_ref().unwrap().install_size + RESCUEKIT_SIZE;
             if let Some(disk_list) = disk_list {
                 let disk_list = disk_list.clone();
                 let current_partition = if cfg!(debug_assertions) {

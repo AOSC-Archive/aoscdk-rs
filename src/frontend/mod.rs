@@ -27,6 +27,7 @@ use sha2::{Digest, Sha256};
 pub use tui::tui_main;
 
 pub const DEFAULT_EMPTY_SIZE: u64 = 5 * 1024 * 1024 * 1024;
+pub const RESCUEKIT_SIZE: u64 = 5 * 1024 * 1024 * 1024;
 
 pub(crate) enum InstallProgress {
     Pending(String, usize),
@@ -95,7 +96,8 @@ fn begin_install(
     ))?;
 
     let partition = &config.partition.unwrap();
-    disks::format_partition(partition)?;
+    let (main_part, _) = disks::install_rescuekit_part(partition)?;
+    disks::format_partition(&main_part)?;
     let mount_path = install::auto_mount_root_path(&tempdir, partition)?;
     let mount_path_copy = mount_path.clone();
     let mut efi_path = mount_path.clone();

@@ -19,7 +19,7 @@ use crate::{
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
-use super::{begin_install, tui_main, InstallConfig, DEFAULT_EMPTY_SIZE};
+use super::{begin_install, tui_main, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -162,7 +162,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
 }
 
 fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
-    let required_size = variant.install_size;
+    let required_size = variant.install_size + RESCUEKIT_SIZE;
     if cfg!(debug_assertions) {
         disks::right_combine(Some(&PathBuf::from("/dev/loop0")))?;
 

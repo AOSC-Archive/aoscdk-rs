@@ -2,15 +2,21 @@ use anyhow::{anyhow, Result};
 
 use disk_types::FileSystem;
 use fstab_generate::BlockInfo;
+use libparted::Constraint;
 use libparted::DiskType;
+use libparted::FileSystemType;
 use libparted::IsZero;
+use libparted::PartitionType;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 use std::ffi::CStr;
 use std::ffi::OsString;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+
+use crate::frontend::RESCUEKIT_SIZE;
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 pub(crate) const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
@@ -129,12 +135,7 @@ pub fn list_partitions() -> Vec<Partition> {
                 if part.num() < 0 {
                     continue;
                 }
-                let geom_length: i64 = part.geom_length();
-                let part_length = if geom_length < 0 {
-                    0
-                } else {
-                    geom_length as u64
-                };
+                let part_length = get_part_length(&part);
                 let fs_type = if let Ok(type_) = part.get_geom().probe_fs() {
                     Some(type_.name().to_owned())
                 } else {
@@ -151,6 +152,17 @@ pub fn list_partitions() -> Vec<Partition> {
     }
 
     partitions
+}
+
+fn get_part_length(part: &libparted::Partition) -> u64 {
+    let geom_length: i64 = part.geom_length();
+    let part_length = if geom_length < 0 {
+        0
+    } else {
+        geom_length as u64
+    };
+
+    part_length
 }
 
 fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
@@ -310,6 +322,99 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
 
     // Round back to GiB for display message.
     Err(anyhow!("The specified swapfile size is too small, AOSC OS recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
+}
+
+pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)> {
+    let part_path = part
+        .path
+        .as_ref()
+        .ok_or_else(|| anyhow!("Can not get pre-install system partition!"))?;
+    let parent_path = part
+        .parent_path
+        .as_ref()
+        .ok_or_else(|| anyhow!("Can not get block device!"))?;
+
+    let mut dev = libparted::Device::new(&parent_path)?;
+    let disk = libparted::Disk::new(&mut dev)?;
+
+    let mut part = None;
+
+    let parts = disk.parts();
+
+    for i in parts {
+        if Some(part_path.as_path()) == i.get_path() {
+            part = Some(i)
+        }
+    }
+
+    let dev = libparted::Device::new(parent_path)?;
+
+    let sector_size = dev.sector_size();
+
+    let mut dev = libparted::Device::new(parent_path)?;
+    let mut disk = libparted::Disk::new(&mut dev)?;
+
+    let mut part = part.ok_or_else(|| anyhow!("Can not get part!"))?;
+    let part_fs = part.fs_type_name().unwrap_or("ext4");
+    let pre_size = sector_size * get_part_length(&part) - RESCUEKIT_SIZE;
+    let part_start = part.geom_start();
+    let part_end = part_start + (pre_size / sector_size - 1) as i64;
+
+    let num = part.num();
+    disk.remove_partition_by_number(num.try_into()?)?;
+    disk.commit_to_dev()?;
+
+    let mut new_main_part = libparted::Partition::new(
+        &disk,
+        PartitionType::PED_PARTITION_NORMAL,
+        FileSystemType::get(part_fs).as_ref(),
+        part_start,
+        part_end,
+    )?;
+
+    disk.add_partition(
+        &mut new_main_part,
+        &Constraint::new_from_max(&part.get_geom())?,
+    )?;
+
+    disk.commit_to_dev()?;
+
+    let new_part_fs = new_main_part.fs_type_name().unwrap_or("ext4").to_string();
+
+    let mut rescuekit_part = libparted::Partition::new(
+        &disk,
+        PartitionType::PED_PARTITION_NORMAL,
+        FileSystemType::get("ext4").as_ref(),
+        part_end + 1,
+        part_end + 1 + (RESCUEKIT_SIZE / sector_size - 1) as i64,
+    )?;
+
+    let rescue_goem = rescuekit_part.get_geom();
+
+    disk.add_partition(
+        &mut rescuekit_part,
+        &Constraint::new_from_max(&rescue_goem)?,
+    )?;
+
+    disk.commit_to_dev()?;
+
+    let new_main_length = get_part_length(&new_main_part);
+
+    let main_part = Partition {
+        path: new_main_part.get_path().map(|path| path.to_owned()),
+        parent_path: Some(parent_path.clone()),
+        size: new_main_length * sector_size,
+        fs_type: Some(new_part_fs.to_string()),
+    };
+
+    let rescuekit_part = Partition {
+        path: rescuekit_part.get_path().map(|path| path.to_owned()),
+        parent_path: Some(parent_path.clone()),
+        size: 5 * 1024 * 1024 * 1024,
+        fs_type: Some("ext4".to_string()),
+    };
+
+    Ok((main_part, rescuekit_part))
 }
 
 #[test]
