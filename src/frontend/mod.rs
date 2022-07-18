@@ -26,6 +26,8 @@ pub use cli::*;
 use sha2::{Digest, Sha256};
 pub use tui::tui_main;
 
+pub const DEFAULT_EMPTY_SIZE: u64 = 5 * 1024 * 1024 * 1024;
+
 pub(crate) enum InstallProgress {
     Pending(String, usize),
     Finished,
