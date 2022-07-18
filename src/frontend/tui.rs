@@ -26,7 +26,7 @@ use std::{
 };
 use tempfile::TempDir;
 
-use super::{begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig};
+use super::{begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
@@ -916,7 +916,7 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                             }
                             let is_hibernation_clone = is_hibernation_clone_2.clone();
                             let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
-                            if installed_size + size as u64 > partition_size {
+                            if installed_size + size as u64 > partition_size - DEFAULT_EMPTY_SIZE {
                                 show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB",  (size / 1024.0 / 1024.0 / 1024.0).round()));
                                 return;
                             }

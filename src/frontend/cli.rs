@@ -19,7 +19,7 @@ use crate::{
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
-use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig};
+use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -230,7 +230,7 @@ fn get_swap(
     } else {
         let size = disks::get_recommand_swap_size()?;
 
-        if partition.size > size as u64 + variant.install_size {
+        if partition.size > size as u64 + variant.install_size - DEFAULT_EMPTY_SIZE  {
             (true, size, true)
         } else {
             (false, size, false)
