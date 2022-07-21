@@ -99,7 +99,7 @@ fn begin_install(
 
     let partition = &config.partition.unwrap();
     let ptt = disks::get_partition_table_type(partition.parent_path.as_ref())?;
-    let (main_part, _) = if ptt == "gpt" {
+    let (main_part, _) = if ptt == "gpt" && config.install_rescuekit.load(Ordering::SeqCst) {
         let (main_part, rescuekit_part) = disks::install_rescuekit_part(partition)?;
 
         (Arc::new(main_part), Some(rescuekit_part))
