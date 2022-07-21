@@ -7,8 +7,8 @@ use anyhow::Result;
 use cursive::{
     event::Event,
     views::{
-        Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar,
-        RadioGroup, ResizedView, ScrollView, SelectView, TextContent, TextView,
+        Checkbox, Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel,
+        ProgressBar, RadioGroup, ResizedView, ScrollView, SelectView, TextContent, TextView,
     },
 };
 use cursive::{traits::*, utils::Counter};
@@ -26,7 +26,9 @@ use std::{
 };
 use tempfile::TempDir;
 
-use super::{begin_install, games::add_callback, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE};
+use super::{
+    begin_install, games::add_callback, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE,
+};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
@@ -82,6 +84,11 @@ const BENCHMARK_TEXT: &str = "Installer will now test all mirrors for download s
 const FINISHED_TEXT: &str = r#"AOSC OS has been successfully installed on your device.
 
 You may reboot to your installed system by choosing "Reboot," or return to LiveKit by selecting "Exit to LiveKit.""#;
+
+const RESCUEKIT_TEXT: &str = r#"Installer has detected that your partition scheme supports RescueKit, a rescue environment for AOSC OS. RescueKit provides tools for data backup and recovery, reinstallation, and more. Would you like to install RescueKit?"#;
+const RESCUEKIT_TEXT_2: &str = r#"If checkbox is checked, Installer has detected insufficient space on your storage device. RescueKit requires 5GiB of additional space in your system partition to install.
+
+If checkbox is unchecked, Without RescueKit, you will likely need to use an external livemedia to repair or reinstall AOSC OS."#;
 
 macro_rules! fill_in_all_the_fields {
     ($s:ident) => {
@@ -385,12 +392,14 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     let partitions = show_fetch_progress!(siv, "Probing disks ...", { disks::list_partitions() });
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
+
     let dest_view = LinearLayout::vertical()
-    .child(TextView::new(
-        "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open GParted.\"",
-    ))
-    .child(DummyView {})
-    .child(disk_view);
+        .child(TextView::new(
+            "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open GParted.\"",
+        ))
+        .child(DummyView {})
+        .child(disk_view);
+
     let config_view = LinearLayout::vertical()
         .child(Panel::new(dest_view).title("Select System Partition"))
         .child(DummyView {});
@@ -517,7 +526,57 @@ fn partition_view_to_next(s: &mut Cursive, config_clone: InstallConfig) {
     if config_clone.user.is_some() {
         is_use_last_config(s, config_clone);
     } else {
+        select_install_rescuekit(s, config_clone);
+    }
+}
+
+fn select_install_rescuekit(s: &mut Cursive, config_clone: InstallConfig) {
+    let ptt = disks::get_partition_table_type(
+        config_clone.partition.clone().unwrap().parent_path.as_ref(),
+    )
+    .ok();
+
+    if ptt != Some("gpt".to_string()) {
+        s.pop_layer();
         select_user_password(s, config_clone);
+    } else {
+        s.pop_layer();
+
+        let textview = TextView::new(RESCUEKIT_TEXT).max_width(80);
+        let checkbox = Checkbox::new().checked().with_name("install_rescuekit");
+        let textview_2 = TextView::new(RESCUEKIT_TEXT_2).max_width(80);
+
+        let config_clone_2 = config_clone.clone();
+
+        let view = wrap_in_dialog(
+            LinearLayout::vertical()
+                .child(textview)
+                .child(DummyView {})
+                .child(
+                    LinearLayout::horizontal()
+                        .child(checkbox)
+                        .child(TextView::new(" Install RescueKit"))
+                )
+                .child(DummyView {})
+                .child(textview_2),
+            "AOSC OS Installer",
+            None,
+        )
+        .button("Continue", move |s| {
+            let install_rescuekit = s
+                .find_name::<Checkbox>("install_rescuekit")
+                .unwrap()
+                .is_checked();
+            let mut config_clone = config_clone.clone();
+            config_clone.install_rescuekit = Arc::new(AtomicBool::new(install_rescuekit));
+            select_user_password(s, config_clone);
+        })
+        .button("Back", move |s| select_partition(s, config_clone_2.clone()))
+        .button("Exit", |s| {
+            s.quit();
+        });
+
+        s.add_layer(view);
     }
 }
 

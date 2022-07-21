@@ -94,6 +94,9 @@ struct InstallCommand {
     /// Set custom swapfile size
     #[clap(long)]
     swap_size: Option<f64>,
+    // Do not install Rescuekit
+    #[clap(long)]
+    no_install_rescuekit: bool,
 }
 
 pub fn execute(args: Args) -> Result<()> {
@@ -230,7 +233,7 @@ fn get_swap(
     } else {
         let size = disks::get_recommand_swap_size()?;
 
-        if partition.size > size as u64 + variant.install_size - DEFAULT_EMPTY_SIZE  {
+        if partition.size > size as u64 + variant.install_size - DEFAULT_EMPTY_SIZE {
             (true, size, true)
         } else {
             (false, size, false)
@@ -270,6 +273,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         use_swap: Arc::new(AtomicBool::new(!ic.no_swap && use_swap)),
         swap_size: Arc::new(Some(swap_size)),
         is_hibernation: Arc::new(AtomicBool::new(is_hibernation)),
+        install_rescuekit: Arc::new(AtomicBool::new(!ic.no_install_rescuekit)),
     };
 
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();

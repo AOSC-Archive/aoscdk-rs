@@ -55,6 +55,7 @@ struct InstallConfig {
     use_swap: Arc<AtomicBool>,
     swap_size: Arc<Option<f64>>,
     is_hibernation: Arc<AtomicBool>,
+    install_rescuekit: Arc<AtomicBool>,
 }
 
 impl Default for InstallConfig {
@@ -72,6 +73,7 @@ impl Default for InstallConfig {
             use_swap: Arc::new(AtomicBool::new(false)),
             swap_size: Arc::new(None),
             is_hibernation: Arc::new(AtomicBool::new(false)),
+            install_rescuekit: Arc::new(AtomicBool::new(true)),
         }
     }
 }
