@@ -165,7 +165,7 @@ fn get_part_length(part: &libparted::Partition) -> u64 {
     part_length
 }
 
-fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
+pub fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
     fn cvt<T: IsZero>(t: T) -> io::Result<T> {
         if t.is_zero() {
             Err(io::Error::last_os_error())

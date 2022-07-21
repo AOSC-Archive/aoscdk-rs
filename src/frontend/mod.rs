@@ -96,7 +96,14 @@ fn begin_install(
     ))?;
 
     let partition = &config.partition.unwrap();
-    let (main_part, _) = disks::install_rescuekit_part(partition)?;
+    let ptt = disks::get_partition_table_type(partition.parent_path.as_ref())?;
+    let (main_part, _) = if ptt == "gpt" {
+        let (main_part, rescuekit_part) = disks::install_rescuekit_part(partition)?;
+
+        (Arc::new(main_part), Some(rescuekit_part))
+    } else {
+        (partition.to_owned(), None)
+    };
     disks::format_partition(&main_part)?;
     let mount_path = install::auto_mount_root_path(&tempdir, &main_part)?;
     let mount_path_copy = mount_path.clone();
