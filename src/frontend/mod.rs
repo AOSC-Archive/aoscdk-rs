@@ -98,7 +98,7 @@ fn begin_install(
     let partition = &config.partition.unwrap();
     let (main_part, _) = disks::install_rescuekit_part(partition)?;
     disks::format_partition(&main_part)?;
-    let mount_path = install::auto_mount_root_path(&tempdir, partition)?;
+    let mount_path = install::auto_mount_root_path(&tempdir, &main_part)?;
     let mount_path_copy = mount_path.clone();
     let mut efi_path = mount_path.clone();
     if disks::is_efi_booted() {
@@ -284,7 +284,7 @@ fn begin_install(
     worker.join().unwrap();
     sha256sum_work.join().unwrap();
     // genfstab to file
-    install::genfstab_to_file(partition, &tempdir, Path::new("/"))?;
+    install::genfstab_to_file(&main_part, &tempdir, Path::new("/"))?;
     if disks::is_efi_booted() {
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
         install::genfstab_to_file(&esp_part, &tempdir, Path::new("/efi"))?;

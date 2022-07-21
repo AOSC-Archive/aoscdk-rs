@@ -356,37 +356,21 @@ pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)
 
     let mut part = part.ok_or_else(|| anyhow!("Can not get part!"))?;
     let part_fs = part.fs_type_name().unwrap_or("ext4");
-    let pre_size = sector_size * get_part_length(&part) - RESCUEKIT_SIZE;
     let part_start = part.geom_start();
-    let part_end = part_start + (pre_size / sector_size - 1) as i64;
+    let part_end = part_start + (RESCUEKIT_SIZE / sector_size - 1) as i64;
+
+    let total_size = sector_size * get_part_length(&part);
 
     let num = part.num();
     disk.remove_partition_by_number(num.try_into()?)?;
     disk.commit_to_dev()?;
 
-    let mut new_main_part = libparted::Partition::new(
-        &disk,
-        PartitionType::PED_PARTITION_NORMAL,
-        FileSystemType::get(part_fs).as_ref(),
-        part_start,
-        part_end,
-    )?;
-
-    disk.add_partition(
-        &mut new_main_part,
-        &Constraint::new_from_max(&part.get_geom())?,
-    )?;
-
-    disk.commit_to_dev()?;
-
-    let new_part_fs = new_main_part.fs_type_name().unwrap_or("ext4").to_string();
-
     let mut rescuekit_part = libparted::Partition::new(
         &disk,
         PartitionType::PED_PARTITION_NORMAL,
         FileSystemType::get("ext4").as_ref(),
-        part_end + 1,
-        part_end + 1 + (RESCUEKIT_SIZE / sector_size - 1) as i64,
+        part_start,
+        part_end,
     )?;
 
     let rescue_goem = rescuekit_part.get_geom();
@@ -395,6 +379,21 @@ pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)
         &mut rescuekit_part,
         &Constraint::new_from_max(&rescue_goem)?,
     )?;
+
+    let mut new_main_part = libparted::Partition::new(
+        &disk,
+        PartitionType::PED_PARTITION_NORMAL,
+        FileSystemType::get(part_fs).as_ref(),
+        part_end + 1,
+        part_end + 1 + ((total_size - RESCUEKIT_SIZE) / sector_size - 1) as i64,
+    )?;
+
+    disk.add_partition(
+        &mut new_main_part,
+        &Constraint::new_from_max(&part.get_geom())?,
+    )?;
+
+    let new_part_fs = new_main_part.fs_type_name().unwrap_or("ext4").to_string();
 
     disk.commit_to_dev()?;
 
@@ -410,9 +409,13 @@ pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)
     let rescuekit_part = Partition {
         path: rescuekit_part.get_path().map(|path| path.to_owned()),
         parent_path: Some(parent_path.clone()),
-        size: 5 * 1024 * 1024 * 1024,
+        size: get_part_length(&rescuekit_part) * sector_size,
         fs_type: Some("ext4".to_string()),
     };
+
+    if cfg!(debug_assertions) {
+        Command::new("partprobe").arg("/dev/loop0").output()?;
+    }
 
     Ok((main_part, rescuekit_part))
 }
