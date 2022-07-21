@@ -29,15 +29,15 @@
      showgrid="false"
      units="px"
      width="19200px"
-     inkscape:zoom="1.8346429"
-     inkscape:cx="972.66886"
-     inkscape:cy="1100.4867"
+     inkscape:zoom="1.2972884"
+     inkscape:cx="775.46363"
+     inkscape:cy="941.19393"
      inkscape:window-width="2560"
-     inkscape:window-height="1491"
+     inkscape:window-height="1493"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="layer2"
      inkscape:snap-intersection-paths="true" />
   <defs
      id="defs2">
@@ -112,6 +112,72 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.4056px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, ';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
          x="47.009125"
          y="43.230762">Installation</tspan></text>
+    <g
+       id="g7100">
+      <rect
+         style="fill:#eeeeee;fill-opacity:0.16;stroke-width:1.55556;stroke-linecap:round;paint-order:stroke fill markers;stop-color:#000000"
+         id="rect30307"
+         width="91.455109"
+         height="25.4"
+         x="159.06609"
+         y="293.68753" />
+      <g
+         id="g7086"
+         transform="translate(0.30572782)">
+        <g
+           id="g21162"
+           transform="translate(134.38753,27.640183)">
+          <text
+             xml:space="preserve"
+             style="font-style:normal;font-weight:normal;font-size:8.46667px;line-height:1.1;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+             x="50.092678"
+             y="276.30896"
+             id="text2126"><tspan
+               sodipodi:role="line"
+               id="tspan2124"
+               style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.46667px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, ';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
+               x="50.092678"
+               y="276.30896">Manage Partition</tspan><tspan
+               sodipodi:role="line"
+               style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.4056px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, ';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
+               x="50.092678"
+               y="286.98459"
+               id="tspan2194" /></text>
+          <text
+             xml:space="preserve"
+             style="font-style:normal;font-weight:normal;font-size:13.4056px;line-height:1.25;font-family:sans-serif;fill:#eeeeee;fill-opacity:1;stroke:none;stroke-width:0.264583"
+             x="49.080906"
+             y="286.90454"
+             id="text20333"><tspan
+               sodipodi:role="line"
+               id="tspan20331"
+               style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.4056px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, ';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
+               x="49.080906"
+               y="286.90454">GParted</tspan></text>
+        </g>
+        <g
+           style="color:#232629;fill:#eeeeee;fill-opacity:1;stroke:none"
+           class="ColorScheme-Text"
+           id="g6702"
+           transform="matrix(1.4111111,0,0,1.4111111,160.80099,295.09864)">
+          <path
+             d="M 3,2 V 14 H 13 V 2 Z m 3,1 h 4 a 2,2 0 0 1 2,2 v 1 a 1,1 0 1 0 0,2 v 2 l -1,1 H 5 L 4,10 V 8 A 1,1 0 1 0 4,6 V 5 A 2,2 0 0 1 6,3 Z m -2,9 h 4 v 1 H 4 Z m 6,0 h 2 v 1 h -2 z"
+             id="path6696"
+             style="fill:#eeeeee;fill-opacity:1" />
+          <path
+             d="M 8,4 5,10 H 6 L 9,4 Z"
+             id="path6698"
+             style="fill:#eeeeee;fill-opacity:1" />
+          <rect
+             height="1"
+             width="3"
+             x="8"
+             y="9"
+             id="rect6700"
+             style="fill:#eeeeee;fill-opacity:1" />
+        </g>
+      </g>
+    </g>
   </g>
   <g
      inkscape:groupmode="layer"
@@ -186,9 +252,9 @@
          style="font-style:normal;font-weight:normal;font-size:96px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect11014);fill:#eeeeee;fill-opacity:1;stroke:none"><tspan
            x="182.85938"
            y="186.97805"
-           id="tspan3909"><tspan
+           id="tspan7684"><tspan
              style="font-weight:600;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Semi-Bold'"
-             id="tspan3907">Partitioning</tspan></tspan></text>
+             id="tspan7682">Partitioning</tspan></tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:11.2889px;line-height:1.15;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
@@ -315,28 +381,6 @@
            style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:11.2889px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Semi-Bold';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
            x="376.91064"
            y="315.30292">Next</tspan></text>
-    </g>
-    <g
-       id="g35805"
-       transform="translate(3.1480103e-6,4.7606257)">
-      <rect
-         style="fill:#dddddd;fill-opacity:0.16;stroke-width:0.369812"
-         id="rect973-7"
-         width="95.25"
-         height="14.816667"
-         x="159.06609"
-         y="299.51022" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-weight:normal;font-size:11.2889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-         x="168.3484"
-         y="310.5423"
-         id="text113215-56"><tspan
-           sodipodi:role="line"
-           id="tspan113213-2"
-           style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:11.2889px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Semi-Bold';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
-           x="168.3484"
-           y="310.5423">Open GParted...</tspan></text>
     </g>
     <rect
        style="fill:#dddddd;fill-opacity:0.16078432;stroke-width:0.275642"
