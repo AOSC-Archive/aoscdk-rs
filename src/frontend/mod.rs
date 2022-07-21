@@ -73,7 +73,7 @@ impl Default for InstallConfig {
             use_swap: Arc::new(AtomicBool::new(false)),
             swap_size: Arc::new(None),
             is_hibernation: Arc::new(AtomicBool::new(false)),
-            install_rescuekit: Arc::new(AtomicBool::new(true)),
+            install_rescuekit: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -98,8 +98,7 @@ fn begin_install(
     ))?;
 
     let partition = &config.partition.unwrap();
-    let ptt = disks::get_partition_table_type(partition.parent_path.as_ref())?;
-    let (main_part, _) = if ptt == "gpt" && config.install_rescuekit.load(Ordering::SeqCst) {
+    let (main_part, _) = if config.install_rescuekit.load(Ordering::SeqCst) {
         let (main_part, rescuekit_part) = disks::install_rescuekit_part(partition)?;
 
         (Arc::new(main_part), Some(rescuekit_part))
