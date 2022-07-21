@@ -413,9 +413,7 @@ pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)
         fs_type: Some("ext4".to_string()),
     };
 
-    if cfg!(debug_assertions) {
-        Command::new("partprobe").arg("/dev/loop0").output()?;
-    }
+    Command::new("partprobe").output()?;
 
     Ok((main_part, rescuekit_part))
 }
