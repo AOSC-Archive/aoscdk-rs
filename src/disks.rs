@@ -337,24 +337,34 @@ pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)
     let mut dev = libparted::Device::new(&parent_path)?;
     let disk = libparted::Disk::new(&mut dev)?;
 
-    let mut part = None;
-
-    let parts = disk.parts();
-
-    for i in parts {
-        if Some(part_path.as_path()) == i.get_path() {
-            part = Some(i)
-        }
-    }
-
     let dev = libparted::Device::new(parent_path)?;
 
     let sector_size = dev.sector_size();
 
+    let mut opt_part = None;
+
+    let parts = disk.parts();
+
+    for i in parts {
+        if i.name() == Some("aosc-rescuekit".to_string()) {
+            let rescuekit_part = Partition {
+                path: Some(part_path.to_owned()),
+                parent_path: Some(parent_path.clone()),
+                size: get_part_length(&i) * sector_size,
+                fs_type: Some("ext4".to_string()),
+            };
+
+            return Ok((part.to_owned(), rescuekit_part));
+        }
+        if Some(part_path.as_path()) == i.get_path() {
+            opt_part = Some(i)
+        }
+    }
+
     let mut dev = libparted::Device::new(parent_path)?;
     let mut disk = libparted::Disk::new(&mut dev)?;
 
-    let mut part = part.ok_or_else(|| anyhow!("Can not get part!"))?;
+    let mut part = opt_part.ok_or_else(|| anyhow!("Can not get part!"))?;
     let part_fs = part.fs_type_name().unwrap_or("ext4");
     let part_start = part.geom_start();
     let part_end = part_start + (RESCUEKIT_SIZE / sector_size - 1) as i64;
@@ -372,6 +382,8 @@ pub fn install_rescuekit_part(part: &Partition) -> Result<(Partition, Partition)
         part_start,
         part_end,
     )?;
+
+    rescuekit_part.set_name("aosc-rescuekit")?;
 
     let rescue_goem = rescuekit_part.get_geom();
 
