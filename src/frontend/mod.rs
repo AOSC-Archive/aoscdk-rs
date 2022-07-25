@@ -16,7 +16,7 @@ use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
 use nix::fcntl::FallocateFlags;
 use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 mod cli;
 mod games;
@@ -49,9 +49,9 @@ struct InstallConfig {
     locale: Option<Arc<String>>,
     timezone: Option<Arc<String>>,
     tc: Option<Arc<String>>,
-    use_swap: Arc<AtomicBool>,
+    use_swap: Arc<AtomicBoolWrapper>,
     swap_size: Arc<Option<f64>>,
-    is_hibernation: Arc<AtomicBool>,
+    is_hibernation: Arc<AtomicBoolWrapper>,
 }
 
 impl Default for InstallConfig {
@@ -66,10 +66,59 @@ impl Default for InstallConfig {
             locale: None,
             timezone: None,
             tc: None,
-            use_swap: Arc::new(AtomicBool::new(false)),
+            use_swap: Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) }),
             swap_size: Arc::new(None),
-            is_hibernation: Arc::new(AtomicBool::new(false)),
+            is_hibernation: Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) }),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct AtomicBoolWrapper {
+    v: AtomicBool,
+}
+
+struct AtomicBoolWrapperVisitor;
+
+impl AtomicBoolWrapperVisitor {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+impl<'de> Visitor<'de> for AtomicBoolWrapperVisitor {
+    type Value = AtomicBoolWrapper;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "value: is not a bool")
+    }
+
+    fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(AtomicBoolWrapper {
+            v: AtomicBool::new(v),
+        })
+    }
+}
+
+impl Serialize for AtomicBoolWrapper {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use std::sync::atomic;
+        serializer.serialize_bool(self.v.load(atomic::Ordering::SeqCst))
+    }
+}
+
+impl<'de> Deserialize<'de> for AtomicBoolWrapper {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_bool(AtomicBoolWrapperVisitor::new())
     }
 }
 
@@ -326,7 +375,7 @@ fn begin_install(
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
     install::execute_locale_gen(locale)?;
     install::set_locale(locale)?;
-    let use_swap = config.use_swap.load(Ordering::SeqCst);
+    let use_swap = config.use_swap.v.load(Ordering::SeqCst);
     if use_swap {
         if let Some(swap_size) = config.swap_size.as_ref() {
             install::create_swapfile(*swap_size, use_swap)?;
