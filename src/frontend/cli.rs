@@ -19,7 +19,9 @@ use crate::{
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
-use super::{begin_install, tui_main, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE};
+use super::{
+    begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE,
+};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -270,10 +272,16 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         locale: Some(Arc::new(ic.locale)),
         timezone: Some(Arc::new(ic.timezone)),
         tc: Some(Arc::new(tc.to_string())),
-        use_swap: Arc::new(AtomicBool::new(!ic.no_swap && use_swap)),
+        use_swap: Arc::new(AtomicBoolWrapper {
+            v: AtomicBool::new(!ic.no_swap && use_swap),
+        }),
         swap_size: Arc::new(Some(swap_size)),
-        is_hibernation: Arc::new(AtomicBool::new(is_hibernation)),
-        install_rescuekit: Arc::new(AtomicBool::new(!ic.no_install_rescuekit)),
+        is_hibernation: Arc::new(AtomicBoolWrapper {
+            v: AtomicBool::new(is_hibernation),
+        }),
+        install_rescuekit: Arc::new(AtomicBoolWrapper {
+            v: AtomicBool::new(!ic.no_install_rescuekit),
+        }),
     };
 
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();

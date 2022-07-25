@@ -27,7 +27,8 @@ use std::{
 use tempfile::TempDir;
 
 use super::{
-    begin_install, games::add_callback, InstallConfig, DEFAULT_EMPTY_SIZE, RESCUEKIT_SIZE,
+    begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
+    RESCUEKIT_SIZE,
 };
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
@@ -555,7 +556,7 @@ fn select_install_rescuekit(s: &mut Cursive, config_clone: InstallConfig) {
                 .child(
                     LinearLayout::horizontal()
                         .child(checkbox)
-                        .child(TextView::new(" Install RescueKit"))
+                        .child(TextView::new(" Install RescueKit")),
                 )
                 .child(DummyView {})
                 .child(textview_2),
@@ -568,7 +569,9 @@ fn select_install_rescuekit(s: &mut Cursive, config_clone: InstallConfig) {
                 .unwrap()
                 .is_checked();
             let mut config_clone = config_clone.clone();
-            config_clone.install_rescuekit = Arc::new(AtomicBool::new(install_rescuekit));
+            config_clone.install_rescuekit = Arc::new(AtomicBoolWrapper {
+                v: AtomicBool::new(install_rescuekit),
+            });
             select_user_password(s, config_clone);
         })
         .button("Back", move |s| select_partition(s, config_clone_2.clone()))
@@ -1022,9 +1025,13 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
             }
             let swap_size = swap_size.as_ref().to_owned().into_inner();
             let mut config = config.clone();
-            config.use_swap = use_swap_clone_2.clone();
+            config.use_swap = Arc::new(AtomicBoolWrapper {
+                v: AtomicBool::new(use_swap_clone_2.load(Ordering::SeqCst)),
+            });
             config.swap_size = Arc::new(swap_size);
-            config.is_hibernation = is_hibernation_clone_2.clone();
+            config.is_hibernation = Arc::new(AtomicBoolWrapper {
+                v: AtomicBool::new(is_hibernation_clone_2.load(Ordering::SeqCst)),
+            });
             show_summary(s, config);
         })
         .button("Back", move |s| {
