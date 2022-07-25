@@ -7,7 +7,7 @@
    viewBox="0 0 507.99999 381.00001"
    version="1.1"
    id="svg5"
-   sodipodi:docname="0005-partitioning-new-hdd-with-rescuekit-new.svg"
+   sodipodi:docname="0005-partitioning-new-hdd-with-rescuekit-new-hover.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    inkscape:export-filename="/home/白铭骢/文档/AOSC/DeployKit GUI Mockup/Rev A/0005-partitioning-new-hdd.png"
    inkscape:export-xdpi="96"
@@ -119,6 +119,13 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.4056px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, ';fill:#eeeeee;fill-opacity:1;stroke-width:0.264583"
          x="47.009125"
          y="43.230762">Installation</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:0.143504;stroke:none;stroke-width:0.365;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect87563"
+       width="286.74463"
+       height="28.078035"
+       x="154.38544"
+       y="250.19258" />
   </g>
   <g
      inkscape:groupmode="layer"
@@ -185,9 +192,9 @@
          style="font-style:normal;font-weight:normal;font-size:96px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect11014);fill:#eeeeee;fill-opacity:1;stroke:none"><tspan
            x="182.85938"
            y="180.94612"
-           id="tspan90339"><tspan
+           id="tspan90438"><tspan
              style="font-weight:600;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Semi-Bold'"
-             id="tspan90337">Partitioning</tspan></tspan></text>
+             id="tspan90436">Partitioning</tspan></tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:11.2889px;line-height:1.15;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
@@ -412,9 +419,9 @@
          style="font-style:normal;font-weight:normal;font-size:42.6667px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect67622);fill:#ffffff;fill-opacity:1;stroke:none"><tspan
            x="696.59766"
            y="1009.3613"
-           id="tspan90343"><tspan
+           id="tspan90442"><tspan
              style="font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, '"
-             id="tspan90341">Manage partitions with GParted</tspan></tspan></text>
+             id="tspan90440">Manage partitions with GParted</tspan></tspan></text>
       <path
          style="fill:none;stroke:#ffffff;stroke-width:0.365;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          d="m 154.38544,278.27062 286.91348,-0.0981"

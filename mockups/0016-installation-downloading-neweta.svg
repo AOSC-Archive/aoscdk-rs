@@ -7,7 +7,7 @@
    viewBox="0 0 507.99999 381.00001"
    version="1.1"
    id="svg5"
-   sodipodi:docname="0016-installation-downloading-new.svg"
+   sodipodi:docname="0016-installation-downloading-neweta.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    inkscape:export-filename="/home/白铭骢/文档/AOSC/DeployKit GUI Mockup/Rev A/0016-installation-downloading.png"
    inkscape:export-xdpi="96"
@@ -42,6 +42,12 @@
      showguides="false" />
   <defs
      id="defs2">
+    <rect
+       x="178.29402"
+       y="674.56279"
+       width="342.29878"
+       height="293.47568"
+       id="rect40389" />
     <rect
        x="673.84592"
        y="1057.0161"
@@ -177,17 +183,6 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:9.87778px;line-height:1.25;font-family:'Source Sans';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="491.61188"
-       y="350.94095"
-       id="text62192"><tspan
-         sodipodi:role="line"
-         id="tspan62190"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:9.87778px;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, ';text-align:end;text-anchor:end;fill:#eeeeee;fill-opacity:0.99;stroke-width:0.264583"
-         x="491.61188"
-         y="350.94095">12 minutes remaining...</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:9.87778px;line-height:1.25;font-family:'Source Sans';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="5.3589725"
        y="345.2189"
        id="text62192-3"><tspan
@@ -225,9 +220,9 @@
        style="font-style:normal;font-weight:normal;font-size:96px;line-height:1.25;font-family:'Source Sans';white-space:pre;shape-inside:url(#rect11014);fill:#eeeeee;fill-opacity:1;stroke:none"><tspan
          x="182.85938"
          y="180.94612"
-         id="tspan53775"><tspan
+         id="tspan53143"><tspan
            style="font-weight:600;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Semi-Bold'"
-           id="tspan53773">Work Ready</tspan></tspan></text>
+           id="tspan53141">Work Ready</tspan></tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:11.2889px;line-height:1.15;font-family:'Source Sans';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
@@ -376,5 +371,27 @@
        style="fill:none;stroke:#ffffff;stroke-width:0.365;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="m 158.52388,293.62096 286.91348,-0.0981"
        id="path1656-3" />
+    <text
+       xml:space="preserve"
+       transform="scale(0.26458333)"
+       id="text40387"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect40389);fill:#ffffff;fill-opacity:1;stroke:none"><tspan
+         x="178.29492"
+         y="712.2492"
+         id="tspan53147"><tspan
+           style="font-weight:bold;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Bold'"
+           id="tspan53145">Estimated Time
+</tspan></tspan><tspan
+         x="178.29492"
+         y="766.17186"
+         id="tspan53151"><tspan
+           style="font-weight:bold;font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3 Bold'"
+           id="tspan53149">Remaining:
+</tspan></tspan><tspan
+         x="178.29492"
+         y="820.09453"
+         id="tspan53155"><tspan
+           style="font-family:'Source Sans 3';-inkscape-font-specification:'Source Sans 3, '"
+           id="tspan53153">12 Minutes</tspan></tspan></text>
   </g>
 </svg>
