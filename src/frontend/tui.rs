@@ -251,10 +251,10 @@ fn build_variant_list(
 
     let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
         .column(VariantColumn::Name, "Available Distributions", |c| {
-            c.width(38)
+            c.width(30)
         })
-        .column(VariantColumn::Date, "Last Updated", |c| c.width(18))
-        .column(VariantColumn::Size, "Download Size", |c| c.width(18))
+        .column(VariantColumn::Date, "Last Updated", |c| c.width(22))
+        .column(VariantColumn::Size, "Download Size", |c| c.width(22))
         .items(variants.clone())
         .on_submit(move |siv, _row, index| {
             let mut config = config.clone();
