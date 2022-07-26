@@ -26,7 +26,9 @@ use std::{
 };
 use tempfile::TempDir;
 
-use super::{begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
+use super::{
+    begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
+};
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
@@ -249,17 +251,17 @@ fn build_variant_list(
 
     let variant_view = TableView::<network::VariantEntry, VariantColumn>::new()
         .column(VariantColumn::Name, "Available Distributions", |c| {
-            c.width(60)
+            c.width(38)
         })
-        .column(VariantColumn::Date, "Last Updated", |c| c.width(20))
-        .column(VariantColumn::Size, "Download Size", |c| c.width(20))
+        .column(VariantColumn::Date, "Last Updated", |c| c.width(18))
+        .column(VariantColumn::Size, "Download Size", |c| c.width(18))
         .items(variants.clone())
         .on_submit(move |siv, _row, index| {
             let mut config = config.clone();
             config.variant = Some(Arc::new(variants.get(index).unwrap().clone()));
             select_mirrors(siv, mirrors.clone(), config);
         })
-        .min_width(106)
+        .min_width(80)
         .min_height(30);
     let variant_view = Panel::new(variant_view).title("Variant");
     config_view.add_child(TextView::new(VARIANT_TEXT));

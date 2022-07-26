@@ -230,7 +230,7 @@ fn get_swap(
     } else {
         let size = disks::get_recommand_swap_size()?;
 
-        if partition.size > size as u64 + variant.install_size - DEFAULT_EMPTY_SIZE  {
+        if partition.size > size as u64 + variant.install_size - DEFAULT_EMPTY_SIZE {
             (true, size, true)
         } else {
             (false, size, false)
