@@ -20,7 +20,7 @@ pub fn run(siv: &mut Cursive) {
     let view = Dialog::around(
         LinearLayout::vertical()
             .child(board.with_name("board"))
-            .child(TextView::new("Press 'm' to see manual")),
+            .child(TextView::new("Press 'm' for controls.")),
     )
     .title("SUDOKU");
 
@@ -62,5 +62,5 @@ fn redo(s: &mut Cursive) {
 }
 
 fn help(s: &mut Cursive) {
-    s.add_layer(Dialog::info("Use arrow keys/TAB/Shift+TAB/mouse wheel/mouse click to navigate.\nEnter number 0-9 to fill in.\nClick <Hint> or press <h> to obtain a hint.\nPress <z> to redo\nPress <u> to undo\nPress <r> to restart game\nPress <q> to exit game\nGood luck."))
+    s.add_layer(Dialog::info("Use arrow keys/Tab/Shift+Tab/mouse wheel/mouse click to navigate.\nEnter number 0-9 to fill in a number.\nClick <Hint> or press <h> to obtain a hint.\nPress <z> to redo\nPress <u> to undo\nPress <r> to restart game\nPress <q> to exit game\n\nGood luck."))
 }
