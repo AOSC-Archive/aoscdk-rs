@@ -403,6 +403,7 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
     if !use_swap {
         return Ok(());
     }
+
     let mut swapfile = std::fs::File::create("/swapfile")?;
     nix::fcntl::fallocate(
         swapfile.as_raw_fd(),
@@ -411,7 +412,9 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
         (size as i32).into(),
     )?;
     swapfile.flush()?;
+
     std::fs::set_permissions("/swapfile", std::fs::Permissions::from_mode(0o600))?;
+
     let mkswap = Command::new("mkswap").arg("/swapfile").output()?;
     if !mkswap.status.success() {
         return Err(anyhow!(
@@ -420,11 +423,16 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
             String::from_utf8_lossy(&mkswap.stdout)
         ));
     }
-    let s = "/swapfile none swap defaults,nofail 0 0";
+
+    let s = "/swapfile none swap defaults,nofail 0 0\n";
     let mut fstab = std::fs::OpenOptions::new()
         .append(true)
         .open("/etc/fstab")?;
     fstab.write_all(s.as_bytes())?;
+
+    if cfg!(feature = "is_retro") {
+        Command::new("swapon").arg("/swapfile").output().ok();
+    }
 
     Ok(())
 }
