@@ -377,7 +377,6 @@ fn begin_install(
     install::set_hostname(&config.hostname.unwrap())?;
     let locale = config.locale.as_ref().unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
-    install::execute_locale_gen(locale)?;
     install::set_locale(locale)?;
     let use_swap = config.use_swap.v.load(Ordering::SeqCst);
     if use_swap {

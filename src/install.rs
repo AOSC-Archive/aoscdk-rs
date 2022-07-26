@@ -226,65 +226,6 @@ pub fn execute_dracut() -> Result<()> {
     Ok(())
 }
 
-/// Runs locale-gen
-/// Must be used in a chroot context
-#[cfg(feature = "is_retro")]
-pub fn execute_locale_gen(locale: &str) -> Result<()> {
-    use std::io::SeekFrom;
-    let mut locale_gen_file = std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/etc/locale.gen")?;
-    let mut buf = String::new();
-    locale_gen_file.read_to_string(&mut buf)?;
-    let mut locale_gen_list = buf.split("\n").map(|x| x.into()).collect::<Vec<String>>();
-    let index = locale_gen_list
-        .iter()
-        .position(|x| x.starts_with(&format!("{}", locale)));
-    if index.is_some() {
-        return Ok(());
-    }
-    let index = locale_gen_list
-        .iter()
-        .position(|x| x.starts_with(&format!("#{}", locale)))
-        .ok_or_else(|| anyhow!("AOSC OS could not find the specified locale!"))?;
-    let selected_locale = &locale_gen_list[index];
-    let split_selected_locale = selected_locale.split_once(".");
-    if split_selected_locale.is_some() {
-        locale_gen_list[index] = locale_gen_list[index].replace("#", "");
-    } else {
-        let match_index_list = locale_gen_list
-            .iter()
-            .enumerate()
-            .filter(|(_, x)| x.starts_with(&format!("#{}", locale)))
-            .map(|(index, _)| index)
-            .collect::<Vec<_>>();
-        for i in match_index_list {
-            locale_gen_list[i] = locale_gen_list[i].replace("#", "");
-        }
-    }
-    let locale_gen_str = locale_gen_list.join("\n");
-    locale_gen_file.seek(SeekFrom::Start(0))?;
-    locale_gen_file.write_all(locale_gen_str.as_bytes())?;
-    let output = Command::new("/usr/bin/locale-gen").output()?;
-    if !output.status.success() {
-        return Err(anyhow!(
-            "AOSC OS failed to generate locale data: \n\n{}\n{}",
-            String::from_utf8_lossy(&output.stderr),
-            String::from_utf8_lossy(&output.stdout)
-        ));
-    }
-
-    Ok(())
-}
-
-/// Runs locale-gen (dummy function for non-retro mode)
-/// Must be used in a chroot context
-#[cfg(not(feature = "is_retro"))]
-pub fn execute_locale_gen(_locale: &str) -> Result<()> {
-    Ok(())
-}
-
 /// Runs dracut (dummy function for retro mode)
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
