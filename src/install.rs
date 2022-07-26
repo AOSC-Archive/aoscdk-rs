@@ -513,7 +513,7 @@ pub fn is_valid_hostname(hostname: &str) -> bool {
         return false;
     }
     for c in hostname.as_bytes() {
-        if c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-' {
+        if c.is_ascii_alphanumeric() || *c == b'-' {
             continue;
         } else {
             return false;
@@ -554,6 +554,8 @@ fn test_hostname_validation() {
     assert_eq!(is_valid_hostname("invalid_host"), false);
     assert_eq!(is_valid_hostname("-invalid"), false);
     assert_eq!(is_valid_hostname("+invalid"), false);
+    assert_eq!(is_valid_hostname("JellyDimension"), true);
+    assert_eq!(is_valid_hostname("Jelly_Dimension"), false);
 }
 
 #[test]
