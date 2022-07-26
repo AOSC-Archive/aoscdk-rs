@@ -19,9 +19,7 @@ use crate::{
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
-use super::{
-    begin_install, tui_main, AtomicBoolWrapper, InstallConfig,
-};
+use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]

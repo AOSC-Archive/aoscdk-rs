@@ -17,6 +17,7 @@ use cursive::utils::{Counter, ProgressReader};
 use nix::fcntl::FallocateFlags;
 use rand::{thread_rng, Rng};
 use serde::{de::Visitor, Deserialize, Serialize};
+use std::sync::atomic;
 
 mod cli;
 mod games;
@@ -66,9 +67,13 @@ impl Default for InstallConfig {
             locale: None,
             timezone: None,
             tc: None,
-            use_swap: Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) }),
+            use_swap: Arc::new(AtomicBoolWrapper {
+                v: AtomicBool::new(false),
+            }),
             swap_size: Arc::new(None),
-            is_hibernation: Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) }),
+            is_hibernation: Arc::new(AtomicBoolWrapper {
+                v: AtomicBool::new(false),
+            }),
         }
     }
 }
@@ -108,7 +113,6 @@ impl Serialize for AtomicBoolWrapper {
     where
         S: serde::Serializer,
     {
-        use std::sync::atomic;
         serializer.serialize_bool(self.v.load(atomic::Ordering::SeqCst))
     }
 }
