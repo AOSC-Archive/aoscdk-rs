@@ -20,7 +20,7 @@ pub fn run(siv: &mut Cursive) {
     let view = Dialog::around(
         LinearLayout::vertical()
             .child(board.with_name("board"))
-            .child(TextView::new("Press 'm' to see manual"))
+            .child(TextView::new("Press 'm' to see manual")),
     )
     .title("SUDOKU");
 
