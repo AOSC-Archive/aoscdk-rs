@@ -16,7 +16,6 @@ pub fn run(siv: &mut Cursive) {
     siv.set_fps(2);
 
     let board = SudokuBoard::new();
-
     let view = Dialog::around(
         LinearLayout::vertical()
             .child(board.with_name("board"))

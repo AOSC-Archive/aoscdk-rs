@@ -293,7 +293,7 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
         let mut buf = String::new();
         adjtime_file.read_to_string(&mut buf)?;
         let line: Vec<&str> = buf.split('\n').collect();
-        if line.len() < 3 || line[2] == "UTC" {
+        if line.len() < 3 || line.get(2) == Some(&"UTC") {
             false
         } else {
             line[2] == "LOCAL"
