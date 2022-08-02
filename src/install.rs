@@ -350,7 +350,11 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
         ));
     }
     let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
-    let mut stdin = command.stdin.unwrap();
+
+    let mut stdin = command.stdin.ok_or_else(|| {
+        anyhow!("Installer can not get your stdin! please restart your environment")
+    })?;
+
     stdin.write_all(format!("{}:{}\n", name, password).as_bytes())?;
     stdin.flush()?;
 
