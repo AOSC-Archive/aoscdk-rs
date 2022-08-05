@@ -842,115 +842,26 @@ fn set_locales(
 
 fn select_swap(siv: &mut Cursive, config: InstallConfig) {
     let config_clone = config.clone();
+    let config_clone_2 = config.clone();
     let partition_size = config.partition.as_ref().unwrap().size;
     let installed_size = config.variant.as_ref().unwrap().install_size;
     siv.pop_layer();
     let swap_size = Rc::new(RefCell::new(None));
     let swap_size_copy = Rc::clone(&swap_size);
     let is_hibernation = Arc::new(AtomicBool::new(false));
-    let is_hibernation_clone = is_hibernation.clone();
     let is_hibernation_clone_2 = is_hibernation;
     let use_swap = Arc::new(AtomicBool::new(false));
     let use_swap_clone = use_swap.clone();
-    let use_swap_clone_2 = use_swap.clone();
-    let swap_is_set = Arc::new(AtomicBool::new(false));
-    let swap_is_set_clone = swap_is_set.clone();
+
     let view = ListView::new().child(
         "Swapfile Size",
         SelectView::new()
             .popup()
             .autojump()
             .with_all_str(vec!["Automatic", "Custom", "Disabled"])
-            .selected(0)
-            .on_submit(move |s: &mut Cursive, c: &str| match c {
-                "Automatic" => {
-                    let size = disks::get_recommand_swap_size();
-                    let swap_is_set_clone = swap_is_set.clone();
-                    match size {
-                        Ok(size) => {
-                            if installed_size + size as u64 > partition_size {
-                                show_msg(s, &format!("There is not enough available space in the system partition to create a swapfile! Default swapfile size: {} GiB", (size / 1024.0 / 1024.0 / 1024.0).round()));
-                                swap_is_set_clone.store(false, Ordering::SeqCst);
-                                return;
-                            }
-                            swap_size_copy.replace(Some(size));
-                            is_hibernation_clone.store(true, Ordering::SeqCst);
-                            use_swap.store(true, Ordering::SeqCst);
-                            swap_is_set_clone.store(true, Ordering::SeqCst);
-                        }
-                        Err(e) => {
-                            show_msg(s, &e.to_string());
-                            swap_is_set_clone.store(false, Ordering::SeqCst);
-                        }
-                    }
-                }
-                "Custom" => {
-                    let is_hibernation_clone_2 = is_hibernation_clone.clone();
-                    let swap_size_copy = swap_size_copy.clone();
-                    let use_swap_copy = use_swap_clone.clone();
-                    let swap_size_temp = Rc::new(RefCell::new(String::new()));
-                    let swap_size_temp_clone = Rc::clone(&swap_size_temp);
-                    let swap_is_set = swap_is_set.clone();
-                    s.add_layer(
-                        wrap_in_dialog(
-                            LinearLayout::vertical()
-                                .child(TextView::new(
-                                    "Please enter your desired swapfile size (GiB): ",
-                                ))
-                                .child(
-                                    EditView::new()
-                                        .on_edit_mut(move |_, c, _| {
-                                            swap_size_temp_clone.replace(c.to_owned());
-                                        })
-                                        .min_width(20)
-                                        .with_name("size"),
-                                ),
-                            "Customize Swapfile Size",
-                            None,
-                        )
-                        .button("OK", move |s| {
-                            let size = swap_size_temp.as_ref().to_owned().into_inner();
-                            let size = size.parse::<f64>();
-                            if size.is_err() {
-                                show_msg(s, "Invalid custom swapfile size!");
-                                swap_is_set.store(false, Ordering::SeqCst);
-                                return;
-                            }
-                            let is_hibernation_clone = is_hibernation_clone_2.clone();
-                            let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
-                            if installed_size + size as u64 > partition_size - DEFAULT_EMPTY_SIZE {
-                                show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB",  (size / 1024.0 / 1024.0 / 1024.0).round()));
-                                return;
-                            }
-                            match disks::is_enable_hibernation(size) {
-                                Ok(is_h) => {
-                                    is_hibernation_clone.store(is_h, Ordering::SeqCst);
-                                    swap_size_copy.replace(Some(size));
-                                    use_swap_copy.store(true, Ordering::SeqCst);
-                                    swap_is_set.store(true, Ordering::SeqCst);
-                                }
-                                Err(e) => {
-                                    show_msg(s, &e.to_string());
-                                    swap_is_set.store(false, Ordering::SeqCst);
-                                    return;
-                                }
-                            }
-                            s.cb_sink()
-                                .send(Box::new(|s| {
-                                    s.pop_layer();
-                                }))
-                                .unwrap()
-                        }),
-                    )
-                }
-                "Disabled" => {
-                    use_swap.store(false, Ordering::SeqCst);
-                    let swap_is_set = swap_is_set.clone();
-                    swap_is_set.store(true, Ordering::SeqCst);
-                }
-                _ => unreachable!(),
-            }),
+            .with_name("select_swap_config"),
     );
+
     let textview = TextView::new("Would you like to create a swapfile?\n");
     siv.add_layer(
         wrap_in_dialog(
@@ -959,27 +870,152 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
             None,
         )
         .button("Continue", move |s| {
-            if !swap_is_set_clone.load(Ordering::SeqCst) {
-                show_msg(s, "Please select an option for swapfile creation!");
-                return;
+            let selected = s
+                .find_name::<SelectView>("select_swap_config")
+                .expect("select_swap_config must have value")
+                .selected_id()
+                .expect("select_swap_config must have value");
+            match selected {
+                0 => auto_swap(
+                    installed_size,
+                    partition_size,
+                    s,
+                    swap_size_copy.clone(),
+                    use_swap_clone.clone(),
+                    config_clone.clone(),
+                ),
+                1 => custom_swap_size(installed_size, partition_size, s, swap_size_copy.clone(), config.clone(), is_hibernation_clone_2.clone(), use_swap.clone()),
+                2 => disable_swap(config.clone(), s),
+                _ => unreachable!(),
             }
-            let swap_size = swap_size.as_ref().to_owned().into_inner();
-            let mut config = config.clone();
-            config.use_swap = Arc::new(AtomicBoolWrapper {
-                v: AtomicBool::new(use_swap_clone_2.load(Ordering::SeqCst)),
-            });
-            config.swap_size = Arc::new(swap_size);
-            config.is_hibernation = Arc::new(AtomicBoolWrapper {
-                v: AtomicBool::new(is_hibernation_clone_2.load(Ordering::SeqCst)),
-            });
-            show_summary(s, config);
         })
         .button("Back", move |s| {
             s.pop_layer();
-            select_timezone(s, config_clone.clone());
+            select_timezone(s, config_clone_2.clone());
         })
         .button("Exit", move |s| s.quit()),
     );
+}
+
+fn auto_swap(
+    installed_size: u64,
+    partition_size: u64,
+    s: &mut Cursive,
+    swap_size: Rc<RefCell<Option<f64>>>,
+    use_swap: Arc<AtomicBool>,
+    config: InstallConfig,
+) {
+    let mut config = config.clone();
+    let auto_size = disks::get_recommand_swap_size();
+
+    match auto_size {
+        Ok(auto_size) => {
+            if installed_size + auto_size as u64 > partition_size - DEFAULT_EMPTY_SIZE {
+                show_msg(s, &format!("There is not enough available space in the system partition to create a swapfile! Default swapfile size: {} GiB", (auto_size / 1024.0 / 1024.0 / 1024.0).round()));
+                return;
+            }
+
+            swap_size.replace(Some(auto_size));
+            use_swap.store(true, Ordering::SeqCst);
+        }
+        Err(e) => {
+            show_msg(s, &e.to_string());
+            return;
+        }
+    }
+
+    let swap_size = swap_size.as_ref().to_owned().into_inner();
+    config.swap_size = Arc::new(swap_size);
+    config.use_swap = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(use_swap.load(Ordering::SeqCst) )});
+    config.is_hibernation = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(true) });
+
+    show_summary(s, config);
+}
+
+fn custom_swap_size(
+    installed_size: u64,
+    partition_size: u64,
+    s: &mut Cursive,
+    swap_size: Rc<RefCell<Option<f64>>>,
+    config: InstallConfig,
+    is_hibernation_clone_2: Arc<AtomicBool>,
+    use_swap: Arc<AtomicBool>,
+) {
+    let swap_size_input = Rc::new(RefCell::new(String::new()));
+    let swap_size_input_clone = swap_size_input.clone();
+
+    let swap_size_clone = swap_size.clone();
+    let use_swap_clone = use_swap.clone();
+
+    let is_hibernation_clone_3 = is_hibernation_clone_2.clone();
+
+    s.add_layer(
+        wrap_in_dialog(
+            LinearLayout::vertical()
+                .child(TextView::new(
+                    "Please enter your desired swapfile size (GiB): ",
+                ))
+                .child(
+                    EditView::new()
+                        .on_edit_mut(move |_, c, _| {
+                            swap_size_input_clone.replace(c.to_owned());
+                        })
+                        .min_width(20)
+                        .with_name("size"),
+                ),
+            "Customize Swapfile Size",
+            None,
+        )
+        .button("OK", move |s| {
+            let mut config = config.clone();
+            let size = swap_size_input.as_ref().to_owned().into_inner();
+            let size = size.parse::<f64>();
+            if size.is_err() {
+                show_msg(s, "Invalid custom swapfile size!");
+                return;
+            }
+
+            let is_hibernation_clone = is_hibernation_clone_2.clone();
+            let size = size.unwrap() * 1024.0 * 1024.0 * 1024.0;
+            if installed_size + size as u64 > partition_size - DEFAULT_EMPTY_SIZE {
+                show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB",  (size / 1024.0 / 1024.0 / 1024.0).round()));
+                return;
+            }
+    
+            match disks::is_enable_hibernation(size) {
+                Ok(is_h) => {
+                    is_hibernation_clone.store(is_h, Ordering::SeqCst);
+                    swap_size_clone.replace(Some(size));
+                    use_swap_clone.store(true, Ordering::SeqCst);
+                }
+                Err(e) => {
+                    show_msg(s, &e.to_string());
+                    return;
+                }
+            };
+
+            let swap_size = swap_size.as_ref().to_owned().into_inner();
+            config.swap_size = Arc::new(swap_size);
+            config.use_swap = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(use_swap.load(Ordering::SeqCst) )});
+            config.is_hibernation = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(is_hibernation_clone_3.load(Ordering::SeqCst) )});
+        
+            show_summary(s, config);
+        })
+        .button("Cancel", move |s| s.cb_sink().send(Box::new(|s| {
+            s.pop_layer();
+        }))
+        .unwrap()),
+    );
+
+}
+
+fn disable_swap(config: InstallConfig, s: &mut Cursive) {
+    let mut config = config.clone();
+    config.swap_size = Arc::new(None);
+    config.use_swap = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) });
+    config.is_hibernation = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) });
+
+    show_summary(s, config);
 }
 
 fn is_use_last_config(siv: &mut Cursive, config: InstallConfig) {
