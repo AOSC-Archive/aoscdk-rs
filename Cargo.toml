@@ -38,6 +38,7 @@ libparted-sys = "0.3"
 clock-core = "0.0.7"
 hhmmss = "0.1.0"
 sudoku = "0.7"
+log = "0.4"
 
 [features]
 is_retro = []

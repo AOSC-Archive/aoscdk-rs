@@ -14,6 +14,7 @@ use std::{
 use crate::{disks, install, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
+use log::info;
 use nix::fcntl::FallocateFlags;
 use rand::{thread_rng, Rng};
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -97,7 +98,7 @@ impl<'de> Visitor<'de> for AtomicBoolWrapperVisitor {
     type Value = AtomicBoolWrapper;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "value: is not a bool")
+        write!(formatter, "value is not a bool")
     }
 
     fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
@@ -149,18 +150,27 @@ fn begin_install(
     ))?;
 
     let partition = &config.partition.unwrap();
+
+    info!("Formatting partitions: {:?}", partition);
     disks::format_partition(partition)?;
 
+    info!("Mounting partitions: {:?}", partition);
     let mount_path = install::auto_mount_root_path(&tempdir, partition)?;
     let mount_path_copy = mount_path.clone();
     let mut efi_path = mount_path.clone();
     if disks::is_efi_booted() {
         efi_path.push("efi");
+
+        info!("Finding ESP partition from: {:?}", partition.parent_path);
         let mut esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
+        info!("ESP is: {:?}", esp_part);
+
         std::fs::create_dir_all(&efi_path).unwrap();
         if esp_part.fs_type.is_none() {
             // format the un-formatted ESP partition
             esp_part.fs_type = Some("vfat".to_string());
+
+            info!("Formatting ESP partition: {:?}", esp_part);
             disks::format_partition(&esp_part)?;
         }
         install::mount_root_path(&esp_part, &efi_path)?;
@@ -170,6 +180,11 @@ fn begin_install(
         file_size = variant.size.try_into().unwrap();
         url = format!("{}{}", mirror_url, variant.url);
         right_sha256 = variant.sha256sum.clone();
+
+        info!(
+            "Mirror URL is: {}, file_size: {}, url: {}, right_sha256: {}",
+            mirror_url, file_size, url, right_sha256
+        );
     } else {
         return Err(anyhow!(
             "Installer could not parse release metadata: `variant` field not found."
@@ -194,13 +209,18 @@ fn begin_install(
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
         let mut output = match std::fs::File::create(tarball_file.clone()) {
-            Ok(file) => file,
+            Ok(file) => {
+                info!("tarball file: {:?} is created", tarball_file);
+
+                file
+            },
             Err(e) => {
                 send_error!(error_channel_tx_copy, e);
             }
         };
         match network::download_file(url) {
             Ok(mut reader) => {
+                info!("Allocating tarball file: {:?}", tarball_file);
                 if let Err(e) = nix::fcntl::fallocate(
                     output.as_raw_fd(),
                     FallocateFlags::empty(),
@@ -213,10 +233,14 @@ fn begin_install(
                     );
                     send_error!(error_channel_tx_copy, e);
                 }
+
+                info!("Flushing tarball_file: {:?}", tarball_file);
                 if let Err(e) = output.flush() {
                     let e = anyhow!("Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
                     send_error!(error_channel_tx_copy, e);
                 }
+                
+                info!("Starting download tarball_file: {:?}", tarball_file);
                 let mut tarball_size = 0;
                 loop {
                     let mut buf = vec![0; 4096];
@@ -233,7 +257,9 @@ fn begin_install(
                     }
                     sha256_work_tx.send((buf, reader_size)).unwrap();
                     counter_clone.set(tarball_size);
+                    info!("Downloaded size: {}", tarball_size);
                     if tarball_size == file_size {
+                        info!("Download complete");
                         download_done_copy.fetch_or(true, Ordering::SeqCst);
                         // dbg!("download complete");
                         break;
@@ -242,6 +268,7 @@ fn begin_install(
                 drop(sha256_work_tx);
                 loop {
                     if hasher_done.load(Ordering::SeqCst) {
+                        info!("Hash done");
                         break;
                     }
                 }
@@ -251,6 +278,8 @@ fn begin_install(
             }
         }
         counter_clone.set(0);
+
+        info!("Trying open tarball file: {:?}", tarball_file);
         match std::fs::File::open(tarball_file.clone()) {
             Ok(file) => output = file,
             Err(e) => {
@@ -258,12 +287,18 @@ fn begin_install(
                 send_error!(error_channel_tx_copy, e);
             }
         }
+
         let reader = ProgressReader::new(counter_clone, output);
+
+        info!("Trying extract tarball file: {:?}", tarball_file);
         if let Err(e) = install::extract_tar_xz(reader, &mount_path) {
             let e = anyhow!("Installer failed to unpack system release:\n\n{}", e);
             send_error!(error_channel_tx_copy, e);
         }
+    
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
+
+        info!("Trying remove tarball file: {:?}", tarball_file);
         std::fs::remove_file(tarball_file).ok();
     });
     let sha256sum_work = thread::spawn(move || {
@@ -278,6 +313,7 @@ fn begin_install(
                 return;
             };
             let (buf, reader_size) = rx;
+            info!("Writting hasher, size: {}", reader_size);
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
                 let e = anyhow!(
                     "Installer failed to calculate checksum for system release:\n\n{}",
