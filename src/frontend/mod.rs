@@ -237,7 +237,6 @@ fn begin_install(
                 }
             }
             Err(e) => {
-                let e = anyhow!("Installer failed to download system release:\n\n{}", e);
                 send_error!(error_channel_tx_copy, e);
             }
         }

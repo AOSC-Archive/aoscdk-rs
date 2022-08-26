@@ -148,7 +148,7 @@ pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
     let resp_result = rx
         .recv_timeout(Duration::from_secs(30))
         .map_err(|e| anyhow!("Installer detected a network response timeout: {}", e))?;
-    let resp = resp_result?.error_for_status()?;
+    let resp = resp_result?.error_for_status().map_err(|e| anyhow!("Installer failed to download system release: distribution is not found on the specified mirror.\n\nThis may have resulted from a newly uploaded system release that's not yet available from the mirror you have selected.\n\n{}", e))?;
 
     Ok(resp)
 }
