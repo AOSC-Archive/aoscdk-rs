@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 pub type SudokuMatrix = [[u8; 9]; 9];
 type Coord = [usize; 2];
 
@@ -115,7 +117,7 @@ impl fmt::Display for MySudoku {
         let mut s = String::with_capacity(180);
         for i in 0..9 {
             for j in 0..9 {
-                s.push_str(&format!("{} ", self[[i, j]]))
+                write!(s, "{} ", self[[i, j]])?;
             }
             s.push('\n')
         }

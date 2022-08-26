@@ -65,11 +65,19 @@ macro_rules! SUMMARY_TEXT {
         "Installer will perform the following operations:\n- {} will be erased and formatted as {}.\n- AOSC OS {} will be downloaded from {}.\n- User {} will be created.\n- AOSC OS will use the {} locale.\n- Your timezone will be set to {}, and will use {} as local time.\n"
     };
 }
+
 macro_rules! SURE_FS_TYPE_INFO {
     () => {
         "AOSC OS Installation has detected that the specified partition is currently formatted {}, would you like to format this partition using the original filesystem? For its proven reliability, we recommend formatting your system partition as ext4."
     };
 }
+
+macro_rules! SURE_FS_FORMAT_INFO {
+    () => {
+        "Installer has detected an existing file system on the specified partition, {}. Please consider verifying if there is data in this partition that is yet to be backed up.\n\nAfter the final confirmation, coming up in a few steps, Installer will format this partition as {}. "
+    };
+}
+
 const ADVANCED_METHOD_INFO: &str = "Installer detected an unsupported filesystem format in your system partition. If you proceed, the installer will format your system partition using the ext4 filesystem. Please refer to the manual installation guides if you prefer to use an unsupported filesystem.";
 const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS Installer!
 
@@ -127,6 +135,8 @@ macro_rules! show_fetch_progress {
     }};
 }
 
+type PartitionButton = (&'static str, &'static dyn Fn(&mut Cursive, InstallConfig));
+
 fn show_error(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
         Dialog::around(TextView::new(msg))
@@ -155,7 +165,7 @@ fn show_blocking_message(siv: &mut Cursive, msg: &str) {
     );
 }
 
-fn partition_button() -> (&'static str, &'static dyn Fn(&mut Cursive, InstallConfig)) {
+fn partition_button() -> PartitionButton {
     if env::var("DISPLAY").is_ok() {
         return ("Open GParted", &|s, _| {
             show_blocking_message(s, "Waiting for GParted Partitioning Program to exit ...");
@@ -296,7 +306,7 @@ fn select_mirrors(siv: &mut Cursive, mirrors: Vec<Mirror>, config: InstallConfig
 fn select_mirror_view_base(mirrors: &[Mirror]) -> (LinearLayout, RadioGroup<Mirror>) {
     let mut config_view = LinearLayout::vertical();
     let mut repo_list = RadioGroup::new();
-    let mirror_list = &*mirrors;
+    let mirror_list = mirrors;
     let mut repo_view = LinearLayout::vertical()
         .child(TextView::new(
             "Please select a mirror to download AOSC OS. Generally, a mirror closest to you geographically would be the best bet for download speeds.",
@@ -436,7 +446,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let mut config = config.clone();
                 let config_copy = config.clone();
                 let config_copy_2 = config.clone();
-                let fs_type = current_partition.fs_type.as_ref();
+                let fs_type = current_partition.fs_type.clone();
                 let current_partition_clone = current_partition.clone();
                 if let Err(e) = disks::right_combine(current_partition.parent_path.as_ref()) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
@@ -451,19 +461,19 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 if let Some(fs_type) = fs_type {
                     if fs_type != "ext4" && ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
-                        .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), fs_type))), "AOSC OS Installer", None)
+                        .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), &fs_type))), "AOSC OS Installer", None)
                         .button("Yes", move |s| {
                             let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
                             let mut config_clone = config_copy.clone();
-                            config_clone.partition = Some(Arc::new(new_part));
+                            config_clone.partition = Some(Arc::new(new_part.clone()));
                             s.pop_layer();
-                            partition_view_to_next(s, config_clone);
+                            continue_to_format_hdd(s, config_clone, new_part.fs_type.expect("Must unwrap success"));
                         })
                         .button("Use Ext4", move |s| {
                             let new_part = disks::fill_fs_type(current_partition.as_ref(), true);
                             let mut config_clone = config_copy_2.clone();
-                            config_clone.partition = Some(Arc::new(new_part));
-                            partition_view_to_next(s, config_clone);
+                            config_clone.partition = Some(Arc::new(new_part.clone()));
+                            continue_to_format_hdd(s, config_clone, new_part.fs_type.expect("Must unwrap success"));
                         })
                         .button("Cancel", move |s| {
                             s.cb_sink()
@@ -475,17 +485,17 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                         s.add_layer(view);
                     } else if fs_type == "ext4" {
                         let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
-                        config.partition = Some(Arc::new(new_part));
-                        partition_view_to_next(s, config);
+                        config.partition = Some(Arc::new(new_part.clone()));
+                        continue_to_format_hdd(s, config.clone(), new_part.fs_type.expect("Must unwrap success"));
                     } else if !ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
                         .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
                         .button("OK", move |s| {
                             let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
                             let mut config_clone = config_copy.clone();
-                            config_clone.partition = Some(Arc::new(new_part));
+                            config_clone.partition = Some(Arc::new(new_part.clone()));
                             s.pop_layer();
-                            partition_view_to_next(s, config_clone);
+                            continue_to_format_hdd(s, config_clone, new_part.fs_type.expect("Must unwrap success"));
                         })
                         .button("Cancel", move |s| {
                             s.cb_sink()
@@ -498,8 +508,8 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     }
                 } else {
                     let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
-                    config.partition = Some(Arc::new(new_part));
-                    partition_view_to_next(s, config);
+                    config.partition = Some(Arc::new(new_part.clone()));
+                    continue_to_format_hdd(s, config, new_part.fs_type.expect("Must success unwrap"));
                 }
             }
         })
@@ -512,6 +522,37 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
         })
         .button("Exit", |s| s.quit())
     );
+}
+
+fn continue_to_format_hdd(s: &mut Cursive, config_clone: InstallConfig, fs_type: String) {
+    let path = config_clone
+        .partition
+        .as_ref()
+        .expect("Must unwrap success")
+        .path
+        .as_ref()
+        .expect("Must unwrap success")
+        .to_str()
+        .expect("Must as string");
+
+    let dialog = LinearLayout::vertical().child(TextView::new(format!(
+        SURE_FS_FORMAT_INFO!(),
+        path, fs_type
+    )));
+
+    let view = wrap_in_dialog(dialog, "AOSC OS Installer", None)
+        .button("OK", move |s| {
+            partition_view_to_next(s, config_clone.clone())
+        })
+        .button("Cancel", move |s| {
+            s.cb_sink()
+                .send(Box::new(|s| {
+                    s.pop_layer();
+                }))
+                .unwrap()
+        });
+
+    s.add_layer(view);
 }
 
 fn partition_view_to_next(s: &mut Cursive, config_clone: InstallConfig) {
@@ -884,7 +925,15 @@ fn select_swap(siv: &mut Cursive, config: InstallConfig) {
                     use_swap_clone.clone(),
                     config_clone.clone(),
                 ),
-                1 => custom_swap_size(installed_size, partition_size, s, swap_size_copy.clone(), config.clone(), is_hibernation_clone_2.clone(), use_swap.clone()),
+                1 => custom_swap_size(
+                    installed_size,
+                    partition_size,
+                    s,
+                    swap_size_copy.clone(),
+                    config.clone(),
+                    is_hibernation_clone_2.clone(),
+                    use_swap.clone(),
+                ),
                 2 => disable_swap(config.clone(), s),
                 _ => unreachable!(),
             }
@@ -905,7 +954,7 @@ fn auto_swap(
     use_swap: Arc<AtomicBool>,
     config: InstallConfig,
 ) {
-    let mut config = config.clone();
+    let mut config = config;
     let auto_size = disks::get_recommand_swap_size();
 
     match auto_size {
@@ -926,8 +975,12 @@ fn auto_swap(
 
     let swap_size = swap_size.as_ref().to_owned().into_inner();
     config.swap_size = Arc::new(swap_size);
-    config.use_swap = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(use_swap.load(Ordering::SeqCst) )});
-    config.is_hibernation = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(true) });
+    config.use_swap = Arc::new(AtomicBoolWrapper {
+        v: AtomicBool::new(use_swap.load(Ordering::SeqCst)),
+    });
+    config.is_hibernation = Arc::new(AtomicBoolWrapper {
+        v: AtomicBool::new(true),
+    });
 
     show_summary(s, config);
 }
@@ -981,7 +1034,7 @@ fn custom_swap_size(
                 show_msg(s, &format!("There is not enough space available in the system partition to create a custom swapfile! Custom swapfile size: {} GiB",  (size / 1024.0 / 1024.0 / 1024.0).round()));
                 return;
             }
-    
+
             match disks::is_enable_hibernation(size) {
                 Ok(is_h) => {
                     is_hibernation_clone.store(is_h, Ordering::SeqCst);
@@ -998,7 +1051,7 @@ fn custom_swap_size(
             config.swap_size = Arc::new(swap_size);
             config.use_swap = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(use_swap.load(Ordering::SeqCst) )});
             config.is_hibernation = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(is_hibernation_clone_3.load(Ordering::SeqCst) )});
-        
+
             show_summary(s, config);
         })
         .button("Cancel", move |s| s.cb_sink().send(Box::new(|s| {
@@ -1006,14 +1059,17 @@ fn custom_swap_size(
         }))
         .unwrap()),
     );
-
 }
 
 fn disable_swap(config: InstallConfig, s: &mut Cursive) {
     let mut config = config.clone();
     config.swap_size = Arc::new(None);
-    config.use_swap = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) });
-    config.is_hibernation = Arc::new(AtomicBoolWrapper { v: AtomicBool::new(false) });
+    config.use_swap = Arc::new(AtomicBoolWrapper {
+        v: AtomicBool::new(false),
+    });
+    config.is_hibernation = Arc::new(AtomicBoolWrapper {
+        v: AtomicBool::new(false),
+    });
 
     show_summary(s, config);
 }
