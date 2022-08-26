@@ -577,7 +577,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
         let name = name.as_ref().to_owned().into_inner();
         if !install::is_acceptable_username(&name) {
-            show_msg(s, "Username is not acceptable!");
+            show_msg(s, "Username is not valid, please refer to the criteria specified on top of the dialog.");
             return;
         }
         if password.is_empty() || password_confirm.is_empty() || name.is_empty() {

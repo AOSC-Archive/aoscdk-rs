@@ -254,7 +254,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     }
 
     if !is_acceptable_username(&ic.user) {
-        return Err(anyhow!("username {} is not acceptable!", ic.user));
+        return Err(anyhow!("username {} is not valid!", ic.user));
     }
 
     let install_config = InstallConfig {
