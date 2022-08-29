@@ -57,9 +57,11 @@ fn clear_callback(siv: &mut Cursive) {
 }
 
 pub fn add_callback(siv: &mut Cursive) {
-    siv.add_global_callback('m', |s| {
-        start_mines(s);
-    });
+    if std::env::var("DISPLAY").is_ok() {
+        siv.add_global_callback('m', |s| {
+            start_mines(s);
+        });
+    }
     siv.add_global_callback('s', |s| {
         start_sudoku(s);
     });
