@@ -173,6 +173,14 @@ fn begin_install(
             "Installer could not parse release metadata: `variant` field not found."
         ));
     }
+
+    let use_swap = config.use_swap.v.load(Ordering::SeqCst);
+    if use_swap {
+        if let Some(swap_size) = config.swap_size.as_ref() {
+            install::create_swapfile(*swap_size, use_swap, &tempdir)?;
+        }
+    }
+
     let extract_done_copy = extract_done.clone();
     let download_done_copy = download_done.clone();
     let hasher_done_copy = hasher_done.clone();
@@ -335,6 +343,7 @@ fn begin_install(
     sha256sum_work.join().unwrap();
     // genfstab to file
     install::genfstab_to_file(partition, &tempdir, Path::new("/"))?;
+    install::write_swap_entry_to_fstab()?;
     if disks::is_efi_booted() {
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
         install::genfstab_to_file(&esp_part, &tempdir, Path::new("/efi"))?;
@@ -379,12 +388,6 @@ fn begin_install(
     let locale = config.locale.as_ref().unwrap();
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
     install::set_locale(locale)?;
-    let use_swap = config.use_swap.v.load(Ordering::SeqCst);
-    if use_swap {
-        if let Some(swap_size) = config.swap_size.as_ref() {
-            install::create_swapfile(*swap_size, use_swap)?;
-        }
-    }
     // The swapfile offset reading problem is not solved yet, so hibernation is temporarily closed.
     install::disable_hibernate()?;
     install::escape_chroot(escape_vector.as_raw_fd())?;
@@ -392,6 +395,7 @@ fn begin_install(
         install::umount_root_path(&efi_path)?;
     }
     install::remove_bind_mounts(&mount_path_copy)?;
+    install::swapoff(&tempdir).ok();
     install::umount_root_path(&mount_path_copy).ok();
     sender.send(InstallProgress::Finished)?;
 

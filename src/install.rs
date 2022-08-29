@@ -402,13 +402,14 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
 }
 
 /// Create swapfile
-/// Must be used in a chroot context
-pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
+pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> {
     if !use_swap {
         return Ok(());
     }
 
-    let mut swapfile = std::fs::File::create("/swapfile")?;
+    let swap_path = tempdir.join("swapfile");
+
+    let mut swapfile = std::fs::File::create(&swap_path)?;
     nix::fcntl::fallocate(
         swapfile.as_raw_fd(),
         FallocateFlags::empty(),
@@ -417,9 +418,9 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
     )?;
     swapfile.flush()?;
 
-    std::fs::set_permissions("/swapfile", std::fs::Permissions::from_mode(0o600))?;
+    std::fs::set_permissions(&swap_path, std::fs::Permissions::from_mode(0o600))?;
 
-    let mkswap = Command::new("mkswap").arg("/swapfile").output()?;
+    let mkswap = Command::new("mkswap").arg(&swap_path).output()?;
     if !mkswap.status.success() {
         return Err(anyhow!(
             "Installer failed to create swap signature on swapfile: {}\n{}",
@@ -428,15 +429,25 @@ pub fn create_swapfile(size: f64, use_swap: bool) -> Result<()> {
         ));
     }
 
+    Command::new("swapon").arg(swap_path).output().ok();
+
+    Ok(())
+}
+
+pub fn swapoff(tempdir: &Path) -> Result<()> {
+    Command::new("swapoff")
+        .arg(tempdir.join("swapfile"))
+        .output()?;
+
+    Ok(())
+}
+
+pub fn write_swap_entry_to_fstab() -> Result<()> {
     let s = "/swapfile none swap defaults,nofail 0 0\n";
     let mut fstab = std::fs::OpenOptions::new()
         .append(true)
         .open("/etc/fstab")?;
     fstab.write_all(s.as_bytes())?;
-
-    if cfg!(feature = "is_retro") {
-        Command::new("swapon").arg("/swapfile").output().ok();
-    }
 
     Ok(())
 }
@@ -458,6 +469,7 @@ pub fn umount_all(mount_path: &Path, root_fd: i32) {
     if is_efi_booted() {
         umount_root_path(&efi_path).ok();
     }
+    swapoff(mount_path).ok();
     umount_root_path(mount_path).ok();
 }
 

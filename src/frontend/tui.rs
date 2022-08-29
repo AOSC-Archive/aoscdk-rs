@@ -186,6 +186,7 @@ fn partition_button() -> PartitionButton {
             });
         });
     }
+
     ("Open Shell", &|s, config| {
         s.set_user_data(config);
         let dump = s.dump();
