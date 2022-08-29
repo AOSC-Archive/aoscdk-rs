@@ -74,7 +74,7 @@ impl SudokuBoard {
     }
 
     fn draw_config(&self, printer: &Printer) {
-        printer.print((2, 6), "Press <Enter> to Start!");
+        printer.print((1, 6), "Press <Enter> to Start!");
     }
 
     fn draw_finish(&self, printer: &Printer) {
