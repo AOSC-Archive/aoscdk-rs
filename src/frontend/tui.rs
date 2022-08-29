@@ -487,7 +487,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     } else if fs_type == "ext4" {
                         let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), true);
                         config.partition = Some(Arc::new(new_part.clone()));
-                        continue_to_format_hdd(s, config.clone(), new_part.fs_type.expect("Must unwrap success"));
+                        continue_to_format_hdd(s, config, new_part.fs_type.expect("Must unwrap success"));
                     } else if !ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
                         .child(TextView::new(ADVANCED_METHOD_INFO)), "AOSC OS Installer", None)
@@ -1063,7 +1063,7 @@ fn custom_swap_size(
 }
 
 fn disable_swap(config: InstallConfig, s: &mut Cursive) {
-    let mut config = config.clone();
+    let mut config = config;
     config.swap_size = Arc::new(None);
     config.use_swap = Arc::new(AtomicBoolWrapper {
         v: AtomicBool::new(false),
