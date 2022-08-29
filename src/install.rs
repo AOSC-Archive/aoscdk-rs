@@ -442,6 +442,7 @@ pub fn swapoff(tempdir: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Must be used in a chroot context
 pub fn write_swap_entry_to_fstab() -> Result<()> {
     let s = "/swapfile none swap defaults,nofail 0 0\n";
     let mut fstab = std::fs::OpenOptions::new()

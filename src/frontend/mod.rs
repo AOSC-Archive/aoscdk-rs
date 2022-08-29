@@ -343,7 +343,6 @@ fn begin_install(
     sha256sum_work.join().unwrap();
     // genfstab to file
     install::genfstab_to_file(partition, &tempdir, Path::new("/"))?;
-    install::write_swap_entry_to_fstab()?;
     if disks::is_efi_booted() {
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
         install::genfstab_to_file(&esp_part, &tempdir, Path::new("/efi"))?;
@@ -378,6 +377,7 @@ fn begin_install(
         "Step 8 of 8: Finalising installation ...".to_string(),
         fake_counter,
     ))?;
+    install::write_swap_entry_to_fstab()?;
     install::set_zoneinfo(&config.timezone.unwrap())?;
     install::set_hwclock_tc(match config.tc.unwrap().as_str() {
         "UTC" => true,
