@@ -401,7 +401,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     Ok(())
 }
 
-pub fn prepare_umount() -> Result<()> {
+pub fn prepare_try_umount() -> Result<()> {
     let mut mounts = std::fs::File::open("/proc/mounts")?;
     let mut buf = Vec::new();
     mounts.read_to_end(&mut buf)?;
@@ -415,7 +415,7 @@ pub fn prepare_umount() -> Result<()> {
         .filter(|(_, mount_path)| mount_path.starts_with("/tmp/.tmp"));
 
     for (_, mount_path) in dk_mounts {
-        umount_root_path(Path::new(mount_path))?;
+        umount_root_path(Path::new(mount_path)).ok();
     }
 
     Ok(())

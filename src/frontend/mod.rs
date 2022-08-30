@@ -133,7 +133,7 @@ fn begin_install(
     config: InstallConfig,
     tempdir: PathBuf,
 ) -> Result<()> {
-    install::prepare_umount()?;
+    install::prepare_try_umount()?;
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
