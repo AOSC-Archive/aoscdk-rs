@@ -5,7 +5,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    thread,
+    thread, time::Duration,
 };
 
 use anyhow::{anyhow, Result};
@@ -289,7 +289,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
     let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
-    bar.enable_steady_tick(50);
+    bar.enable_steady_tick(Duration::from_millis(50));
 
     loop {
         if !running.load(Ordering::SeqCst) {

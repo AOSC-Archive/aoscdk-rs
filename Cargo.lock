@@ -66,7 +66,7 @@ dependencies = [
  "lazy_static",
  "libparted",
  "libparted-sys",
- "nix 0.24.2",
+ "nix",
  "nom 7.1.1",
  "number_prefix",
  "rand 0.8.5",
@@ -319,6 +319,7 @@ dependencies = [
  "libc",
  "once_cell",
  "terminal_size",
+ "unicode-width",
  "winapi",
 ]
 
@@ -444,15 +445,15 @@ version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d91974fbbe88ec1df0c24a4f00f99583667a7e2e6272b2b92d294d81e462173"
 dependencies = [
- "nix 0.25.0",
+ "nix",
  "winapi",
 ]
 
 [[package]]
 name = "cursive"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfaeae1b6ebac028126197b63a4df82d70833ea724f279e236eaf94d28edcd9c"
+checksum = "f3dc950f7cbc2aeb48ba253623fcd21357b15170a0e7c5f6433081d95808b7fd"
 dependencies = [
  "ahash",
  "cfg-if",
@@ -1053,14 +1054,13 @@ dependencies = [
 
 [[package]]
 name = "indicatif"
-version = "0.16.2"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d207dc617c7a380ab07ff572a6e52fa202a2a8f355860ac9c38e23f8196be1b"
+checksum = "fcc42b206e70d86ec03285b123e65a5458c92027d1fb2ae3555878b8113b3ddf"
 dependencies = [
  "console",
- "lazy_static",
  "number_prefix",
- "regex",
+ "unicode-width",
 ]
 
 [[package]]
@@ -1259,18 +1259,6 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.24.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "195cdbc1741b8134346d515b3a56a1c94b0912758009cfd53f99ea0f57b065fc"
-dependencies = [
- "bitflags",
- "cfg-if",
- "libc",
- "memoffset",
-]
-
-[[package]]
-name = "nix"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e322c04a9e3440c327fca7b6c8a63e6890a32fa2ad689db972425f07e0d22abb"
@@ -1279,6 +1267,8 @@ dependencies = [
  "bitflags",
  "cfg-if",
  "libc",
+ "memoffset",
+ "pin-utils",
 ]
 
 [[package]]
@@ -2129,9 +2119,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.23.13"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3977ec2e0520829be45c8a2df70db2bf364714d8a748316a10c3c35d4d2b01c9"
+checksum = "e08068324641dc7a50f3aa753e730594619ed9c5ba037b1b3920cb683e1a80b1"
 dependencies = [
  "cfg-if",
  "core-foundation-sys",
