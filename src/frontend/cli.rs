@@ -5,7 +5,8 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    thread, time::Duration,
+    thread,
+    time::Duration,
 };
 
 use anyhow::{anyhow, Result};

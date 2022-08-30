@@ -133,6 +133,7 @@ fn begin_install(
     config: InstallConfig,
     tempdir: PathBuf,
 ) -> Result<()> {
+    install::prepare_umount()?;
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
@@ -149,6 +150,7 @@ fn begin_install(
 
     let partition = &config.partition.unwrap();
     disks::format_partition(partition)?;
+
     let mount_path = install::auto_mount_root_path(&tempdir, partition)?;
     let mount_path_copy = mount_path.clone();
     let mut efi_path = mount_path.clone();

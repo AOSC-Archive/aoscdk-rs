@@ -14,7 +14,7 @@ use std::{fs::File, path::Path};
 
 use crate::disks::{fstab_entries, is_efi_booted, Partition};
 use crate::network;
-use crate::parser::{list_zoneinfo, locale_names};
+use crate::parser::{list_mounts, list_zoneinfo, locale_names};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
 const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
@@ -396,6 +396,27 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             "Installer failed to generate GRUB menu: {}",
             String::from_utf8_lossy(&process.stderr)
         ));
+    }
+
+    Ok(())
+}
+
+pub fn prepare_umount() -> Result<()> {
+    let mut mounts = std::fs::File::open("/proc/mounts")?;
+    let mut buf = Vec::new();
+    mounts.read_to_end(&mut buf)?;
+
+    let mounts = list_mounts(&buf)
+        .map_err(|e| anyhow!("Failed to get mounts, {}", e))?
+        .1;
+
+    let dk_mounts = mounts
+        .iter()
+        .filter(|(_, mount_path)| mount_path.starts_with("/tmp/.tmp"))
+        .collect::<Vec<_>>();
+
+    for (_, mount_path) in dk_mounts {
+        umount_root_path(Path::new(mount_path))?;
     }
 
     Ok(())
