@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 
 use disk_types::FileSystem;
 use fstab_generate::BlockInfo;
-use libparted::DiskType;
 use libparted::IsZero;
 use serde::{Deserialize, Serialize};
 use std::ffi::CStr;
@@ -181,44 +180,6 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
     Err(anyhow!(
         "Installer does support the specified partition map for your device."
     ))
-}
-
-#[cfg(not(target_arch = "powerpc64"))]
-pub fn new_partition_table() -> Result<()> {
-    let t = if is_efi_booted() { "gpt" } else { "msdos" };
-    for mut i in libparted::Device::devices(true) {
-        if libparted::Disk::new(&mut i).is_err() {
-            let disk = libparted::Disk::new_fresh(
-                &mut i,
-                DiskType::get(t).ok_or_else(|| anyhow!("Installer does support the specified partition map for your device (supported partition maps: GPT (for EFI systems) and MBR/MS-DOS (for BIOS systems)."))?,
-            );
-            if let Ok(mut disk) = disk {
-                disk.commit_to_dev().ok();
-            }
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(target_arch = "powerpc64")]
-pub fn new_partition_table() -> Result<()> {
-    use crate::network;
-
-    let arch_name = network::get_arch_name();
-    for mut i in libparted::Device::devices(true) {
-        if libparted::Disk::new(&mut i).is_err() && arch_name == Some("ppc64el") {
-            let disk = libparted::Disk::new_fresh(
-                &mut i,
-                DiskType::get("gpt").ok_or_else(|| anyhow!("Installer does support the specified partition map for your device (supported partition map: GPT)."))?,
-            );
-            if let Ok(mut disk) = disk {
-                disk.commit_to_dev().ok();
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg(not(target_arch = "powerpc64"))]

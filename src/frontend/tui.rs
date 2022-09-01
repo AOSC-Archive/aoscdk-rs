@@ -391,10 +391,6 @@ fn select_mirrors_view(
 }
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig) {
-    if let Err(e) = disks::new_partition_table() {
-        show_error(siv, &e.to_string());
-        return;
-    }
     let partitions = show_fetch_progress!(siv, "Probing disks ...", { disks::list_partitions() });
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
