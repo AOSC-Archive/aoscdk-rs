@@ -459,7 +459,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     if fs_type != "ext4" && ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
                         .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), &fs_type))), "AOSC OS Installer", None)
-                        .button("Yes", move |s| {
+                        .button(format!("Use {}", fs_type), move |s| {
                             let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
                             let mut config_clone = config_copy.clone();
                             config_clone.partition = Some(Arc::new(new_part.clone()));
