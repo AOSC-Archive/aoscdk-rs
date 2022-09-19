@@ -12,7 +12,9 @@ use std::{
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
+use log::{error, info};
 use tempfile::TempDir;
+use time::{format_description, OffsetDateTime};
 
 use crate::{
     disks::{self, Partition},
@@ -241,7 +243,34 @@ fn get_swap(
     Ok(result)
 }
 
+fn setup_logger() -> Result<()> {
+    let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
+
+    let tempfile = tempfile::Builder::new().prefix("dklog").tempfile()?;
+    let path = tempfile.path();
+
+    fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                now,
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Info)
+        .chain(fern::log_file(path)?)
+        .apply()?;
+
+    info!("Using AOSC Deplotkit CLI mode");
+
+    Ok(())
+}
+
 fn start_install(ic: InstallCommand) -> Result<()> {
+    setup_logger()?;
+
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     let variant = get_variant(&ic.tarball)?;
@@ -308,6 +337,8 @@ fn start_install(ic: InstallCommand) -> Result<()> {
             }
         } else {
             let err = install_thread.join().map_err(|_| anyhow!("Installer has encountered an unexpected error. Please restart your installation environment."))?.unwrap_err();
+
+            error!("{}", err);
             umount_all(&tempdir_clone_2, root_fd);
             return Err(err);
         }

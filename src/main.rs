@@ -21,6 +21,7 @@ fn main() {
         eprintln!("Installer failed to obtain the instance lock: {}", e);
         std::process::exit(1);
     }
+
     if let Err(e) = execute() {
         eprintln!("{}", e);
         remove_lock().ok();
