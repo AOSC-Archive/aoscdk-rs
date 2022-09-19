@@ -1180,7 +1180,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
-fn setup_logger() -> Result<()> {
+fn setup_logger() -> Result<PathBuf> {
     let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
 
     let tempfile = tempfile::Builder::new().prefix("dklog").tempfile()?;
@@ -1203,11 +1203,11 @@ fn setup_logger() -> Result<()> {
 
     info!("Using AOSC Deplotkit TUI mode");
 
-    Ok(())
+    Ok(path.to_path_buf())
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
-    setup_logger().expect("Installer could not set logger");
+    let logger = setup_logger().expect("Installer could not set logger");
 
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
@@ -1253,7 +1253,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let tempdir_copy_2 = tempdir.clone();
     let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
         .expect("Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
-    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
+    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, logger));
     thread::spawn(move || {
         let user_exit = user_interrup_rx.recv();
         if let Ok(user_exit) = user_exit {
