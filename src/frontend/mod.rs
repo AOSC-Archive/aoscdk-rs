@@ -37,8 +37,7 @@ const STEP4: &str = "Step 4 of 8: Unpacking system release ...";
 const STEP5: &str = "Step 5 of 8: Generating initramfs (initial RAM filesystem) ...";
 const STEP6: &str = "Step 6 of 8: Installing and configuring GRUB bootloader ...";
 const STEP7: &str = "Step 7 of 8: Generating OpenSSH host keys ...";
-const STEP8: &str = "Step 8 of 8: Finalising installation ..."; 
-
+const STEP8: &str = "Step 8 of 8: Finalising installation ...";
 
 pub(crate) enum InstallProgress {
     Pending(String, usize),
@@ -143,6 +142,7 @@ fn begin_install(
     sender: Sender<InstallProgress>,
     config: InstallConfig,
     tempdir: PathBuf,
+    logfile: PathBuf,
 ) -> Result<()> {
     install::prepare_try_umount()?;
     let refresh_interval = std::time::Duration::from_millis(30);
@@ -155,10 +155,7 @@ fn begin_install(
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let hasher_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
-    sender.send(InstallProgress::Pending(
-        STEP1.to_string(),
-        0,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP1.to_string(), 0))?;
     info!("{}", STEP1);
 
     let partition = &config.partition.unwrap();
@@ -227,7 +224,7 @@ fn begin_install(
                 info!("tarball file: {:?} is created", tarball_file);
 
                 file
-            },
+            }
             Err(e) => {
                 send_error!(error_channel_tx_copy, e);
             }
@@ -253,7 +250,7 @@ fn begin_install(
                     let e = anyhow!("Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
                     send_error!(error_channel_tx_copy, e);
                 }
-                
+
                 info!("Starting download tarball_file: {:?}", tarball_file);
                 let mut tarball_size = 0;
                 loop {
@@ -308,7 +305,7 @@ fn begin_install(
             let e = anyhow!("Installer failed to unpack system release:\n\n{}", e);
             send_error!(error_channel_tx_copy, e);
         }
-    
+
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
 
         info!("Trying remove tarball file: {:?}", tarball_file);
@@ -345,10 +342,7 @@ fn begin_install(
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
-        sender.send(InstallProgress::Pending(
-            STEP2.to_string(),
-            count,
-        ))?;
+        sender.send(InstallProgress::Pending(STEP2.to_string(), count))?;
         std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;
@@ -358,10 +352,7 @@ fn begin_install(
 
     info!("{}", STEP3);
     loop {
-        sender.send(InstallProgress::Pending(
-            STEP3.to_string(),
-            fake_counter,
-        ))?;
+        sender.send(InstallProgress::Pending(STEP3.to_string(), fake_counter))?;
         std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
             let final_hash = hex::encode(hasher.finalize());
@@ -384,10 +375,7 @@ fn begin_install(
     loop {
         let tarball_unpack_size = counter.get() as f64;
         let count = (tarball_unpack_size / file_size * 100.0) as usize;
-        sender.send(InstallProgress::Pending(
-            STEP4.to_string(),
-            count,
-        ))?;
+        sender.send(InstallProgress::Pending(STEP4.to_string(), count))?;
         std::thread::sleep(refresh_interval);
         if extract_done.load(Ordering::SeqCst) {
             break;
@@ -409,10 +397,7 @@ fn begin_install(
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
 
-    sender.send(InstallProgress::Pending(
-        STEP5.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP5.to_string(), fake_counter))?;
     info!("{}", STEP5);
 
     info!("Chroot to installed system ...");
@@ -423,10 +408,7 @@ fn begin_install(
     install::execute_dracut()?;
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(
-        STEP6.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP6.to_string(), fake_counter))?;
     info!("{}", STEP6);
 
     if disks::is_efi_booted() {
@@ -438,10 +420,7 @@ fn begin_install(
     };
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(
-        STEP7.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP7.to_string(), fake_counter))?;
     info!("{}", STEP7);
 
     info!("Generating SSH key ...");
@@ -449,10 +428,7 @@ fn begin_install(
 
     info!("{}", STEP8);
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(
-        STEP8.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP8.to_string(), fake_counter))?;
 
     info!("Generating swapfile entry to fstab");
     install::write_swap_entry_to_fstab()?;
@@ -479,7 +455,7 @@ fn begin_install(
     let locale = config.locale.as_ref().unwrap();
     info!("Setting locale as {}", locale);
     install::set_locale(locale)?;
-    
+
     info!("The swapfile offset reading problem is not solved yet, so hibernation is temporarily closed.");
     install::disable_hibernate()?;
 
@@ -490,6 +466,9 @@ fn begin_install(
         info!("Unmounting EFI partition ...");
         install::umount_root_path(&efi_path)?;
     }
+
+    info!("Copy log file to main partition");
+    std::fs::copy(logfile, tempdir.join("var").join("log"))?;
 
     info!("Removing bind mounts ...");
     install::remove_bind_mounts(&mount_path_copy)?;
@@ -503,37 +482,4 @@ fn begin_install(
     sender.send(InstallProgress::Finished)?;
 
     Ok(())
-}
-
-#[cfg(all(not(feature = "is_retro"), target_arch = "x86_64"))]
-#[test]
-fn test_download_amd64() {
-    use tempfile::TempDir;
-    let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-amd64/base/aosc-os_base_20210602_amd64.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC"}"#;
-    let config = serde_json::from_str(json).unwrap();
-    let (tx, _rx) = std::sync::mpsc::channel();
-    let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir).is_ok());
-}
-
-#[test]
-fn test_404() {
-    use tempfile::TempDir;
-    let json = r#"{"variant":{"name":"Base","size":821730832,"install_size":4157483520,"date":"20210602","sha256sum":"b5a5b9d889888a0e4f16b9f299b8a820ae2c8595aa363eb1e797d32ed0e957ed","url":"os-i486/base/aosc-os_base_20200620.1_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"","continent":"Asia","city":"Shanghai","tc":"UTC","use_swap":false,"swap_size":null,"is_hibernation":false}"#;
-    let config = serde_json::from_str(json).unwrap();
-    let (tx, _rx) = std::sync::mpsc::channel();
-    let tempdir = TempDir::new().unwrap().into_path();
-    assert!(begin_install(tx, config, tempdir).is_err());
-}
-
-#[cfg(all(feature = "is_retro", target_arch = "x86"))]
-#[test]
-fn test_download_i486() {
-    use tempfile::TempDir;
-    let json = r#"{"variant":{"name":"Base","size":97613332,"install_size":448060928,"date":"20220128","sha256sum":"2b691be7f14c4948fac7e1533bd5a19e78ee72640f666b64f2c1fae2216ab708","url":"os-i486/base/aosc-os_base_20220128_i486.tar.xz"},"partition":{"path":"/dev/loop0p1","parent_path":"/dev/loop0","fs_type":"ext4","size":3145728},"mirror":{"name":"Beijing Foreign Studies University","name-tr":"bfsu-name","loc":"China","loc-tr":"bfsu-loc","url":"https://mirrors.bfsu.edu.cn/anthon/aosc-os/"},"user":"test","password":"test","hostname":"test","locale":"C.UTF-8","continent":"Asia","city":"Shanghai","tc":"UTC","use_swap":false,"swap_size":null,"is_hibernation":false}}"#;
-    let config = serde_json::from_str(json).unwrap();
-    let (tx, _rx) = std::sync::mpsc::channel();
-    let tempdir = TempDir::new().unwrap().into_path();
-    let (_tx2, rx2) = std::sync::mpsc::channel();
-    assert!(begin_install(tx, config, tempdir, rx2).is_ok());
 }

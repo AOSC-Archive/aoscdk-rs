@@ -243,7 +243,7 @@ fn get_swap(
     Ok(result)
 }
 
-fn setup_logger() -> Result<()> {
+fn setup_logger() -> Result<PathBuf> {
     let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
 
     let tempfile = tempfile::Builder::new().prefix("dklog").tempfile()?;
@@ -265,11 +265,11 @@ fn setup_logger() -> Result<()> {
 
     info!("Using AOSC Deplotkit CLI mode");
 
-    Ok(())
+    Ok(path.to_path_buf())
 }
 
 fn start_install(ic: InstallCommand) -> Result<()> {
-    setup_logger()?;
+    let logfile = setup_logger()?;
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -317,7 +317,8 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         umount_all(&tempdir, root_fd);
         r.store(false, Ordering::SeqCst);
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
-    let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
+
+    let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone, logfile));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(Duration::from_millis(50));
 
