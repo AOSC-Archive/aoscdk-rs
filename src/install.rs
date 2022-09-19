@@ -6,7 +6,8 @@ use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
-use std::io::prelude::*;
+use std::fmt::Write as FmtWrite;
+use std::io::{prelude::*, Write};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::prelude::{OsStrExt, PermissionsExt};
 use std::path::PathBuf;
@@ -413,10 +414,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let mut command = Command::new("grub-install");
     let mut s = String::new();
     let cmd = if let Some(mbr_dev) = mbr_dev {
-        s.push_str(&format!(
-            "grub-install --target=i386-pc {}",
-            mbr_dev.display()
-        ));
+        write!(s, "grub-install --target=i386-pc {}", mbr_dev.display())?;
 
         command.arg("--target=i386-pc").arg(mbr_dev)
     } else {
@@ -430,7 +428,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             _ => return Ok(()),
         };
         let efi = if is_efi { "--efi-directory=/efi" } else { "" };
-        s.push_str(&format!("gruib-install {} --bootloader-id=AOSC OS", target));
+        write!(s, "gruib-install {} --bootloader-id=AOSC OS", target)?;
 
         command.arg(target).arg("--bootloader-id=AOSC OS").arg(efi)
     };
