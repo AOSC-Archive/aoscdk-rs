@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use log::info;
 use nix::dir::Dir;
 use nix::fcntl::{FallocateFlags, OFlag};
 use nix::mount;
@@ -22,6 +23,22 @@ const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
 const SYSTEM_ZONEINFO1970_PATH: &str = "/usr/share/zoneinfo/zone1970.tab";
 const BUNDLED_ZONEINFO_LIST: &[u8] = include_bytes!("../res/zone1970.tab");
 
+fn running_info(s: &str) {
+    info!("Running {}", s);
+}
+
+fn run_successfully_info(s: &str) {
+    info!("Run {} Successfully!", s);
+}
+
+fn no_need_to_run_info(s: &str, str_is_retro: bool) {
+    if str_is_retro {
+        info!("Retro system no need to run {}", s);
+    } else {
+        info!("Non retro system no need to run {}", s);
+    }
+}
+
 fn read_system_locale_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
     let mut data: Vec<u8> = Vec::new();
@@ -33,11 +50,7 @@ fn read_system_locale_list() -> Result<Vec<u8>> {
 
 /// Get the list of available locales
 pub fn get_locale_list() -> Result<Vec<String>> {
-    let data = if !cfg!(feature = "is_retro") {
-        read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec())
-    } else {
-        BUNDLED_LOCALE_GEN.to_vec()
-    };
+    let data = read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec());
     let names = locale_names(&data)
         .map_err(|_| anyhow!("Installer failed to gather available locales."))?;
     let names = names.1.into_iter().map(|x| x.to_string()).collect();
@@ -214,7 +227,10 @@ pub fn dive_into_guest(root: &Path) -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(not(feature = "is_retro"))]
 pub fn execute_dracut() -> Result<()> {
-    let output = Command::new("/usr/bin/update-initramfs").output()?;
+    let cmd = "/usr/bin/update-initramfs";
+    running_info(cmd);
+    let output = Command::new(cmd).output()?;
+
     if !output.status.success() {
         return Err(anyhow!(
             "Installer failed to execute dracut: \n{}\n{}",
@@ -223,6 +239,8 @@ pub fn execute_dracut() -> Result<()> {
         ));
     }
 
+    run_successfully_info(cmd);
+
     Ok(())
 }
 
@@ -230,6 +248,8 @@ pub fn execute_dracut() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn execute_dracut() -> Result<()> {
+    no_need_to_run_info("dracut", true);
+
     Ok(())
 }
 
@@ -237,6 +257,8 @@ pub fn execute_dracut() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(not(feature = "is_retro"))]
 pub fn gen_ssh_key() -> Result<()> {
+    no_need_to_run_info("ssh-keygen", true);
+
     Ok(())
 }
 
@@ -244,7 +266,9 @@ pub fn gen_ssh_key() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn gen_ssh_key() -> Result<()> {
+    running_info("ssh-keygen");
     let output = Command::new("ssh-keygen").arg("-A").output()?;
+
     if !output.status.success() {
         return Err(anyhow!(
             "Installer failed to generate SSH host keys: \n\n{}\n{}",
@@ -252,6 +276,8 @@ pub fn gen_ssh_key() -> Result<()> {
             String::from_utf8_lossy(&output.stdout)
         ));
     }
+
+    run_successfully_info("ssh-keygen");
 
     Ok(())
 }
@@ -301,10 +327,13 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
     } else {
         false
     };
+
+    info!("Status is rtc: {}", status_is_rtc);
     if utc {
         if !status_is_rtc {
             return Ok(());
         } else {
+            running_info("hwclock -wu");
             let command = Command::new("hwclock").arg("-wu").output()?;
             if !command.status.success() {
                 return Err(anyhow!(
@@ -312,10 +341,12 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
                     String::from_utf8_lossy(&command.stderr)
                 ));
             }
+            run_successfully_info("hwclock -wu");
         }
     } else if status_is_rtc {
         return Ok(());
     } else {
+        running_info("hwclock -wl");
         let command = Command::new("hwclock").arg("-wl").output()?;
         if !command.status.success() {
             return Err(anyhow!(
@@ -323,6 +354,8 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
                 String::from_utf8_lossy(&command.stderr)
             ));
         }
+
+        run_successfully_info("hwclock -wl");
     }
 
     Ok(())
@@ -331,6 +364,7 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
 pub fn add_new_user(name: &str, password: &str) -> Result<()> {
+    running_info(&format!("useradd -m -s /bin/bash {}", name));
     let command = Command::new("useradd")
         .args(&["-m", "-s", "/bin/bash", name])
         .output()?;
@@ -340,6 +374,12 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
             String::from_utf8_lossy(&command.stderr)
         ));
     }
+    run_successfully_info(&format!("useradd -m -s /bin/bash {}", name));
+
+    running_info(&format!(
+        "usermod -aG audio,cdrom,video,wheel,plugdev {}",
+        name
+    ));
     let command = Command::new("usermod")
         .args(&["-aG", "audio,cdrom,video,wheel,plugdev", name])
         .output()?;
@@ -349,6 +389,8 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
             String::from_utf8_lossy(&command.stderr)
         ));
     }
+
+    running_info("chpasswd");
     let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
 
     let mut stdin = command.stdin.ok_or_else(|| {
@@ -358,6 +400,8 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
     stdin.write_all(format!("{}:{}\n", name, password).as_bytes())?;
     stdin.flush()?;
 
+    run_successfully_info("chpasswd");
+
     Ok(())
 }
 
@@ -365,7 +409,13 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
 /// Must be used in a chroot context
 pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let mut command = Command::new("grub-install");
+    let mut s = String::new();
     let cmd = if let Some(mbr_dev) = mbr_dev {
+        s.push_str(&format!(
+            "grub-install --target=i386-pc {}",
+            mbr_dev.display()
+        ));
+
         command.arg("--target=i386-pc").arg(mbr_dev)
     } else {
         let (target, is_efi) = match network::get_arch_name() {
@@ -378,8 +428,12 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             _ => return Ok(()),
         };
         let efi = if is_efi { "--efi-directory=/efi" } else { "" };
+        s.push_str(&format!("gruib-install {} --bootloader-id=AOSC OS", target));
+
         command.arg(target).arg("--bootloader-id=AOSC OS").arg(efi)
     };
+
+    running_info(&s);
     let process = cmd.output()?;
     if !process.status.success() {
         return Err(anyhow!(
@@ -387,6 +441,9 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             String::from_utf8_lossy(&process.stderr)
         ));
     }
+    run_successfully_info(&s);
+
+    running_info("grub-mkconfig -o /boot/grub/grub.cfg");
     let process = Command::new("grub-mkconfig")
         .arg("-o")
         .arg("/boot/grub/grub.cfg")
@@ -397,6 +454,8 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             String::from_utf8_lossy(&process.stderr)
         ));
     }
+
+    run_successfully_info("grub-mkconfig -o /boot/grub/grub.cfg");
 
     Ok(())
 }
@@ -429,6 +488,7 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
 
     let swap_path = tempdir.join("swapfile");
 
+    info!("Creating swapfile");
     let mut swapfile = std::fs::File::create(&swap_path)?;
     nix::fcntl::fallocate(
         swapfile.as_raw_fd(),
@@ -438,8 +498,10 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
     )?;
     swapfile.flush()?;
 
+    info!("Set swapfile permission as 600");
     std::fs::set_permissions(&swap_path, std::fs::Permissions::from_mode(0o600))?;
 
+    running_info(&format!("mkswap {}", swap_path.display()));
     let mkswap = Command::new("mkswap").arg(&swap_path).output()?;
     if !mkswap.status.success() {
         return Err(anyhow!(
@@ -448,16 +510,20 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
             String::from_utf8_lossy(&mkswap.stdout)
         ));
     }
+    run_successfully_info(&format!("mkswap {}", swap_path.display()));
 
+    running_info(&format!("swapon {}", swap_path.display()));
     Command::new("swapon").arg(swap_path).output().ok();
 
     Ok(())
 }
 
 pub fn swapoff(tempdir: &Path) -> Result<()> {
+    running_info(&format!("swaponff {}/swapfile", tempdir.display()));
     Command::new("swapoff")
         .arg(tempdir.join("swapfile"))
         .output()?;
+    run_successfully_info(&format!("swaponff {}/swapfile", tempdir.display()));
 
     Ok(())
 }
