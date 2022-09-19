@@ -16,6 +16,7 @@ use cursive::{view::SizeConstraint, views::Button};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
+use log::info;
 use number_prefix::NumberPrefix;
 use std::{cell::RefCell, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
@@ -1238,10 +1239,11 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             match progress {
                 super::InstallProgress::Pending(msg, pct) => {
                     counter_clone.set(pct);
-                    status_text.set_content(msg);
+                    status_text.set_content(&msg);
                 }
                 super::InstallProgress::Finished => {
                     cb_sink.send(Box::new(show_finished)).unwrap();
+                    info!("Install finished");
                     return;
                 }
             }
@@ -1290,6 +1292,12 @@ fn show_finished(siv: &mut Cursive) {
 
 pub fn tui_main() {
     let mut siv = cursive::default();
+
+    cursive::logger::init();
+    log::set_max_level(log::LevelFilter::Info);
+
+    siv.add_global_callback('~', cursive::Cursive::toggle_debug_console);
+
     siv.add_layer(
         Dialog::around(TextView::new(WELCOME_TEXT))
             .title("Welcome")

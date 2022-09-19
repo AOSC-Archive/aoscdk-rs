@@ -30,6 +30,16 @@ pub use tui::tui_main;
 
 pub const DEFAULT_EMPTY_SIZE: u64 = 5 * 1024 * 1024 * 1024;
 
+const STEP1: &str = "Step 1 of 8: Formatting partitions ...";
+const STEP2: &str = "Step 2 of 8: Downloading system release ...";
+const STEP3: &str = "Step 3 of 8: Verifying system release ...";
+const STEP4: &str = "Step 4 of 8: Unpacking system release ...";
+const STEP5: &str = "Step 5 of 8: Generating initramfs (initial RAM filesystem) ...";
+const STEP6: &str = "Step 6 of 8: Installing and configuring GRUB bootloader ...";
+const STEP7: &str = "Step 7 of 8: Generating OpenSSH host keys ...";
+const STEP8: &str = "Step 8 of 8: Finalising installation ..."; 
+
+
 pub(crate) enum InstallProgress {
     Pending(String, usize),
     Finished,
@@ -144,10 +154,12 @@ fn begin_install(
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let hasher_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+
     sender.send(InstallProgress::Pending(
-        "Step 1 of 8: Formatting partitions ...".to_string(),
+        STEP1.to_string(),
         0,
     ))?;
+    info!("{}", STEP1);
 
     let partition = &config.partition.unwrap();
 
@@ -194,6 +206,7 @@ fn begin_install(
     let use_swap = config.use_swap.v.load(Ordering::SeqCst);
     if use_swap {
         if let Some(swap_size) = config.swap_size.as_ref() {
+            info!("Creating swapfile and trying swapon swapfile ...");
             install::create_swapfile(*swap_size, use_swap, &tempdir)?;
         }
     }
@@ -205,6 +218,7 @@ fn begin_install(
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
+
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -257,7 +271,6 @@ fn begin_install(
                     }
                     sha256_work_tx.send((buf, reader_size)).unwrap();
                     counter_clone.set(tarball_size);
-                    info!("Downloaded size: {}", tarball_size);
                     if tarball_size == file_size {
                         info!("Download complete");
                         download_done_copy.fetch_or(true, Ordering::SeqCst);
@@ -313,7 +326,6 @@ fn begin_install(
                 return;
             };
             let (buf, reader_size) = rx;
-            info!("Writting hasher, size: {}", reader_size);
             if let Err(e) = hasher.write_all(&buf[..reader_size]) {
                 let e = anyhow!(
                     "Installer failed to calculate checksum for system release:\n\n{}",
@@ -326,6 +338,7 @@ fn begin_install(
 
     let file_size = file_size as f64;
     // Progress update
+    info!("{}", STEP2);
     loop {
         let tarball_downloaded_size = counter.get() as f64;
         let count = (tarball_downloaded_size / file_size * 100.0) as usize;
@@ -333,7 +346,7 @@ fn begin_install(
             return Err(anyhow!(err));
         }
         sender.send(InstallProgress::Pending(
-            "Step 2 of 8: Downloading system release ...".to_string(),
+            STEP2.to_string(),
             count,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -342,9 +355,11 @@ fn begin_install(
         }
     }
     let mut fake_counter = 0;
+
+    info!("{}", STEP3);
     loop {
         sender.send(InstallProgress::Pending(
-            "Step 3 of 8: Verifying system release ...".to_string(),
+            STEP3.to_string(),
             fake_counter,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -364,11 +379,13 @@ fn begin_install(
             fake_counter = 0;
         }
     }
+
+    info!("{}", STEP4);
     loop {
         let tarball_unpack_size = counter.get() as f64;
         let count = (tarball_unpack_size / file_size * 100.0) as usize;
         sender.send(InstallProgress::Pending(
-            "Step 4 of 8: Unpacking system release ...".to_string(),
+            STEP4.to_string(),
             count,
         ))?;
         std::thread::sleep(refresh_interval);
@@ -376,65 +393,113 @@ fn begin_install(
             break;
         }
     }
+
     // GC the worker thread
     worker.join().unwrap();
     sha256sum_work.join().unwrap();
     // genfstab to file
+    info!("Generating fstab ...");
     install::genfstab_to_file(partition, &tempdir, Path::new("/"))?;
+
     if disks::is_efi_booted() {
+        info!("Generating fstab efi entry...");
         let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
         install::genfstab_to_file(&esp_part, &tempdir, Path::new("/efi"))?;
     }
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
+
     sender.send(InstallProgress::Pending(
-        "Step 5 of 8: Generating initramfs (initial RAM filesystem) ...".to_string(),
+        STEP5.to_string(),
         fake_counter,
     ))?;
+    info!("{}", STEP5);
+
+    info!("Chroot to installed system ...");
     let escape_vector = install::get_dir_fd(PathBuf::from("/"))?;
     install::dive_into_guest(&mount_path_copy)?;
+
+    info!("Running dracut ...");
     install::execute_dracut()?;
+
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
-        "Step 6 of 8: Installing and configuring GRUB bootloader ...".to_string(),
+        STEP6.to_string(),
         fake_counter,
     ))?;
+    info!("{}", STEP6);
+
     if disks::is_efi_booted() {
+        info!("Installing grub to UEFI partition ...");
         install::execute_grub_install(None)?;
     } else {
+        info!("Installing grub to MBR partition ...");
         install::execute_grub_install(Some(partition.parent_path.as_ref().unwrap()))?;
     };
+
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
-        "Step 7 of 8: Generating OpenSSH host keys ...".to_string(),
+        STEP7.to_string(),
         fake_counter,
     ))?;
+    info!("{}", STEP7);
+
+    info!("Generating SSH key ...");
     install::gen_ssh_key()?;
+
+    info!("{}", STEP8);
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(
-        "Step 8 of 8: Finalising installation ...".to_string(),
+        STEP8.to_string(),
         fake_counter,
     ))?;
+
+    info!("Generating swapfile entry to fstab");
     install::write_swap_entry_to_fstab()?;
-    install::set_zoneinfo(&config.timezone.unwrap())?;
-    install::set_hwclock_tc(match config.tc.unwrap().as_str() {
+
+    let tz = config.timezone.unwrap();
+    info!("Setting timezone as {}", &tz);
+    install::set_zoneinfo(&tz)?;
+
+    let tc = config.tc.unwrap();
+    info!("Setting hwclock (hardware clock) as {}", &tc);
+    install::set_hwclock_tc(match tc.as_str() {
         "UTC" => true,
         "RTC" => false,
         _ => true,
     })?;
-    install::set_hostname(&config.hostname.unwrap())?;
-    let locale = config.locale.as_ref().unwrap();
+
+    let hostname = config.hostname.unwrap();
+    info!("Setting hostname as {}", &hostname);
+    install::set_hostname(&hostname)?;
+
+    info!("Setting username and password ...");
     install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
+
+    let locale = config.locale.as_ref().unwrap();
+    info!("Setting locale as {}", locale);
     install::set_locale(locale)?;
-    // The swapfile offset reading problem is not solved yet, so hibernation is temporarily closed.
+    
+    info!("The swapfile offset reading problem is not solved yet, so hibernation is temporarily closed.");
     install::disable_hibernate()?;
+
+    info!("Escaping chroot ...");
     install::escape_chroot(escape_vector.as_raw_fd())?;
+
     if disks::is_efi_booted() {
+        info!("Unmounting EFI partition ...");
         install::umount_root_path(&efi_path)?;
     }
+
+    info!("Removing bind mounts ...");
     install::remove_bind_mounts(&mount_path_copy)?;
+
+    info!("Trying to swapoff ...");
     install::swapoff(&tempdir).ok();
+
+    info!("Unmounting main partition ...");
     install::umount_root_path(&mount_path_copy).ok();
+
     sender.send(InstallProgress::Finished)?;
 
     Ok(())
