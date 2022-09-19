@@ -16,7 +16,7 @@ use cursive::{view::SizeConstraint, views::Button};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
-use log::info;
+use log::{error, info};
 use number_prefix::NumberPrefix;
 use std::{cell::RefCell, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
@@ -26,6 +26,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use tempfile::TempDir;
+use time::{format_description, OffsetDateTime};
 
 use super::{
     begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
@@ -1179,7 +1180,35 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
+fn setup_logger() -> Result<()> {
+    let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
+
+    let tempfile = tempfile::Builder::new().prefix("dklog").tempfile()?;
+    let path = tempfile.path();
+
+    fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                now,
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Info)
+        .chain(fern::log_file(path)?)
+        .chain(Box::new(cursive::logger::get_logger()) as Box<dyn log::Log>)
+        .apply()?;
+
+    info!("Using AOSC Deplotkit TUI mode");
+
+    Ok(())
+}
+
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
+    setup_logger().expect("Installer could not set logger");
+
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     add_callback(siv);
@@ -1249,6 +1278,8 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }
         } else {
             let err = install_thread.join().unwrap().unwrap_err();
+            error!("{}", err);
+
             umount_all(&tempdir, root_fd);
             cb_sink
                 .send(Box::new(move |s| {
@@ -1292,9 +1323,6 @@ fn show_finished(siv: &mut Cursive) {
 
 pub fn tui_main() {
     let mut siv = cursive::default();
-
-    cursive::logger::init();
-    log::set_max_level(log::LevelFilter::Info);
 
     siv.add_global_callback('~', cursive::Cursive::toggle_debug_console);
 

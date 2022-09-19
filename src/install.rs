@@ -180,6 +180,8 @@ pub fn escape_chroot(root_fd: i32) -> Result<()> {
     chroot(".")?;
     std::env::set_current_dir("/")?; // reset cwd (on host)
 
+    info!("Escaped chroot environment");
+
     Ok(())
 }
 
@@ -551,6 +553,8 @@ pub fn disable_hibernate() -> Result<()> {
 
 /// Run umount -R
 pub fn umount_all(mount_path: &Path, root_fd: i32) {
+    info!("Cleaning up mount path ...");
+
     escape_chroot(root_fd).ok();
     let efi_path = mount_path.join("efi");
     if is_efi_booted() {
