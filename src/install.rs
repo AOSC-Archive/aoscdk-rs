@@ -430,7 +430,7 @@ pub fn log_system_info() {
             .and_then(|x| sys.os_version().map(|y| format!("{} {}", x, y)))
     );
     info!("Kernel: {:?}", sys.kernel_version());
-    info!("CPU: {:?}", sys.cpus());
+    info!("CPU: {:?}", sys.cpus().first());
     info!(
         "Memory: {:?}, Usage: {:?}",
         sys.total_memory(),
