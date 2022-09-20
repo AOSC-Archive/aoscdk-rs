@@ -18,7 +18,7 @@ use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use log::{error, info};
 use number_prefix::NumberPrefix;
-use std::{cell::RefCell, sync::Arc, thread, path::Path};
+use std::{cell::RefCell, path::Path, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
 use std::{os::unix::prelude::AsRawFd, rc::Rc};
 use std::{
@@ -141,7 +141,7 @@ type PartitionButton = (&'static str, &'static dyn Fn(&mut Cursive, InstallConfi
 
 fn show_error(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
-        Dialog::around(TextView::new(msg))
+        Dialog::around(TextView::new(msg).max_width(80))
             .title("Error")
             .button("Exit", |s| s.quit())
             .padding_lrtb(2, 2, 1, 1),
@@ -150,7 +150,7 @@ fn show_error(siv: &mut Cursive, msg: &str) {
 
 fn show_msg(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
-        Dialog::around(TextView::new(msg))
+        Dialog::around(TextView::new(msg).max_width(80))
             .title("AOSC OS Installer")
             .button("OK", |s| {
                 s.pop_layer();
@@ -1205,7 +1205,8 @@ fn setup_logger() -> Result<PathBuf> {
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
-    let logger = setup_logger().expect("Installer could not set logger");
+    let logfile = setup_logger().expect("Installer could not set logger");
+    let logfile_clone = logfile.clone();
 
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
@@ -1251,7 +1252,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let tempdir_copy_2 = tempdir.clone();
     let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
         .expect("Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
-    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, logger));
+    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, logfile));
     thread::spawn(move || {
         let user_exit = user_interrup_rx.recv();
         if let Ok(user_exit) = user_exit {
@@ -1281,7 +1282,14 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             umount_all(&tempdir, root_fd);
             cb_sink
                 .send(Box::new(move |s| {
-                    show_error(s, &err.to_string());
+                    show_error(
+                        s,
+                        &format!(
+                            "{}\n\nPress <~> to see log console.\n\nLog file is save to {}",
+                            err,
+                            logfile_clone.display()
+                        ),
+                    );
                 }))
                 .unwrap();
             return;
