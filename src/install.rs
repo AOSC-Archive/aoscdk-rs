@@ -425,7 +425,10 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
                 ("--target=powerpc-ieee1275", false)
             }
             Some("riscv64") => ("--target=riscv64-efi", true),
-            _ => return Ok(()),
+            _ => {
+                info!("This architecture does not support grub");
+                return Ok(());
+            }
         };
         let efi = if is_efi { "--efi-directory=/efi" } else { "" };
         write!(s, "grub-install {} --bootloader-id=AOSC OS {}", target, efi)?;
