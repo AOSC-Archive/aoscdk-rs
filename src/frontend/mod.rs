@@ -11,7 +11,7 @@ use std::{
     thread,
 };
 
-use crate::{disks, install, network};
+use crate::{disks, install::{self, log_system_info}, network};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
 use log::info;
@@ -144,7 +144,11 @@ fn begin_install(
     tempdir: PathBuf,
     logfile: PathBuf,
 ) -> Result<()> {
+    log_system_info();
+
+    info!("Prepare trying unmount before deploykit mount partition ...");
     install::prepare_try_umount()?;
+
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
     let counter_clone = counter.clone();
