@@ -10,6 +10,7 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use sysinfo::SystemExt;
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 pub(crate) const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
@@ -244,7 +245,7 @@ pub fn fstab_entries(
 
 pub fn get_recommand_swap_size() -> Result<f64> {
     // Get men (GiB)
-    let men = (sys_info::mem_info()?.total / 1024 / 1024) as f64;
+    let men = (sysinfo::System::new_all().total_memory() / 1024 / 1024 / 1024) as f64;
     let swap_size = if men <= 5.0 {
         1.3 * men + 0.7
     } else if men > 5.0 && men <= 32.0 {
@@ -260,7 +261,7 @@ pub fn get_recommand_swap_size() -> Result<f64> {
 
 pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     // Get men (iB)
-    let men = (sys_info::mem_info()?.total * 1024) as f64;
+    let men = sysinfo::System::new_all().total_memory() as f64;
     let recommand_size = get_recommand_swap_size()?;
     let no_hibernation_size = recommand_size - men;
     if custom_size >= no_hibernation_size && custom_size < recommand_size {
