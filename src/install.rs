@@ -428,7 +428,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             _ => return Ok(()),
         };
         let efi = if is_efi { "--efi-directory=/efi" } else { "" };
-        write!(s, "gruib-install {} --bootloader-id=AOSC OS", target)?;
+        write!(s, "grub-install {} --bootloader-id=AOSC OS", target)?;
 
         command.arg(target).arg("--bootloader-id=AOSC OS").arg(efi)
     };
