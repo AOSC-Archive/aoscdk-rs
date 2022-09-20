@@ -26,7 +26,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use tempfile::TempDir;
-use time::{format_description, OffsetDateTime};
+use time::OffsetDateTime;
 
 use super::{
     begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
@@ -1181,11 +1181,12 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn setup_logger() -> Result<PathBuf> {
-    let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
+    let now = OffsetDateTime::now_utc();
     let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
 
     fern::Dispatch::new()
         .format(move |out, message, record| {
+            let now = OffsetDateTime::now_utc();
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 now,
@@ -1347,7 +1348,9 @@ pub fn tui_main() {
             .padding_lrtb(2, 2, 1, 1)
             .max_width(80),
     );
+
     siv.run();
+
     loop {
         let dump = siv.take_user_data::<cursive::Dump>();
         if let Some(dump) = dump {

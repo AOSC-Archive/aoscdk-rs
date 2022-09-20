@@ -11,7 +11,11 @@ use std::{
     thread,
 };
 
-use crate::{disks, install::{self, log_system_info}, network};
+use crate::{
+    disks,
+    install::{self, log_system_info},
+    network,
+};
 use anyhow::{anyhow, Result};
 use cursive::utils::{Counter, ProgressReader};
 use log::info;
@@ -485,7 +489,7 @@ fn begin_install(
     install::remove_bind_mounts(&mount_path_copy)?;
 
     info!("Trying to swapoff ...");
-    install::swapoff(&tempdir).ok();
+    install::swapoff(&tempdir);
 
     info!("Unmounting main partition ...");
     install::umount_root_path(&mount_path_copy).ok();
