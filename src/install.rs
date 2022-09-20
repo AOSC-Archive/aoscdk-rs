@@ -6,7 +6,8 @@ use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
-use std::fmt::Write as FmtWrite;
+use std::ffi::OsStr;
+use std::fmt::Debug;
 use std::io::{prelude::*, Write};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::prelude::{OsStrExt, PermissionsExt};
@@ -25,12 +26,27 @@ const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
 const SYSTEM_ZONEINFO1970_PATH: &str = "/usr/share/zoneinfo/zone1970.tab";
 const BUNDLED_ZONEINFO_LIST: &[u8] = include_bytes!("../res/zone1970.tab");
 
-fn running_info(s: &str) {
-    info!("Running {}", s);
-}
+fn run_command<I, S>(command: &str, args: I) -> Result<()>
+where
+    I: IntoIterator<Item = S> + Debug,
+    S: AsRef<OsStr>,
+{
+    let cmd_str = format!("{} {:?}", command, args);
+    info!("Running {}", cmd_str);
 
-fn run_successfully_info(s: &str) {
-    info!("Run {} Successfully!", s);
+    let cmd = Command::new(command).args(args).output()?;
+
+    if !cmd.status.success() {
+        return Err(anyhow!(
+            "Run {} failed!\n\n{}",
+            cmd_str,
+            String::from_utf8_lossy(&cmd.stderr)
+        ));
+    }
+
+    info!("Run {} Successfully!", cmd_str);
+
+    Ok(())
 }
 
 fn no_need_to_run_info(s: &str, str_is_retro: bool) {
@@ -232,18 +248,7 @@ pub fn dive_into_guest(root: &Path) -> Result<()> {
 #[cfg(not(feature = "is_retro"))]
 pub fn execute_dracut() -> Result<()> {
     let cmd = "/usr/bin/update-initramfs";
-    running_info(cmd);
-    let output = Command::new(cmd).output()?;
-
-    if !output.status.success() {
-        return Err(anyhow!(
-            "Installer failed to execute dracut: \n{}\n{}",
-            String::from_utf8_lossy(&output.stderr),
-            String::from_utf8_lossy(&output.stdout)
-        ));
-    }
-
-    run_successfully_info(cmd);
+    run_command(cmd, &[] as &[&str])?;
 
     Ok(())
 }
@@ -270,18 +275,7 @@ pub fn gen_ssh_key() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(feature = "is_retro")]
 pub fn gen_ssh_key() -> Result<()> {
-    running_info("ssh-keygen");
-    let output = Command::new("ssh-keygen").arg("-A").output()?;
-
-    if !output.status.success() {
-        return Err(anyhow!(
-            "Installer failed to generate SSH host keys: \n\n{}\n{}",
-            String::from_utf8_lossy(&output.stderr),
-            String::from_utf8_lossy(&output.stdout)
-        ));
-    }
-
-    run_successfully_info("ssh-keygen");
+    run_command("ssh-keygen", &["-A"])?;
 
     Ok(())
 }
@@ -337,29 +331,12 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
         if !status_is_rtc {
             return Ok(());
         } else {
-            running_info("hwclock -wu");
-            let command = Command::new("hwclock").arg("-wu").output()?;
-            if !command.status.success() {
-                return Err(anyhow!(
-                    "Installer failed to set local time as UTC: {}",
-                    String::from_utf8_lossy(&command.stderr)
-                ));
-            }
-            run_successfully_info("hwclock -wu");
+            run_command("hwclock", &["-wu"])?;
         }
     } else if status_is_rtc {
         return Ok(());
     } else {
-        running_info("hwclock -wl");
-        let command = Command::new("hwclock").arg("-wl").output()?;
-        if !command.status.success() {
-            return Err(anyhow!(
-                "Installer failed to set local time as RTC: {}",
-                String::from_utf8_lossy(&command.stderr)
-            ));
-        }
-
-        run_successfully_info("hwclock -wl");
+        run_command("hwclock", &["-wl"])?;
     }
 
     Ok(())
@@ -368,33 +345,10 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
 pub fn add_new_user(name: &str, password: &str) -> Result<()> {
-    running_info(&format!("useradd -m -s /bin/bash {}", name));
-    let command = Command::new("useradd")
-        .args(&["-m", "-s", "/bin/bash", name])
-        .output()?;
-    if !command.status.success() {
-        return Err(anyhow!(
-            "Installer failed to create the default user: {}",
-            String::from_utf8_lossy(&command.stderr)
-        ));
-    }
-    run_successfully_info(&format!("useradd -m -s /bin/bash {}", name));
+    run_command("useradd", &["-m", "-s", "/bin/bash", name])?;
+    run_command("usermod", &["-aG", "audio,cdrom,video,wheel,plugdev", name])?;
 
-    running_info(&format!(
-        "usermod -aG audio,cdrom,video,wheel,plugdev {}",
-        name
-    ));
-    let command = Command::new("usermod")
-        .args(&["-aG", "audio,cdrom,video,wheel,plugdev", name])
-        .output()?;
-    if !command.status.success() {
-        return Err(anyhow!(
-            "Installer failed to configure the default user: {}",
-            String::from_utf8_lossy(&command.stderr)
-        ));
-    }
-
-    running_info("chpasswd");
+    info!("Running chpasswd ...");
     let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
 
     let mut stdin = command.stdin.ok_or_else(|| {
@@ -403,8 +357,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
 
     stdin.write_all(format!("{}:{}\n", name, password).as_bytes())?;
     stdin.flush()?;
-
-    run_successfully_info("chpasswd");
+    info!("Running chpasswd successfully");
 
     Ok(())
 }
@@ -412,12 +365,15 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
 /// Runs grub-install and grub-mkconfig
 /// Must be used in a chroot context
 pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
-    let mut command = Command::new("grub-install");
-    let mut s = String::new();
-    let cmd = if let Some(mbr_dev) = mbr_dev {
-        write!(s, "grub-install --target=i386-pc {}", mbr_dev.display())?;
+    let mut grub_install_args = vec![];
 
-        command.arg("--target=i386-pc").arg(mbr_dev)
+    if let Some(mbr_dev) = mbr_dev {
+        grub_install_args.push("--target=i386-pc");
+        grub_install_args.push(
+            mbr_dev
+                .to_str()
+                .ok_or_else(|| anyhow!("Can not mbr_dev path to str!"))?,
+        );
     } else {
         let (target, is_efi) = match network::get_arch_name() {
             Some("amd64") => ("--target=x86_64-efi", true),
@@ -431,35 +387,15 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
                 return Ok(());
             }
         };
-        let efi = if is_efi { "--efi-directory=/efi" } else { "" };
-        write!(s, "grub-install {} --bootloader-id=AOSC OS {}", target, efi)?;
-
-        command.arg(target).arg("--bootloader-id=AOSC OS").arg(efi)
+        grub_install_args.push("--bootloader-id=AOSC OS");
+        grub_install_args.push(target);
+        if is_efi {
+            grub_install_args.push("--efi-directory=/efi");
+        }
     };
 
-    running_info(&s);
-    let process = cmd.output()?;
-    if !process.status.success() {
-        return Err(anyhow!(
-            "Installer failed to install GRUB: {}",
-            String::from_utf8_lossy(&process.stderr)
-        ));
-    }
-    run_successfully_info(&s);
-
-    running_info("grub-mkconfig -o /boot/grub/grub.cfg");
-    let process = Command::new("grub-mkconfig")
-        .arg("-o")
-        .arg("/boot/grub/grub.cfg")
-        .output()?;
-    if !process.status.success() {
-        return Err(anyhow!(
-            "Installer failed to generate GRUB menu: {}",
-            String::from_utf8_lossy(&process.stderr)
-        ));
-    }
-
-    run_successfully_info("grub-mkconfig -o /boot/grub/grub.cfg");
+    run_command("grub-install", &grub_install_args)?;
+    run_command("grub-mkconfig", &["-o", "/boot/grub/grub.cfg"])?;
 
     Ok(())
 }
@@ -491,11 +427,15 @@ pub fn log_system_info() {
     info!(
         "OS: {:?}",
         sys.name()
-            .and_then(|s| sys.os_version().and_then(|y| Some(format!("{} {}", s, y))))
+            .and_then(|x| sys.os_version().map(|y| format!("{} {}", x, y)))
     );
     info!("Kernel: {:?}", sys.kernel_version());
     info!("CPU: {:?}", sys.cpus());
-    info!("Memory: {:?}, Usage: {:?}", sys.total_memory(), sys.used_memory());
+    info!(
+        "Memory: {:?}, Usage: {:?}",
+        sys.total_memory(),
+        sys.used_memory()
+    );
 }
 
 /// Create swapfile
@@ -519,31 +459,14 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
     info!("Set swapfile permission as 600");
     std::fs::set_permissions(&swap_path, std::fs::Permissions::from_mode(0o600))?;
 
-    running_info(&format!("mkswap {}", swap_path.display()));
-    let mkswap = Command::new("mkswap").arg(&swap_path).output()?;
-    if !mkswap.status.success() {
-        return Err(anyhow!(
-            "Installer failed to create swap signature on swapfile: {}\n{}",
-            String::from_utf8_lossy(&mkswap.stderr),
-            String::from_utf8_lossy(&mkswap.stdout)
-        ));
-    }
-    run_successfully_info(&format!("mkswap {}", swap_path.display()));
-
-    running_info(&format!("swapon {}", swap_path.display()));
-    Command::new("swapon").arg(swap_path).output().ok();
+    run_command("mkswap", &[&swap_path])?;
+    run_command("swapon", &[swap_path]).ok();
 
     Ok(())
 }
 
-pub fn swapoff(tempdir: &Path) -> Result<()> {
-    running_info(&format!("swaponff {}/swapfile", tempdir.display()));
-    Command::new("swapoff")
-        .arg(tempdir.join("swapfile"))
-        .output()?;
-    run_successfully_info(&format!("swaponff {}/swapfile", tempdir.display()));
-
-    Ok(())
+pub fn swapoff(tempdir: &Path) {
+    run_command("swapoff", &[tempdir.join("swapfile")]).ok();
 }
 
 /// Must be used in a chroot context
@@ -576,7 +499,7 @@ pub fn umount_all(mount_path: &Path, root_fd: i32) {
     if is_efi_booted() {
         umount_root_path(&efi_path).ok();
     }
-    swapoff(mount_path).ok();
+    swapoff(mount_path);
     umount_root_path(mount_path).ok();
 }
 
@@ -633,7 +556,7 @@ fn test_hostname_validation() {
 #[test]
 fn test_username_validation() {
     assert_eq!(is_acceptable_username("foo"), true);
-    assert_eq!(is_acceptable_username("老白"), true);
+    assert_eq!(is_acceptable_username("老白"), false);
     assert_eq!(is_acceptable_username("BAIMINGCONG"), false);
     assert_eq!(is_acceptable_username("root"), false);
     assert_eq!(is_acceptable_username("/root"), false);

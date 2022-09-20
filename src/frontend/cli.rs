@@ -14,7 +14,7 @@ use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 use log::{error, info};
 use tempfile::TempDir;
-use time::{format_description, OffsetDateTime};
+use time::OffsetDateTime;
 
 use crate::{
     disks::{self, Partition},
@@ -244,11 +244,12 @@ fn get_swap(
 }
 
 fn setup_logger() -> Result<PathBuf> {
-    let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
+    let now = OffsetDateTime::now_utc();
     let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
 
     fern::Dispatch::new()
         .format(move |out, message, record| {
+            let now = OffsetDateTime::now_utc();
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 now,
