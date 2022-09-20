@@ -312,6 +312,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let tempdir_clone = tempdir.clone();
     let tempdir_clone_2 = tempdir.clone();
     ctrlc::set_handler(move || {
+        info!("User request to exit the installer");
         umount_all(&tempdir, root_fd);
         r.store(false, Ordering::SeqCst);
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
