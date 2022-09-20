@@ -245,9 +245,7 @@ fn get_swap(
 
 fn setup_logger() -> Result<PathBuf> {
     let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
-
-    let tempfile = tempfile::Builder::new().prefix("dklog").tempfile()?;
-    let path = tempfile.path();
+    let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
 
     fern::Dispatch::new()
         .format(move |out, message, record| {
@@ -260,12 +258,12 @@ fn setup_logger() -> Result<PathBuf> {
             ))
         })
         .level(log::LevelFilter::Info)
-        .chain(fern::log_file(path)?)
+        .chain(fern::log_file(&path)?)
         .apply()?;
 
     info!("Using AOSC Deplotkit CLI mode");
 
-    Ok(path.to_path_buf())
+    Ok(path)
 }
 
 fn start_install(ic: InstallCommand) -> Result<()> {
@@ -318,7 +316,8 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         r.store(false, Ordering::SeqCst);
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
 
-    let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone, logfile));
+    let install_thread =
+        thread::spawn(move || begin_install(tx, install_config, tempdir_clone, logfile));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(Duration::from_millis(50));
 
