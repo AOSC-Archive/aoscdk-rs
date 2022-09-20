@@ -18,7 +18,7 @@ use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use log::{error, info};
 use number_prefix::NumberPrefix;
-use std::{cell::RefCell, sync::Arc, thread};
+use std::{cell::RefCell, sync::Arc, thread, path::Path};
 use std::{env, fs, io::Read, path::PathBuf};
 use std::{os::unix::prelude::AsRawFd, rc::Rc};
 use std::{
@@ -1182,9 +1182,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 
 fn setup_logger() -> Result<PathBuf> {
     let now = OffsetDateTime::now_local()?.format(&format_description::well_known::Rfc3339)?;
-
-    let tempfile = tempfile::Builder::new().prefix("dklog").tempfile()?;
-    let path = tempfile.path();
+    let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
 
     fern::Dispatch::new()
         .format(move |out, message, record| {
@@ -1197,13 +1195,13 @@ fn setup_logger() -> Result<PathBuf> {
             ))
         })
         .level(log::LevelFilter::Info)
-        .chain(fern::log_file(path)?)
+        .chain(fern::log_file(&path)?)
         .chain(Box::new(cursive::logger::get_logger()) as Box<dyn log::Log>)
         .apply()?;
 
     info!("Using AOSC Deplotkit TUI mode");
 
-    Ok(path.to_path_buf())
+    Ok(path)
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
