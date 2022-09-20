@@ -13,6 +13,7 @@ use std::os::unix::prelude::{OsStrExt, PermissionsExt};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
+use sysinfo::{System, SystemExt};
 
 use crate::disks::{fstab_entries, is_efi_booted, Partition};
 use crate::network;
@@ -481,6 +482,20 @@ pub fn prepare_try_umount() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn log_system_info() {
+    let sys = System::new_all();
+
+    info!("Deploykit version: {}", env!("CARGO_PKG_VERSION"));
+    info!(
+        "OS: {:?}",
+        sys.name()
+            .and_then(|s| sys.os_version().and_then(|y| Some(format!("{} {}", s, y))))
+    );
+    info!("Kernel: {:?}", sys.kernel_version());
+    info!("CPU: {:?}", sys.cpus());
+    info!("Memory: {:?}, Usage: {:?}", sys.total_memory(), sys.used_memory());
 }
 
 /// Create swapfile
