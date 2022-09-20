@@ -1257,6 +1257,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
         let user_exit = user_interrup_rx.recv();
         if let Ok(user_exit) = user_exit {
             if user_exit {
+                info!("User request to exit the installer");
                 umount_all(&tempdir_copy_2, root_fd);
                 cb_sink_clone.send(Box::new(|s| s.quit())).unwrap();
             }

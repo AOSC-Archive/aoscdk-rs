@@ -468,7 +468,14 @@ fn begin_install(
     }
 
     info!("Copy log file to main partition");
-    std::fs::copy(logfile, tempdir.join("var").join("log"))?;
+    std::fs::copy(
+        &logfile,
+        tempdir.join("var").join("log").join(
+            logfile
+                .file_name()
+                .ok_or_else(|| anyhow!("Can not get filename"))?,
+        ),
+    )?;
 
     info!("Removing bind mounts ...");
     install::remove_bind_mounts(&mount_path_copy)?;
