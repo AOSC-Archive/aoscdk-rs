@@ -1287,7 +1287,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
                     show_error(
                         s,
                         &format!(
-                            "{}\n\nPress <~> to see log console.\n\nLog file is save to {}",
+                            "{}\n\nPress <~> to see installer log.\n\nLog file is save to {}",
                             err,
                             logfile_clone.display()
                         ),
