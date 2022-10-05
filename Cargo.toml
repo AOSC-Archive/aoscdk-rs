@@ -31,7 +31,7 @@ ctrlc = { version = "3.2", features = ["termination"] }
 fstab-generate = "0.1"
 disk-types = "0.1"
 sysinfo = "0.26"
-clap = { version = "3.1", features = ["derive"]}
+clap = { version = "4.0", features = ["derive"]}
 indicatif = "0.17"
 libparted-sys = "0.3"
 clock-core = "0.0.7"

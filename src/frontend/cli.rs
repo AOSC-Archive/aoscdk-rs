@@ -89,13 +89,13 @@ struct InstallCommand {
     #[clap(long, default_value = "C.UTF-8")]
     locale: String,
     /// Toggle using RTC (real time clock) time as local time
-    #[clap(long)]
+    #[clap(long, action = clap::ArgAction::SetTrue)]
     use_rtc: bool,
     /// Disable swapfile
-    #[clap(long, conflicts_with = "swap-size")]
+    #[clap(long, conflicts_with = "swap_size", action = clap::ArgAction::SetTrue)]
     no_swap: bool,
     /// Set custom swapfile size
-    #[clap(long)]
+    #[clap(long, conflicts_with = "no_swap")]
     swap_size: Option<f64>,
 }
 
