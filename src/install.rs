@@ -411,7 +411,7 @@ pub fn prepare_try_umount() -> Result<()> {
 
     let dk_mounts = mounts
         .iter()
-        .filter(|(_, mount_path)| mount_path.starts_with("/tmp/.tmp"));
+        .filter(|(_, mount_path)| mount_path.starts_with("/tmp/.dkmount"));
 
     for (_, mount_path) in dk_mounts {
         umount_root_path(Path::new(mount_path)).ok();

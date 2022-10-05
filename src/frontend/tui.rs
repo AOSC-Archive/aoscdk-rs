@@ -25,7 +25,6 @@ use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
-use tempfile::TempDir;
 use time::OffsetDateTime;
 
 use super::{
@@ -1246,11 +1245,16 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
     let cb_sink_clone = siv.cb_sink().clone();
-    let tempdir = TempDir::new()
+
+    let tempdir = tempfile::Builder::new()
+        .prefix(".dkmount")
+        .tempdir()
         .expect("Installer failed to create temporary file for the download process.")
         .into_path();
+
     let tempdir_copy = tempdir.clone();
     let tempdir_copy_2 = tempdir.clone();
+
     let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
         .expect("Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, logfile));

@@ -13,7 +13,6 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 use log::{error, info};
-use tempfile::TempDir;
 use time::OffsetDateTime;
 
 use crate::{
@@ -307,9 +306,13 @@ fn start_install(ic: InstallCommand) -> Result<()> {
 
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();
     let (tx, rx) = std::sync::mpsc::channel();
-    let tempdir = TempDir::new()
-        .expect("Installer could not create temporary directory for installation.")
+
+    let tempdir = tempfile::Builder::new()
+        .prefix(".dkmount")
+        .tempdir()
+        .expect("Installer failed to create temporary file for the download process.")
         .into_path();
+
     let tempdir_clone = tempdir.clone();
     let tempdir_clone_2 = tempdir.clone();
     ctrlc::set_handler(move || {
