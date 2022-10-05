@@ -266,7 +266,7 @@ pub fn execute_dracut() -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(not(feature = "is_retro"))]
 pub fn gen_ssh_key() -> Result<()> {
-    no_need_to_run_info("ssh-keygen", true);
+    no_need_to_run_info("ssh-keygen", false);
 
     Ok(())
 }
