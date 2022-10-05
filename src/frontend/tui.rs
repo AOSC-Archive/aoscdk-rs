@@ -1,6 +1,7 @@
 use crate::{
     disks::{self, ALLOWED_FS_TYPE},
     install::{self, umount_all},
+    log::setup_logger,
     network::{self, Mirror, VariantEntry},
 };
 use anyhow::Result;
@@ -18,14 +19,13 @@ use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use log::{error, info};
 use number_prefix::NumberPrefix;
-use std::{cell::RefCell, path::Path, sync::Arc, thread};
+use std::{cell::RefCell, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
 use std::{os::unix::prelude::AsRawFd, rc::Rc};
 use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
-use time::OffsetDateTime;
 
 use super::{
     begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
@@ -1179,33 +1179,8 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
-fn setup_logger() -> Result<PathBuf> {
-    let now = OffsetDateTime::now_utc();
-    let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
-
-    fern::Dispatch::new()
-        .format(move |out, message, record| {
-            let now = OffsetDateTime::now_utc();
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                now,
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Info)
-        .chain(fern::log_file(&path)?)
-        .chain(Box::new(cursive::logger::get_logger()) as Box<dyn log::Log>)
-        .apply()?;
-
-    info!("Using AOSC Deplotkit TUI mode");
-
-    Ok(path)
-}
-
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
-    let logfile = setup_logger().expect("Installer could not set logger");
+    let logfile = setup_logger(false).expect("Installer could not set logger");
     let logfile_clone = logfile.clone();
 
     siv.clear_global_callbacks(Event::Exit);

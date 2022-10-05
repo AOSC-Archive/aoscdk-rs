@@ -13,6 +13,7 @@ mod frontend;
 mod install;
 mod network;
 mod parser;
+mod log;
 
 const LOCK: &str = "/run/lock/aoscdk.lock";
 

@@ -13,12 +13,12 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 use log::{error, info};
-use time::OffsetDateTime;
 
 use crate::{
     disks::{self, Partition},
     install::{self, is_acceptable_username, is_valid_hostname, umount_all},
     network::{self, fetch_mirrors, Mirror, VariantEntry},
+    log::setup_logger,
 };
 
 use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
@@ -242,32 +242,8 @@ fn get_swap(
     Ok(result)
 }
 
-fn setup_logger() -> Result<PathBuf> {
-    let now = OffsetDateTime::now_utc();
-    let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
-
-    fern::Dispatch::new()
-        .format(move |out, message, record| {
-            let now = OffsetDateTime::now_utc();
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                now,
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Info)
-        .chain(fern::log_file(&path)?)
-        .apply()?;
-
-    info!("Using AOSC Deplotkit CLI mode");
-
-    Ok(path)
-}
-
 fn start_install(ic: InstallCommand) -> Result<()> {
-    let logfile = setup_logger()?;
+    let logfile = setup_logger(true)?;
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
