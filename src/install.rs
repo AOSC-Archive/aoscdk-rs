@@ -21,6 +21,7 @@ use crate::network;
 use crate::parser::{list_mounts, list_zoneinfo, locale_names};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
+const EFIVARS_PATH: &str = "/sys/firmware/efi/efivars";
 const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
 const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
 const SYSTEM_ZONEINFO1970_PATH: &str = "/usr/share/zoneinfo/zone1970.tab";
@@ -211,6 +212,18 @@ pub fn setup_bind_mounts(root: &Path) -> Result<()> {
         std::fs::create_dir_all(root.clone())?;
         mount::mount(
             Some(*mount),
+            &root,
+            None::<&str>,
+            mount::MsFlags::MS_BIND,
+            None::<&str>,
+        )?;
+    }
+
+    if is_efi_booted() {
+        let root = root.join(&EFIVARS_PATH[1..]);
+        std::fs::create_dir_all(&root)?;
+        mount::mount(
+            Some(&*EFIVARS_PATH),
             &root,
             None::<&str>,
             mount::MsFlags::MS_BIND,
