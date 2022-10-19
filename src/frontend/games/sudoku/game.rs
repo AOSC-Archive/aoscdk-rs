@@ -26,11 +26,17 @@ pub fn run(siv: &mut Cursive) {
     siv.add_layer(view);
 }
 
+fn clear_callback(siv: &mut Cursive) {
+    for i in ['r', 'h', 'q', 'm', 'z', 'u'] {
+        siv.clear_global_callbacks(i);
+    }
+}
+
 fn quit(s: &mut Cursive) {
     s.cb_sink()
         .send(Box::new(|s| {
             s.pop_layer();
-            s.clear_global_callbacks('q');
+            clear_callback(s);
             add_callback(s);
         }))
         .unwrap()
