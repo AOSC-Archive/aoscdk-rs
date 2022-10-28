@@ -16,6 +16,10 @@ const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 pub(crate) const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
+const MBR_NON_PRIMARY_PART_ERROR: &str = r#"Installer has detected that you are attempting to install AOSC OS on an MBR extended partition. This is not allowed as it may cause startup issues.
+
+Please select a primary partition instead."#;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Partition {
     pub path: Option<PathBuf>,
@@ -153,7 +157,7 @@ pub fn list_partitions() -> Vec<Partition> {
     partitions
 }
 
-fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
+fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
     fn cvt<T: IsZero>(t: T) -> io::Result<T> {
         if t.is_zero() {
             Err(io::Error::last_os_error())
@@ -183,8 +187,36 @@ fn get_partition_table_type(device_path: Option<&PathBuf>) -> Result<String> {
     ))
 }
 
+pub fn mbr_is_primary_partition(device_path: Option<&Path>) -> Result<()> {
+    let partition_t = get_partition_table_type(device_path)?;
+
+    if partition_t != "msdos" {
+        return Ok(());
+    }
+
+    for mut device in libparted::Device::devices(true) {
+        if let Ok(disk) = libparted::Disk::new(&mut device) {
+            let parts = disk.parts().collect::<Vec<_>>();
+            let index = parts
+                .iter()
+                .position(|x| x.get_path() == device_path)
+                .ok_or_else(|| anyhow!("Can not find select partition!"))?;
+
+            let part_type = parts[index].type_get_name();
+
+            if part_type != "primary" {
+                return Err(anyhow!(MBR_NON_PRIMARY_PART_ERROR));
+            } else {
+                return Ok(());
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(not(target_arch = "powerpc64"))]
-pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
+pub fn right_combine(device_path: Option<&Path>) -> Result<()> {
     let partition_table_t = get_partition_table_type(device_path)?;
     let is_efi_booted = is_efi_booted();
     let bios_efi_s = if is_efi_booted { "EFI" } else { "BIOS" };

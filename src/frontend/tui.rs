@@ -1,5 +1,5 @@
 use crate::{
-    disks::{self, ALLOWED_FS_TYPE},
+    disks::{self, mbr_is_primary_partition, ALLOWED_FS_TYPE},
     install::{self, umount_all},
     log::setup_logger,
     network::{self, Mirror, VariantEntry},
@@ -446,7 +446,10 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let config_copy_2 = config.clone();
                 let fs_type = current_partition.fs_type.clone();
                 let current_partition_clone = current_partition.clone();
-                if let Err(e) = disks::right_combine(current_partition.parent_path.as_ref()) {
+                if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_ref().map(|x| x.as_path())) {
+                    show_msg(s, &e.to_string());
+                }
+                if let Err(e) = disks::right_combine(current_partition.parent_path.as_ref().map(|x| x.as_path())) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
                     .child(TextView::new(e.to_string())), "AOSC OS Installer", None)
                     .button("OK", |s| {

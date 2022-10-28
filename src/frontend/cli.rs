@@ -17,8 +17,8 @@ use log::{error, info};
 use crate::{
     disks::{self, Partition},
     install::{self, is_acceptable_username, is_valid_hostname, umount_all},
-    network::{self, fetch_mirrors, Mirror, VariantEntry},
     log::setup_logger,
+    network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 
 use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
@@ -191,7 +191,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
             return Err(anyhow!(s));
         }
         let partition = disks::fill_fs_type(&partition, false);
-        disks::right_combine(partition.parent_path.as_ref())?;
+        disks::right_combine(partition.parent_path.as_ref().map(|x| x.as_path()))?;
 
         return Ok(partition);
     }
