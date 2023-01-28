@@ -28,7 +28,7 @@ use std::{
 };
 
 use super::{
-    begin_install, games::add_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
+    begin_install, games::add_main_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
 };
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
@@ -244,7 +244,7 @@ fn make_partition_list(
     (disk_list, disk_view.with_name("part_list"))
 }
 
-fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
+pub fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
     Dialog::around(ResizedView::new(
         SizeConstraint::AtMost(width.unwrap_or(64)),
         SizeConstraint::Free,
@@ -1188,7 +1188,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
 
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
-    add_callback(siv);
+    add_main_callback(siv);
     ctrlc::set_handler(|| {}).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();

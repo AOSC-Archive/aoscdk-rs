@@ -7,7 +7,7 @@ use cursive::{
     Cursive, Printer, Vec2,
 };
 
-use crate::frontend::games::add_callback;
+use crate::frontend::games::add_main_callback;
 
 use super::game;
 
@@ -26,7 +26,7 @@ pub fn _start_mines_inner(siv: &mut Cursive) {
                         s.cb_sink()
                             .send(Box::new(|s| {
                                 s.pop_layer();
-                                add_callback(s);
+                                add_main_callback(s);
                             }))
                             .unwrap();
                     })),
