@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use std::{
     io::{Read, Write},
     path::Path,
+    str::FromStr,
 };
 use sysinfo::{Pid, System, SystemExt};
 
@@ -11,9 +12,9 @@ use frontend::Args;
 mod disks;
 mod frontend;
 mod install;
+mod log;
 mod network;
 mod parser;
-mod log;
 
 const LOCK: &str = "/run/lock/aoscdk.lock";
 
@@ -48,13 +49,13 @@ fn create_lock() -> Result<()> {
     let lock = Path::new(LOCK);
     if lock.is_file() {
         let mut lock_file = std::fs::File::open(lock)?;
-        let mut buf = String::new();
-        lock_file.read_to_string(&mut buf)?;
-        let old_pid = buf
-            .parse::<i32>()
-            .map_err(|_| anyhow!("Invalid or corrupted lock file!"))?;
+        let mut old_pid = String::new();
+        lock_file.read_to_string(&mut old_pid)?;
+
         let s = System::new_all();
-        if s.process(Pid::from(old_pid)).is_some() {
+        let old_pid = Pid::from_str(&old_pid)?;
+
+        if s.process(old_pid).is_some() {
             return Err(anyhow!(
                 "Another instance of Installer (pid: {}) is still running!",
                 old_pid
