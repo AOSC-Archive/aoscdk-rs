@@ -32,7 +32,7 @@ where
     I: IntoIterator<Item = S> + Debug,
     S: AsRef<OsStr>,
 {
-    let cmd_str = format!("{} {:?}", command, args);
+    let cmd_str = format!("{command} {args:?}");
     info!("Running {}", cmd_str);
 
     let cmd = Command::new(command).args(args).output()?;
@@ -223,7 +223,7 @@ pub fn setup_bind_mounts(root: &Path) -> Result<()> {
         let root = root.join(&EFIVARS_PATH[1..]);
         std::fs::create_dir_all(&root)?;
         mount::mount(
-            Some(&*EFIVARS_PATH),
+            Some(EFIVARS_PATH),
             &root,
             None::<&str>,
             mount::MsFlags::MS_BIND,
@@ -317,7 +317,7 @@ pub fn set_zoneinfo(zone: &str) -> Result<()> {
         std::fs::remove_file("/etc/localtime")?;
     }
 
-    std::os::unix::fs::symlink(format!("/usr/share/zoneinfo/{}", zone), "/etc/localtime")?;
+    std::os::unix::fs::symlink(format!("/usr/share/zoneinfo/{zone}"), "/etc/localtime")?;
 
     Ok(())
 }
@@ -344,12 +344,12 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
         if !status_is_rtc {
             return Ok(());
         } else {
-            run_command("hwclock", &["-wu"])?;
+            run_command("hwclock", ["-wu"])?;
         }
     } else if status_is_rtc {
         return Ok(());
     } else {
-        run_command("hwclock", &["-wl"])?;
+        run_command("hwclock", ["-wl"])?;
     }
 
     Ok(())
@@ -358,8 +358,8 @@ pub fn set_hwclock_tc(utc: bool) -> Result<()> {
 /// Adds a new normal user to the guest environment
 /// Must be used in a chroot context
 pub fn add_new_user(name: &str, password: &str) -> Result<()> {
-    run_command("useradd", &["-m", "-s", "/bin/bash", name])?;
-    run_command("usermod", &["-aG", "audio,cdrom,video,wheel,plugdev", name])?;
+    run_command("useradd", ["-m", "-s", "/bin/bash", name])?;
+    run_command("usermod", ["-aG", "audio,cdrom,video,wheel,plugdev", name])?;
 
     info!("Running chpasswd ...");
     let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
@@ -368,7 +368,7 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
         anyhow!("Installer can not get your stdin! please restart your environment")
     })?;
 
-    stdin.write_all(format!("{}:{}\n", name, password).as_bytes())?;
+    stdin.write_all(format!("{name}:{password}\n").as_bytes())?;
     stdin.flush()?;
     info!("Running chpasswd successfully");
 
@@ -408,7 +408,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     };
 
     run_command("grub-install", &grub_install_args)?;
-    run_command("grub-mkconfig", &["-o", "/boot/grub/grub.cfg"])?;
+    run_command("grub-mkconfig", ["-o", "/boot/grub/grub.cfg"])?;
 
     Ok(())
 }
@@ -440,7 +440,7 @@ pub fn log_system_info() {
     info!(
         "OS: {:?}",
         sys.name()
-            .and_then(|x| sys.os_version().map(|y| format!("{} {}", x, y)))
+            .and_then(|x| sys.os_version().map(|y| format!("{x} {y}")))
     );
     info!("Kernel: {:?}", sys.kernel_version());
     info!("CPU: {:?}", sys.cpus().first());
@@ -472,14 +472,14 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
     info!("Set swapfile permission as 600");
     std::fs::set_permissions(&swap_path, std::fs::Permissions::from_mode(0o600))?;
 
-    run_command("mkswap", &[&swap_path])?;
-    run_command("swapon", &[swap_path]).ok();
+    run_command("mkswap", [&swap_path])?;
+    run_command("swapon", [swap_path]).ok();
 
     Ok(())
 }
 
 pub fn swapoff(tempdir: &Path) {
-    run_command("swapoff", &[tempdir.join("swapfile")]).ok();
+    run_command("swapoff", [tempdir.join("swapfile")]).ok();
 }
 
 /// Must be used in a chroot context
@@ -545,10 +545,8 @@ pub fn is_acceptable_username(username: &str) -> bool {
             if !c.is_ascii_lowercase() {
                 return false;
             }
-        } else {
-            if !c.is_ascii_lowercase() && !c.is_ascii_digit() {
-                return false;
-            }
+        } else if !c.is_ascii_lowercase() && !c.is_ascii_digit() {
+            return false;
         }
     }
 
@@ -557,28 +555,28 @@ pub fn is_acceptable_username(username: &str) -> bool {
 
 #[test]
 fn test_hostname_validation() {
-    assert_eq!(is_valid_hostname("foo"), true);
-    assert_eq!(is_valid_hostname("foo-2e10"), true);
-    assert_eq!(is_valid_hostname("jeffbai-device"), true);
-    assert_eq!(is_valid_hostname("invalid_host"), false);
-    assert_eq!(is_valid_hostname("-invalid"), false);
-    assert_eq!(is_valid_hostname("+invalid"), false);
-    assert_eq!(is_valid_hostname("JellyDimension"), true);
-    assert_eq!(is_valid_hostname("Jelly_Dimension"), false);
+    assert!(is_valid_hostname("foo"));
+    assert!(is_valid_hostname("foo-2e10"));
+    assert!(is_valid_hostname("jeffbai-device"));
+    assert!(!is_valid_hostname("invalid_host"));
+    assert!(!is_valid_hostname("-invalid"));
+    assert!(!is_valid_hostname("+invalid"));
+    assert!(is_valid_hostname("JellyDimension"));
+    assert!(!is_valid_hostname("Jelly_Dimension"));
 }
 
 #[test]
 fn test_username_validation() {
-    assert_eq!(is_acceptable_username("foo"), true);
-    assert_eq!(is_acceptable_username("老白"), false);
-    assert_eq!(is_acceptable_username("BAIMINGCONG"), false);
-    assert_eq!(is_acceptable_username("root"), false);
-    assert_eq!(is_acceptable_username("/root"), false);
-    assert_eq!(is_acceptable_username("root:root"), false);
-    assert_eq!(is_acceptable_username("root\n"), false);
-    assert_eq!(is_acceptable_username("root\t"), false);
-    assert_eq!(is_acceptable_username("ro ot"), false);
-    assert_eq!(is_acceptable_username("cth451"), true)
+    assert!(is_acceptable_username("foo"));
+    assert!(is_acceptable_username("cth451"));
+    assert!(!is_acceptable_username("老白"));
+    assert!(!is_acceptable_username("BAIMINGCONG"));
+    assert!(!is_acceptable_username("root"));
+    assert!(!is_acceptable_username("/root"));
+    assert!(!is_acceptable_username("root:root"));
+    assert!(!is_acceptable_username("root\n"));
+    assert!(!is_acceptable_username("root\t"));
+    assert!(!is_acceptable_username("ro ot"));
 }
 
 #[test]

@@ -199,8 +199,8 @@ fn partition_button() -> PartitionButton {
 #[inline]
 fn human_size(size: u64) -> String {
     match NumberPrefix::binary(size as f64) {
-        NumberPrefix::Standalone(bytes) => format!("{} B", bytes),
-        NumberPrefix::Prefixed(prefix, n) => format!("{:.1} {}B", n, prefix),
+        NumberPrefix::Standalone(bytes) => format!("{bytes} B"),
+        NumberPrefix::Prefixed(prefix, n) => format!("{n:.1} {prefix}B"),
     }
 }
 
@@ -244,7 +244,11 @@ fn make_partition_list(
     (disk_list, disk_view.with_name("part_list"))
 }
 
-pub fn wrap_in_dialog<V: View, S: Into<String>>(inner: V, title: S, width: Option<usize>) -> Dialog {
+pub fn wrap_in_dialog<V: View, S: Into<String>>(
+    inner: V,
+    title: S,
+    width: Option<usize>,
+) -> Dialog {
     Dialog::around(ResizedView::new(
         SizeConstraint::AtMost(width.unwrap_or(64)),
         SizeConstraint::Free,
@@ -446,10 +450,10 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let config_copy_2 = config.clone();
                 let fs_type = current_partition.fs_type.clone();
                 let current_partition_clone = current_partition.clone();
-                if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_ref().map(|x| x.as_path())) {
+                if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_deref()) {
                     show_msg(s, &e.to_string());
                 }
-                if let Err(e) = disks::right_combine(current_partition.parent_path.as_ref().map(|x| x.as_path())) {
+                if let Err(e) = disks::right_combine(current_partition.parent_path.as_deref()) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
                     .child(TextView::new(e.to_string())), "AOSC OS Installer", None)
                     .button("OK", |s| {
@@ -463,7 +467,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     if fs_type != "ext4" && ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
                         .child(TextView::new(format!(SURE_FS_TYPE_INFO!(), &fs_type))), "AOSC OS Installer", None)
-                        .button(format!("Use {}", fs_type), move |s| {
+                        .button(format!("Use {fs_type}"), move |s| {
                             let new_part = disks::fill_fs_type(current_partition_clone.as_ref(), false);
                             let mut config_clone = config_copy.clone();
                             config_clone.partition = Some(Arc::new(new_part.clone()));
@@ -839,7 +843,7 @@ fn seatch_select_view(
 
     wrap_in_dialog(
         LinearLayout::vertical()
-            .child(TextView::new(format!("Search {}", name)))
+            .child(TextView::new(format!("Search {name}")))
             .child(
                 EditView::new()
                     // update results every time the query changes
@@ -861,7 +865,7 @@ fn seatch_select_view(
                     .scrollable(),
             )
             .fixed_height(10),
-        format!("Select Your {}", name),
+        format!("Select Your {name}"),
         None,
     )
 }
@@ -1151,11 +1155,11 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
             swap_str
         )
     } else {
-        format!("- {}", swap_str)
+        format!("- {swap_str}")
     };
     siv.add_layer(
         wrap_in_dialog(
-            TextView::new(format!("{}{}", s, swap_s)),
+            TextView::new(format!("{s}{swap_s}")),
             "Pre-Installation Confirmation",
             None,
         )
@@ -1170,8 +1174,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
                 show_msg(
                     s,
                     &format!(
-                        "Installer has successfully saved your installation configuration: {}.",
-                        SAVE_USER_CONFIG_FILE
+                        "Installer has successfully saved your installation configuration: {SAVE_USER_CONFIG_FILE}."
                     ),
                 )
             }

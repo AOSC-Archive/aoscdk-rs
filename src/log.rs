@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 /// Log message to console and file
 pub fn setup_logger(is_cli: bool) -> Result<PathBuf> {
     let now = OffsetDateTime::now_utc();
-    let path = Path::new(&format!("/var/log/dklog-{}.log", now)).to_path_buf();
+    let path = Path::new(&format!("/var/log/dklog-{now}.log")).to_path_buf();
 
     let fern_log = fern::Dispatch::new()
         .format(move |out, message, record| {

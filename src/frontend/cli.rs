@@ -124,7 +124,7 @@ fn list_mirror() -> Result<()> {
 fn list_locale() -> Result<()> {
     let locale_list = install::get_locale_list()?;
     for i in locale_list {
-        println!("{}", i);
+        println!("{i}");
     }
 
     Ok(())
@@ -133,7 +133,7 @@ fn list_locale() -> Result<()> {
 fn list_timezone() -> Result<()> {
     let timezone_list = install::get_zoneinfo_list()?;
     for i in timezone_list {
-        println!("{}", i);
+        println!("{i}");
     }
 
     Ok(())
@@ -191,7 +191,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
             return Err(anyhow!(s));
         }
         let partition = disks::fill_fs_type(&partition, false);
-        disks::right_combine(partition.parent_path.as_ref().map(|x| x.as_path()))?;
+        disks::right_combine(partition.parent_path.as_deref())?;
 
         return Ok(partition);
     }
@@ -207,7 +207,7 @@ fn get_mirror(mirror: &str) -> Mirror {
     let mirror = if mirror.ends_with('/') {
         mirror.to_string()
     } else {
-        format!("{}/", mirror)
+        format!("{mirror}/")
     };
 
     Mirror {
@@ -309,7 +309,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         if let Ok(progress) = rx.recv() {
             match progress {
                 super::InstallProgress::Pending(msg, pct) => {
-                    bar.set_message(format!("{} ({}/100)", msg, pct));
+                    bar.set_message(format!("{msg} ({pct}/100)"));
                 }
                 super::InstallProgress::Finished => {
                     bar.finish_with_message("AOSC OS installation has successfully completed! Good luck to you, Dungeon Master :)");

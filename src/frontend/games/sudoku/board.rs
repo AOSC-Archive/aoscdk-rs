@@ -105,12 +105,12 @@ impl SudokuBoard {
                 if self.sudoku.available[i][j] {
                     if n > 0 {
                         printer.with_style(ColorStyle::secondary(), |p| {
-                            p.print((j_, i_), &format!("{}", n));
+                            p.print((j_, i_), &format!("{n}"));
                         });
                     }
                 } else {
                     // printer.with_effect(Effect::Bold, |p|{p.print((j_, i_), &format!("{}", n));})
-                    printer.print((j_, i_), &format!("{}", n));
+                    printer.print((j_, i_), &format!("{n}"));
                 }
             }
         }
@@ -151,7 +151,7 @@ impl SudokuBoard {
         let txt = if focus == 0 {
             " ".to_owned()
         } else {
-            format!("{}", focus)
+            format!("{focus}")
         };
         printer.with_color(ColorStyle::highlight(), |printer| {
             printer.print(self.focus_xy(), &txt);

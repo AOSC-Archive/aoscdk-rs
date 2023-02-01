@@ -1,4 +1,7 @@
-use crate::frontend::{games::{add_main_callback, sudoku::board::SudokuBoard}, tui::wrap_in_dialog};
+use crate::frontend::{
+    games::{add_main_callback, sudoku::board::SudokuBoard},
+    tui::wrap_in_dialog,
+};
 use cursive::{
     traits::*,
     views::{Dialog, LinearLayout, TextView},

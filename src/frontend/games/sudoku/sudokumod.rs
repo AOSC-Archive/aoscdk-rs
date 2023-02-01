@@ -121,6 +121,6 @@ impl fmt::Display for MySudoku {
             }
             s.push('\n')
         }
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }

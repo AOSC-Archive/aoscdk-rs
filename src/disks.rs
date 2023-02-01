@@ -46,7 +46,7 @@ pub fn get_recommended_fs_type(type_: &str) -> &str {
 pub fn format_partition(partition: &Partition) -> Result<()> {
     let default_fs = DEFAULT_FS_TYPE.to_owned();
     let fs_type = partition.fs_type.as_ref().unwrap_or(&default_fs);
-    let mut command = Command::new(format!("mkfs.{}", fs_type));
+    let mut command = Command::new(format!("mkfs.{fs_type}"));
     let cmd;
 
     if fs_type == "ext4" {
