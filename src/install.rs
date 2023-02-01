@@ -532,7 +532,7 @@ pub fn is_valid_hostname(hostname: &str) -> bool {
 }
 
 pub fn is_acceptable_username(username: &str) -> bool {
-    if username.is_empty() || username.starts_with('-') {
+    if username.is_empty() {
         return false;
     }
 
@@ -540,14 +540,15 @@ pub fn is_acceptable_username(username: &str) -> bool {
         return false;
     }
 
-    for c in username.as_bytes() {
-        if c.is_ascii_whitespace()
-            || !c.is_ascii_lowercase()
-            || *c == b'/'
-            || *c == b'\\'
-            || *c == b':'
-        {
-            return false;
+    for (i, c) in username.as_bytes().iter().enumerate() {
+        if i == 0 {
+            if !c.is_ascii_lowercase() {
+                return false;
+            }
+        } else {
+            if !c.is_ascii_lowercase() && !c.is_ascii_digit() {
+                return false;
+            }
         }
     }
 
@@ -577,6 +578,7 @@ fn test_username_validation() {
     assert_eq!(is_acceptable_username("root\n"), false);
     assert_eq!(is_acceptable_username("root\t"), false);
     assert_eq!(is_acceptable_username("ro ot"), false);
+    assert_eq!(is_acceptable_username("cth451"), true)
 }
 
 #[test]
