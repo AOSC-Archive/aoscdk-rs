@@ -397,7 +397,7 @@ fn select_mirrors_view(
                 Dialog::around(
                     LinearLayout::vertical()
                         .child(TextView::new(
-                            "The path should include protocol and end with \"aosc-os\".",
+                            "This option is for expert users only!\nThe URL should include protocol and end with \"/aosc-os/\".",
                         ))
                         .child(DummyView {})
                         .child(
@@ -419,10 +419,21 @@ fn select_mirrors_view(
                     let mut config_clone = config_clone.clone();
                     let url_input_copy = url_input.clone();
                     let url = url_input_copy.as_ref().to_owned().into_inner();
-                    // FIXME: Verify URL usability. At least manifest should be available.
-                    // pop input window and mirror selection on success
+                    let url_clone = url.clone();
+
+                    // Verify URL usability. At least we should be able to HEAD this mirror
+                    let test_url = format!("{}{}", url_clone, config_clone.variant.as_ref().unwrap().url);
+                    let bench_result = network::query_file_meta(&test_url);
+                    if bench_result.is_err() {
+                        // this mirror is not usable, ask the user to check input.
+                        s.add_layer(Dialog::info(format!("Cannot access mirror! - Please make sure you have typed the URL correctly.\n\nError details:\n{}", bench_result.unwrap_err().to_string())));
+                        return;
+                    }
+
+                    // pop input window and mirror selection once we confirmed a working mirror
                     s.pop_layer();
                     s.pop_layer();
+
                     config_clone.mirror = Some(Arc::new(Mirror {
                         name: String::from("User specified"),
                         name_tr: String::from("user-name"),

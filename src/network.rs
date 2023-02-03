@@ -135,6 +135,22 @@ pub(crate) fn get_arch_name() -> Option<&'static str> {
     }
 }
 
+/// Issue a HEAD request to the specified url instead of downloading the entire body.
+///
+/// If the server returned a error code the response becomes an error.
+pub fn query_file_meta(url: &String) -> Result<reqwest::blocking::Response> {
+    let client = reqwest::blocking::ClientBuilder::new()
+        .user_agent(DEPLOYKIT_USER_AGENT!())
+        .build()?;
+    let head_response = client.head(url).send();
+
+    let server_response = head_response.map_err(|e| anyhow!("{}", e))?;
+    let server_success = server_response.error_for_status().map_err(|e| anyhow!("{}", e))?;
+
+    Ok(server_success)
+}
+
+
 pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
     let client = reqwest::blocking::ClientBuilder::new()
         .user_agent(DEPLOYKIT_USER_AGENT!())
