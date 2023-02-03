@@ -337,6 +337,7 @@ fn select_mirrors_view(
 ) -> Dialog {
     let config_clone = config.clone();
     let config_clone_2 = config.clone();
+    let config_clone_3 = config.clone();
     wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Continue", move |s| {
             let mut config = config.clone();
@@ -386,6 +387,57 @@ fn select_mirrors_view(
                         select_mirrors(s, mirrors_clone_3, config_clone_4);
                     })
                     .padding_lrtb(2, 2, 1, 1),
+            );
+        })
+        .button("Specify URL", move |s| {
+            let config_clone = config_clone_3.clone();
+            let url_input = Rc::new(RefCell::new(String::new()));
+            let url_input_copy = url_input.clone();
+            s.add_layer(
+                Dialog::around(
+                    LinearLayout::vertical()
+                        .child(TextView::new(
+                            "The path should include protocol and end with \"aosc-os\".",
+                        ))
+                        .child(
+                            EditView::new()
+                                .on_edit_mut(move |_, c, _| {
+                                    if c.ends_with('/') {
+                                        url_input_copy.replace(c.to_owned());
+                                    } else {
+                                        let mut owned_url = c.to_owned();
+                                        owned_url.push('/');
+                                        url_input_copy.replace(owned_url);
+                                    }
+                                })
+                                .min_width(40),
+                        ),
+                )
+                .title("Specify mirror URL")
+                .button("Continue", move |s| {
+                    let mut config_clone = config_clone.clone();
+                    let url_input_copy = url_input.clone();
+                    let url = url_input_copy.as_ref().to_owned().into_inner();
+                    // FIXME: Verify URL usability. At least manifest should be available.
+                    // pop input window and mirror selection on success
+                    s.pop_layer();
+                    s.pop_layer();
+                    config_clone.mirror = Some(Arc::new(Mirror {
+                        name: String::from("User specified"),
+                        name_tr: String::from("user-name"),
+                        loc: String::from("User specified"),
+                        loc_tr: String::from("user-loc"),
+                        url
+                    }));
+                    if config_clone.partition.is_some() {
+                        select_user_password(s, config_clone);
+                    } else {
+                        select_partition(s, config_clone);
+                    }
+                })
+                .button("Cancel", |s| {
+                    s.pop_layer();
+                }),
             );
         })
         .button("Back", move |s| {
