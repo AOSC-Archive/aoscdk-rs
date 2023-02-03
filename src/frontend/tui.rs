@@ -399,6 +399,7 @@ fn select_mirrors_view(
                         .child(TextView::new(
                             "The path should include protocol and end with \"aosc-os\".",
                         ))
+                        .child(DummyView {})
                         .child(
                             EditView::new()
                                 .on_edit_mut(move |_, c, _| {
@@ -427,7 +428,7 @@ fn select_mirrors_view(
                         name_tr: String::from("user-name"),
                         loc: String::from("User specified"),
                         loc_tr: String::from("user-loc"),
-                        url
+                        url,
                     }));
                     if config_clone.partition.is_some() {
                         select_user_password(s, config_clone);
@@ -437,7 +438,8 @@ fn select_mirrors_view(
                 })
                 .button("Cancel", |s| {
                     s.pop_layer();
-                }),
+                })
+                .padding_lrtb(2, 2, 1, 1),
             );
         })
         .button("Back", move |s| {
