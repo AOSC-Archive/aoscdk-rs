@@ -164,7 +164,7 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
 }
 
 fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
-    let required_size = variant.install_size;
+    let required_size = variant.install_size + variant.size;
     if cfg!(debug_assertions) {
         disks::right_combine(Some(&PathBuf::from("/dev/loop0")))?;
 
