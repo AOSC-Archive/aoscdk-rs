@@ -465,7 +465,7 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
         swapfile.as_raw_fd(),
         FallocateFlags::empty(),
         0,
-        (size as i32).into(),
+        size as i64,
     )?;
     swapfile.flush()?;
 
