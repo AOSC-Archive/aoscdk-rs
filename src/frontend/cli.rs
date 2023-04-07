@@ -150,6 +150,7 @@ fn list_tarball() -> Result<()> {
 
 fn get_variant(tarball: &str) -> Result<VariantEntry> {
     let variants = network::get_variants()?;
+
     let index = variants
         .iter()
         .position(|x| x.name.to_lowercase() == tarball.to_lowercase());
@@ -172,7 +173,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
             fs_type: Some("ext4".to_string()),
             path: Some(PathBuf::from("/dev/loop0p1")),
             parent_path: Some(PathBuf::from("/dev/loop0")),
-            size: required_size + 10 * 1024 * 1024 * 1024,
+            size: 53687091200,
         });
     }
     let path = Path::new(path);
@@ -182,7 +183,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
         .position(|x| x.path == Some(path.to_path_buf()));
     if let Some(index) = index {
         let partition = list_part[index].to_owned();
-        if partition.size < required_size {
+        if partition.size < required_size + variant.size {
             let s = format!(
                 "The specified partition does not contain enough space to install AOSC OS release!\n\nAvailable space: {:.3}GiB\nRequired space: {:.3}GiB", 
                 partition.size as f32 / 1024.0 / 1024.0 / 1024.0,
@@ -232,7 +233,9 @@ fn get_swap(
     } else {
         let size = disks::get_recommand_swap_size()?;
 
-        if partition.size > size as u64 + variant.install_size - DEFAULT_EMPTY_SIZE {
+        if partition.size as f64
+            > size + variant.install_size as f64 + variant.size as f64 - DEFAULT_EMPTY_SIZE as f64
+        {
             (true, size, true)
         } else {
             (false, size, false)

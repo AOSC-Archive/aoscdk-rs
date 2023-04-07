@@ -235,6 +235,7 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
         .into_iter()
         .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty() && x.name != "BuildKit")
         .collect::<Vec<Variant>>();
+
     let right_recipes_len = right_recipes.len();
     for (index, recipe) in right_recipes.into_iter().enumerate() {
         let mut sorted_tarballs: Vec<Tarball> = recipe

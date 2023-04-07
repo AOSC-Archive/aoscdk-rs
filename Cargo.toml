@@ -41,6 +41,7 @@ sudoku = "0.7"
 log = "0.4"
 fern = "0.6"
 time = { version = "0.3", features = ["formatting"] }
+libc = "0.2"
 
 [features]
 is_retro = []

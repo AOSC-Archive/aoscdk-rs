@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use log::info;
 use nix::dir::Dir;
+use nix::errno::Errno;
 use nix::fcntl::{FallocateFlags, OFlag};
 use nix::mount;
 use nix::sys::reboot::{reboot, RebootMode};
@@ -461,12 +462,18 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
 
     info!("Creating swapfile");
     let mut swapfile = std::fs::File::create(&swap_path)?;
-    nix::fcntl::fallocate(
-        swapfile.as_raw_fd(),
-        FallocateFlags::empty(),
-        0,
-        size as i64,
-    )?;
+
+    let res = unsafe {
+        libc::fallocate64(
+            swapfile.as_raw_fd(),
+            FallocateFlags::empty().bits(),
+            0,
+            size as i64,
+        )
+    };
+
+    Errno::result(res).map(drop)?;
+
     swapfile.flush()?;
 
     info!("Set swapfile permission as 600");

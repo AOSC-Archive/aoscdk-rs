@@ -67,6 +67,7 @@ dependencies = [
  "hhmmss",
  "indicatif",
  "lazy_static",
+ "libc",
  "libparted",
  "libparted-sys",
  "log",
