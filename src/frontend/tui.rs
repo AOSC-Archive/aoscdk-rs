@@ -426,7 +426,7 @@ fn select_mirrors_view(
                     let bench_result = network::query_file_meta(&test_url);
                     if bench_result.is_err() {
                         // this mirror is not usable, ask the user to check input.
-                        s.add_layer(Dialog::info(format!("Cannot access mirror! - Please make sure you have typed the URL correctly.\n\nError details:\n{}", bench_result.unwrap_err().to_string())));
+                        s.add_layer(Dialog::info(format!("Cannot access mirror! - Please make sure you have typed the URL correctly.\n\nError details:\n{}", bench_result.unwrap_err())));
                         return;
                     }
 
