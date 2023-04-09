@@ -182,7 +182,7 @@ pub fn speedtest_mirrors(mirrors: Vec<Mirror>) -> Vec<Mirror> {
         .build()
         .unwrap();
 
-    runtime.block_on(async move {
+    runtime.block_on(async move{
         let mut task = vec![];
         for mirror in &mirrors {
             task.push(get_mirror_speed_score(&mirror.url, &client))
