@@ -500,16 +500,6 @@ pub fn write_swap_entry_to_fstab() -> Result<()> {
     Ok(())
 }
 
-pub fn disable_hibernate() -> Result<()> {
-    let path = "/etc/systemd/system/hibernate.target";
-    if Path::new(path).exists() {
-        std::fs::remove_file(path)?;
-    }
-    std::os::unix::fs::symlink("/dev/null", path)?;
-
-    Ok(())
-}
-
 /// Run umount -R
 pub fn umount_all(mount_path: &Path, root_fd: i32) {
     info!("Cleaning up mount path ...");

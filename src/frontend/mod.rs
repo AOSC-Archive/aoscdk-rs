@@ -464,9 +464,6 @@ fn begin_install(
     info!("Setting locale as {}", locale);
     install::set_locale(locale)?;
 
-    info!("The swapfile offset reading problem is not solved yet, so hibernation is temporarily closed.");
-    install::disable_hibernate()?;
-
     info!("Escaping chroot ...");
     install::escape_chroot(escape_vector.as_raw_fd())?;
 
