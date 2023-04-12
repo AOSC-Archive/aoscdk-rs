@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.7 (2023-04-12)
+
+### Chore
+
+ - <csr-id-daa07b69856a8403b1bf11d387063c752dfaca38/> update all deps
+
+### New Features
+
+ - <csr-id-1e387238bfe9f58bb9fa3a227192da3f8b22be7c/> do not disable hibernate in deploykit
+
+### Style
+
+ - <csr-id-95a17117f3e3d0576b16ea90d9556ffb12f68049/> use cargo-fmt to format code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 2 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`95a1711`](https://github.com/AOSC-Dev/aoscdk-rs/commit/95a17117f3e3d0576b16ea90d9556ffb12f68049))
+    - Update all deps ([`daa07b6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/daa07b69856a8403b1bf11d387063c752dfaca38))
+    - Do not disable hibernate in deploykit ([`1e38723`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1e387238bfe9f58bb9fa3a227192da3f8b22be7c))
+</details>
+
 ## v0.5.6 (2023-04-09)
 
 <csr-id-4ac0590beae826e73ff0ed1da039d5ac7e9b10c9/>
@@ -49,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 11 commits contributed to the release over the course of 48 calendar days.
+ - 12 commits contributed to the release over the course of 48 calendar days.
  - 48 days passed between releases.
  - 10 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -61,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.5.6 ([`75ac6bb`](https://github.com/AOSC-Dev/aoscdk-rs/commit/75ac6bb7e345ee1b6d989b81bf925bd9a0cd4b6e))
     - Add changelog ([`9d540bf`](https://github.com/AOSC-Dev/aoscdk-rs/commit/9d540bf87c29a9d16e713ffb80da96974ad508c0))
     - Remove -alpha.0 version tag; use rust 2021 edition ([`4ac0590`](https://github.com/AOSC-Dev/aoscdk-rs/commit/4ac0590beae826e73ff0ed1da039d5ac7e9b10c9))
     - Use cargo clippy to lint code ([`1f38cfb`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1f38cfb48a371cb413cca7ffb853c37b945d15df))
