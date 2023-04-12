@@ -145,11 +145,12 @@ pub fn query_file_meta(url: &String) -> Result<reqwest::blocking::Response> {
     let head_response = client.head(url).send();
 
     let server_response = head_response.map_err(|e| anyhow!("{}", e))?;
-    let server_success = server_response.error_for_status().map_err(|e| anyhow!("{}", e))?;
+    let server_success = server_response
+        .error_for_status()
+        .map_err(|e| anyhow!("{}", e))?;
 
     Ok(server_success)
 }
-
 
 pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
     let client = reqwest::blocking::ClientBuilder::new()
@@ -182,7 +183,7 @@ pub fn speedtest_mirrors(mirrors: Vec<Mirror>) -> Vec<Mirror> {
         .build()
         .unwrap();
 
-    runtime.block_on(async move{
+    runtime.block_on(async move {
         let mut task = vec![];
         for mirror in &mirrors {
             task.push(get_mirror_speed_score(&mirror.url, &client))

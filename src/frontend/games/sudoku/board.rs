@@ -87,18 +87,10 @@ impl SudokuBoard {
 
     fn draw_playing(&self, printer: &Printer) {
         printer.print((0, 0), "┏━━━┯━━━┯━━━┓");
-        for (i, i_) in (1..4)
-            .chain(5..8)
-            .chain(9..12)
-            .enumerate()
-        {
+        for (i, i_) in (1..4).chain(5..8).chain(9..12).enumerate() {
             printer.print((0, i_), "┃");
             printer.print((12, i_), "┃");
-            for (j, j_) in (1..4)
-                .chain(5..8)
-                .chain(9..12)
-                .enumerate()
-            {
+            for (j, j_) in (1..4).chain(5..8).chain(9..12).enumerate() {
                 let n = self.sudoku[[i, j]];
                 if self.sudoku.available[i][j] {
                     if n > 0 {
@@ -115,18 +107,12 @@ impl SudokuBoard {
         for i in [4usize, 8, 12].iter() {
             printer.print((0, *i), "┠");
             printer.print((12, *i), "┨");
-            for j in (1..4)
-                .chain(5..8)
-                .chain(9..12)
-            {
+            for j in (1..4).chain(5..8).chain(9..12) {
                 printer.print((j, *i), "─");
             }
         }
         for j in [4usize, 8].iter() {
-            for i in (1..4)
-                .chain(5..8)
-                .chain(9..12)
-            {
+            for i in (1..4).chain(5..8).chain(9..12) {
                 printer.print((*j, i), "│");
             }
         }
