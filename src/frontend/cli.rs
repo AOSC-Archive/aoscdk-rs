@@ -269,6 +269,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         partition: Some(Arc::new(partition)),
         mirror: Some(Arc::new(mirror)),
         user: Some(Arc::new(ic.user)),
+        full_name: None,
         password: Some(Arc::new(ic.password)),
         hostname: Some(ic.hostname),
         locale: Some(Arc::new(ic.locale)),

@@ -643,9 +643,20 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
     let password_confirm_copy = Rc::clone(&password_confirm);
     let name = Rc::new(RefCell::new(String::new()));
     let name_copy = Rc::clone(&name);
+    let full_name = Rc::new(RefCell::new(String::new()));
+    let full_name_copy = Rc::clone(&full_name);
 
     let user_password_textview = TextView::new(ENTER_USER_PASSWORD_TEXT).max_width(80);
     let user_password_view = ListView::new()
+        .child(
+            "Full name",
+            EditView::new()
+                .on_edit_mut(move |_, c, _| {
+                    full_name_copy.replace(c.to_owned());
+                })
+                .min_width(20)
+                .with_name("full_name"),
+        )
         .child(
             "Username",
             EditView::new()
@@ -688,20 +699,31 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         let password = password.as_ref().to_owned().into_inner();
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
         let name = name.as_ref().to_owned().into_inner();
+        let full_name = full_name.as_ref().to_owned().into_inner();
+
+        if full_name.contains('\n') || full_name.contains(':') {
+            show_msg(s, "Full name is not valid, please refer to the criteria specified on top of the dialog.");
+            return;
+        }
+    
         if !install::is_acceptable_username(&name) {
             show_msg(s, "Username is not valid, please refer to the criteria specified on top of the dialog.");
             return;
         }
+
         if password.is_empty() || password_confirm.is_empty() || name.is_empty() {
             fill_in_all_the_fields!(s);
         }
+
         if password != password_confirm {
             show_msg(s, "Passwords password do not match.");
             return;
         }
+
         let mut config = config.clone();
         config.password = Some(Arc::new(password));
         config.user = Some(Arc::new(name));
+        config.full_name = Some(Arc::new(full_name));
         select_hostname(s, config);
     })
     .button("Back", move |s| {

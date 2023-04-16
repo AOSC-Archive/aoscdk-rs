@@ -60,6 +60,7 @@ struct InstallConfig {
     variant: Option<Arc<network::VariantEntry>>,
     partition: Option<Arc<disks::Partition>>,
     mirror: Option<Arc<network::Mirror>>,
+    full_name: Option<Arc<String>>,
     user: Option<Arc<String>>,
     password: Option<Arc<String>>,
     hostname: Option<String>,
@@ -77,6 +78,7 @@ impl Default for InstallConfig {
             variant: None,
             partition: None,
             mirror: None,
+            full_name: None,
             user: None,
             password: None,
             hostname: None,
@@ -458,7 +460,10 @@ fn begin_install(
     install::set_hostname(&hostname)?;
 
     info!("Setting username and password ...");
-    install::add_new_user(&config.user.unwrap(), &config.password.unwrap())?;
+    install::add_new_user(&config.user.clone().unwrap(), &config.password.unwrap())?;
+
+    info!("Setting fullname ...");
+    install::passwd_set_fullname(&config.full_name.unwrap(), &config.user.unwrap())?;
 
     let locale = config.locale.as_ref().unwrap();
     info!("Setting locale as {}", locale);
