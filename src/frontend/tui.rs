@@ -705,7 +705,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
             show_msg(s, "Full name is not valid, please refer to the criteria specified on top of the dialog.");
             return;
         }
-    
+
         if !install::is_acceptable_username(&name) {
             show_msg(s, "Username is not valid, please refer to the criteria specified on top of the dialog.");
             return;
