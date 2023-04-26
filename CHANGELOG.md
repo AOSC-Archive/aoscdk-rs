@@ -5,7 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.8 (2023-04-26)
+
+### Chore
+
+ - <csr-id-83aa175e9952cee96bf2afdb0c78b6bf2c3de844/> update all deps
+ - <csr-id-7902d23512acaf4cf08c8ca48d23f6a71058b0a1/> add Mag Mell as author
+
+### New Features
+
+ - <csr-id-e68b7328c6fb774bfd4d001431d34b85012ac5d4/> add set fullname feature
+
+### Bug Fixes
+
+ - <csr-id-592acd0aa2db49204bba8534a6c3b57261368866/> (powerpc64) rename struct PathBuf => Path in src/disks.rs
+
+### Style
+
+ - <csr-id-00c95bd617d4696bb13b753e691b3f47fa5db0f0/> use cargo-fmt to format code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 5 commits contributed to the release over the course of 11 calendar days.
+ - 15 days passed between releases.
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`00c95bd`](https://github.com/AOSC-Dev/aoscdk-rs/commit/00c95bd617d4696bb13b753e691b3f47fa5db0f0))
+    - Update all deps ([`83aa175`](https://github.com/AOSC-Dev/aoscdk-rs/commit/83aa175e9952cee96bf2afdb0c78b6bf2c3de844))
+    - Add Mag Mell as author ([`7902d23`](https://github.com/AOSC-Dev/aoscdk-rs/commit/7902d23512acaf4cf08c8ca48d23f6a71058b0a1))
+    - (powerpc64) rename struct PathBuf => Path in src/disks.rs ([`592acd0`](https://github.com/AOSC-Dev/aoscdk-rs/commit/592acd0aa2db49204bba8534a6c3b57261368866))
+    - Add set fullname feature ([`e68b732`](https://github.com/AOSC-Dev/aoscdk-rs/commit/e68b7328c6fb774bfd4d001431d34b85012ac5d4))
+</details>
+
 ## v0.5.7 (2023-04-12)
+
+<csr-id-daa07b69856a8403b1bf11d387063c752dfaca38/>
+<csr-id-95a17117f3e3d0576b16ea90d9556ffb12f68049/>
 
 ### Chore
 
@@ -23,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 2 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -35,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.5.7 ([`2e8b347`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2e8b3471c676d8a91b312c8dcdcd30d83ecd6d40))
     - Use cargo-fmt to format code ([`95a1711`](https://github.com/AOSC-Dev/aoscdk-rs/commit/95a17117f3e3d0576b16ea90d9556ffb12f68049))
     - Update all deps ([`daa07b6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/daa07b69856a8403b1bf11d387063c752dfaca38))
     - Do not disable hibernate in deploykit ([`1e38723`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1e387238bfe9f58bb9fa3a227192da3f8b22be7c))
