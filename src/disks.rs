@@ -231,7 +231,7 @@ pub fn right_combine(device_path: Option<&Path>) -> Result<()> {
 }
 
 #[cfg(target_arch = "powerpc64")]
-pub fn right_combine(device_path: Option<&PathBuf>) -> Result<()> {
+pub fn right_combine(device_path: Option<&Path>) -> Result<()> {
     use crate::network;
     let partition_table_t = get_partition_table_type(device_path)?;
     let arch_name = network::get_arch_name();
