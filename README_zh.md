@@ -56,14 +56,14 @@ $ cargo build --release --features is_retro
 // 创建一个 35GiB 的硬盘镜像文件（以正常安装 AOSC OS KDE），起名为 test.img
 $ dd if=/dev/zero of=/path/to/aoscdk-rs-src/test.img bs=1M count=35840 status=progress
 
-// 使用 losetup 挂载镜像至 /dev/loop0
+// 使用 losetup 挂载镜像至 /dev/loop10
 # losetup /dev/loop0 /path/to/aoscdk-rs-src/test.img
 
 // 分区：分区一为主分区，若你的机器使用 UEFI 启动，则分区二为 EFI 系统分区 (ESP)
-# cfdisk /dev/loop0
+# cfdisk /dev/loop10
 
 // 刷新分区表
-# partprobe /dev/loop0
+# partprobe /dev/loop10
 ```
 
 2. 编译 DeployKit 的调试版本：

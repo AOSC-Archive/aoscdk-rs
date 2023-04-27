@@ -60,16 +60,16 @@ If you would like to debug DeployKit, please follow the following steps.
 // Create a 35GiB hard disk image (to install AOSC OS KDE), naming it test.img.
 $ dd if=/dev/zero of=/path/to/aoscdk-rs-src/test.img bs=1M count=35840 status=progress
 
-// Mount the image as /dev/loop0 with losetup.
-# losetup /dev/loop0 /path/to/aoscdk-rs-src/test.img
+// Mount the image as /dev/loop10 with losetup.
+# losetup /dev/loop10 /path/to/aoscdk-rs-src/test.img
 
 // Partition the image. The first partition should be the system partition.
 // If you are using EFI, please create an ESP (EFI System Partition) as the
 // second partition.
-# cfdisk /dev/loop0
+# cfdisk /dev/loop10
 
 // Inform the kernel about partition changes.
-# partprobe /dev/loop0
+# partprobe /dev/loop10
 ```
 
 2. Building DeployKit for debugging.

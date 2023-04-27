@@ -489,8 +489,8 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     // prevent developer/tester accidentally delete their partitions
                     Rc::new(disks::Partition {
                         fs_type: None,
-                        path: Some(PathBuf::from("/dev/loop0p1")),
-                        parent_path: Some(PathBuf::from("/dev/loop0")),
+                        path: Some(PathBuf::from("/dev/loop10p1")),
+                        parent_path: Some(PathBuf::from("/dev/loop10")),
                         size: required_size,
                     })
                 } else {
