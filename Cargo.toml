@@ -1,7 +1,7 @@
 [package]
 name = "aoscdk-rs"
 version = "0.5.8"
-authors = ["liushuyu <liushuyu011@gmail.com>", "Mag Mell <saki@aosc.io>"]
+authors = ["liushuyu <liushuyu011@gmail.com>", "eatradish <sakiiily@aosc.io>"]
 
 edition = "2021"
 
