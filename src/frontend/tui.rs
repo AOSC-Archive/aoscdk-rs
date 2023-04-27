@@ -518,6 +518,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let current_partition_clone = current_partition.clone();
                 if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_deref()) {
                     show_msg(s, &e.to_string());
+                    return;
                 }
                 if let Err(e) = disks::right_combine(current_partition.parent_path.as_deref()) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
