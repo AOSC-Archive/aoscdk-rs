@@ -5,7 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.9 (2023-04-27)
+
+### Chore
+
+ - <csr-id-01ee74b2518246c9dbad58d3cb4d665c8d5953f6/> fix author info for Mag Mell (eatradish)
+
+### Bug Fixes
+
+ - <csr-id-63b3d81041b21eb0a77b96b6f07e5e8d77c79bce/> do not set parent_path as argument to mbr_is_primary_partition method
+ - <csr-id-9fc4227e0c37d3acc7bb4ef3434b7c3f639e6d41/> avoid overlapping windows upon resumed setup on MBR drives
+ - <csr-id-af4660e9d76a3b007ede3e6db3f1479deacbb400/> set debug mode disk path as /dev/loop10 to fix conflict with snap
+ - <csr-id-941fe8c0a02c4def9d8fd24cf9a882724df55c23/> allow installing on !GPT partition tables on ppc64el
+ - <csr-id-d303ec80310f2d2a4bdb38a82c1331903538d386/> disable grub-install for PowerNV/OPAL systems
+   These systems uses Petitboot/Skiboot, which picks up boot entries from GRUB
+   configuration. No need for installed bootloaders.
+
+### Style
+
+ - <csr-id-f0f333b98bd5053129107b6c115b12993b1ed7a9/> use cargo clippy to lint code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 7 commits contributed to the release.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo clippy to lint code ([`f0f333b`](https://github.com/AOSC-Dev/aoscdk-rs/commit/f0f333b98bd5053129107b6c115b12993b1ed7a9))
+    - Fix author info for Mag Mell (eatradish) ([`01ee74b`](https://github.com/AOSC-Dev/aoscdk-rs/commit/01ee74b2518246c9dbad58d3cb4d665c8d5953f6))
+    - Do not set parent_path as argument to mbr_is_primary_partition method ([`63b3d81`](https://github.com/AOSC-Dev/aoscdk-rs/commit/63b3d81041b21eb0a77b96b6f07e5e8d77c79bce))
+    - Avoid overlapping windows upon resumed setup on MBR drives ([`9fc4227`](https://github.com/AOSC-Dev/aoscdk-rs/commit/9fc4227e0c37d3acc7bb4ef3434b7c3f639e6d41))
+    - Set debug mode disk path as /dev/loop10 to fix conflict with snap ([`af4660e`](https://github.com/AOSC-Dev/aoscdk-rs/commit/af4660e9d76a3b007ede3e6db3f1479deacbb400))
+    - Allow installing on !GPT partition tables on ppc64el ([`941fe8c`](https://github.com/AOSC-Dev/aoscdk-rs/commit/941fe8c0a02c4def9d8fd24cf9a882724df55c23))
+    - Disable grub-install for PowerNV/OPAL systems ([`d303ec8`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d303ec80310f2d2a4bdb38a82c1331903538d386))
+</details>
+
 ## v0.5.8 (2023-04-26)
+
+<csr-id-83aa175e9952cee96bf2afdb0c78b6bf2c3de844/>
+<csr-id-7902d23512acaf4cf08c8ca48d23f6a71058b0a1/>
+<csr-id-00c95bd617d4696bb13b753e691b3f47fa5db0f0/>
 
 ### Chore
 
@@ -28,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 11 calendar days.
+ - 6 commits contributed to the release over the course of 11 calendar days.
  - 15 days passed between releases.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -40,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.5.8 ([`748c0a3`](https://github.com/AOSC-Dev/aoscdk-rs/commit/748c0a394dc632b2be3fce1d894c55245a357684))
     - Use cargo-fmt to format code ([`00c95bd`](https://github.com/AOSC-Dev/aoscdk-rs/commit/00c95bd617d4696bb13b753e691b3f47fa5db0f0))
     - Update all deps ([`83aa175`](https://github.com/AOSC-Dev/aoscdk-rs/commit/83aa175e9952cee96bf2afdb0c78b6bf2c3de844))
     - Add Mag Mell as author ([`7902d23`](https://github.com/AOSC-Dev/aoscdk-rs/commit/7902d23512acaf4cf08c8ca48d23f6a71058b0a1))
