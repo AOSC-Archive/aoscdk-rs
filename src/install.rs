@@ -489,6 +489,7 @@ pub fn passwd_set_fullname(full_name: &str, username: &str) -> Result<()> {
 
 /// Runs grub-install and grub-mkconfig
 /// Must be used in a chroot context
+#[cfg(not(target_arch = "powerpc64"))]
 pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     let mut grub_install_args = vec![];
 
@@ -503,9 +504,6 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
         let (target, is_efi) = match network::get_arch_name() {
             Some("amd64") => ("--target=x86_64-efi", true),
             Some("arm64") => ("--target=arm64-efi", true),
-            Some("ppc64el") | Some("ppc64") | Some("powerpc") => {
-                ("--target=powerpc-ieee1275", false)
-            }
             Some("riscv64") => ("--target=riscv64-efi", true),
             _ => {
                 info!("This architecture does not support grub");
@@ -520,6 +518,42 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
     };
 
     run_command("grub-install", &grub_install_args)?;
+    run_command("grub-mkconfig", ["-o", "/boot/grub/grub.cfg"])?;
+
+    Ok(())
+}
+
+#[cfg(target_arch = "powerpc64")]
+pub fn execute_grub_install(_mbr_dev: Option<&PathBuf>) -> Result<()> {
+    use std::io::BufReader;
+
+    let target = network::get_arch_name();
+
+    let cpuinfo = std::fs::File::open("/proc/cpuinfo")?;
+    let r = BufReader::new(cpuinfo);
+
+    let find = r.lines().flatten().find(|x| x.starts_with("firmware"));
+
+    let needs_install = if let Some(find) = find {
+        let s = find.split(':').nth(1).map(|x| x.trim());
+
+        s != Some("OPAL")
+    } else {
+        true
+    };
+
+    let install_args = match target {
+        Some("ppc64el") | Some("ppc64") | Some("powerpc") => "--target=powerpc-ieee1275",
+        _ => {
+            info!("This architecture does not support grub");
+            return Ok(());
+        }
+    };
+
+    if needs_install {
+        run_command("grub-install", &[install_args])?;
+    }
+
     run_command("grub-mkconfig", ["-o", "/boot/grub/grub.cfg"])?;
 
     Ok(())
