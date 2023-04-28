@@ -187,7 +187,10 @@ fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
     ))
 }
 
-pub fn mbr_is_primary_partition(device_path: Option<&Path>, part_path: Option<&Path>) -> Result<()> {
+pub fn mbr_is_primary_partition(
+    device_path: Option<&Path>,
+    part_path: Option<&Path>,
+) -> Result<()> {
     let partition_t = get_partition_table_type(device_path)?;
 
     if partition_t != "msdos" {
