@@ -5,7 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.6.0 (2023-04-28)
+
+### Chore
+
+ - <csr-id-6a539a850fb60ab3be499a16daa4414a652d1631/> use cargo-fmt to format code
+ - <csr-id-3f89b6a367fc70de21b70ef4d75ded6930188081/> update all deps
+
+### New Features
+
+ - <csr-id-6b6e135b5fda6134b6c7f750b8f81569192af18b/> allow user set useless swap size
+
+### Bug Fixes
+
+ - <csr-id-6fc6db1dd06fd14712cb204060c7e32b9b8c4f47/> set termion backend to workaround numpad issue under KMSCON
+ - <csr-id-49724d735fac2261ea88d1e731173466d89eaa36/> mbr_is_primary_partition method need parent_path and part_path argument
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 7 commits contributed to the release.
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`6a539a8`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6a539a850fb60ab3be499a16daa4414a652d1631))
+    - Set termion backend to workaround numpad issue under KMSCON ([`6fc6db1`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6fc6db1dd06fd14712cb204060c7e32b9b8c4f47))
+    - Mbr_is_primary_partition method need parent_path and part_path argument ([`49724d7`](https://github.com/AOSC-Dev/aoscdk-rs/commit/49724d735fac2261ea88d1e731173466d89eaa36))
+    - Revert "fix: do not set parent_path as argument to mbr_is_primary_partition method" ([`125e3dd`](https://github.com/AOSC-Dev/aoscdk-rs/commit/125e3dd0393dec7282ba0300e7c0ad64ee726954))
+    - Allow user set useless swap size ([`6b6e135`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6b6e135b5fda6134b6c7f750b8f81569192af18b))
+    - Fix frontend::cli::test Unsupported architecture issue ([`98f5096`](https://github.com/AOSC-Dev/aoscdk-rs/commit/98f50963293ac0cf5a7b49663d5b9fa184ab306f))
+    - Update all deps ([`3f89b6a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/3f89b6a367fc70de21b70ef4d75ded6930188081))
+</details>
+
 ## v0.5.9 (2023-04-27)
+
+<csr-id-01ee74b2518246c9dbad58d3cb4d665c8d5953f6/>
+<csr-id-f0f333b98bd5053129107b6c115b12993b1ed7a9/>
 
 ### Chore
 
@@ -29,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release.
+ - 8 commits contributed to the release.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -40,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.5.9 ([`01ce652`](https://github.com/AOSC-Dev/aoscdk-rs/commit/01ce6526d9ece1bba00000fb8bff23d838c3ac03))
     - Use cargo clippy to lint code ([`f0f333b`](https://github.com/AOSC-Dev/aoscdk-rs/commit/f0f333b98bd5053129107b6c115b12993b1ed7a9))
     - Fix author info for Mag Mell (eatradish) ([`01ee74b`](https://github.com/AOSC-Dev/aoscdk-rs/commit/01ee74b2518246c9dbad58d3cb4d665c8d5953f6))
     - Do not set parent_path as argument to mbr_is_primary_partition method ([`63b3d81`](https://github.com/AOSC-Dev/aoscdk-rs/commit/63b3d81041b21eb0a77b96b6f07e5e8d77c79bce))
