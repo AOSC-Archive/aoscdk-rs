@@ -516,7 +516,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                 let config_copy_2 = config.clone();
                 let fs_type = current_partition.fs_type.clone();
                 let current_partition_clone = current_partition.clone();
-                if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_deref()) {
+                if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_deref(), current_partition.path.as_deref()) {
                     show_msg(s, &e.to_string());
                     return;
                 }

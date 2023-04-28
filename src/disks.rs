@@ -187,7 +187,7 @@ fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
     ))
 }
 
-pub fn mbr_is_primary_partition(device_path: Option<&Path>) -> Result<()> {
+pub fn mbr_is_primary_partition(device_path: Option<&Path>, part_path: Option<&Path>) -> Result<()> {
     let partition_t = get_partition_table_type(device_path)?;
 
     if partition_t != "msdos" {
@@ -199,7 +199,7 @@ pub fn mbr_is_primary_partition(device_path: Option<&Path>) -> Result<()> {
             let parts = disk.parts().collect::<Vec<_>>();
             let index = parts
                 .iter()
-                .position(|x| x.get_path() == device_path)
+                .position(|x| x.get_path() == part_path)
                 .ok_or_else(|| anyhow!("Can not find select partition!"))?;
 
             let part_type = parts[index].type_get_name();
