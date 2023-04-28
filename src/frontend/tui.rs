@@ -1129,17 +1129,19 @@ fn custom_swap_size(
                 return;
             }
 
-            match disks::is_enable_hibernation(size) {
+            let is_h = match disks::is_enable_hibernation(size) {
                 Ok(is_h) => {
-                    is_hibernation_clone.store(is_h, Ordering::SeqCst);
-                    swap_size_clone.replace(Some(size));
-                    use_swap_clone.store(true, Ordering::SeqCst);
+                    is_h
                 }
                 Err(e) => {
                     show_msg(s, &e.to_string());
-                    return;
+                    false
                 }
             };
+
+            is_hibernation_clone.store(is_h, Ordering::SeqCst);
+            swap_size_clone.replace(Some(size));
+            use_swap_clone.store(true, Ordering::SeqCst);
 
             let swap_size = swap_size.as_ref().to_owned().into_inner();
             config.swap_size = Arc::new(swap_size);
