@@ -14,7 +14,7 @@ anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 nix = "0.26"
 libparted = "0.1"
-cursive = { version = "0.20", features = ["termion-backend"]}
+cursive = "0.20"
 cursive_table_view = "0.14"
 lazy_static = "1.4"
 number_prefix = "0.4"
