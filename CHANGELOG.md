@@ -5,7 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.6.1 (2023-04-29)
+
+### Chore
+
+ - <csr-id-87db8ec5a7e87d27352167f26d78c26229d9a65d/> update all deps
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update all deps ([`87db8ec`](https://github.com/AOSC-Dev/aoscdk-rs/commit/87db8ec5a7e87d27352167f26d78c26229d9a65d))
+    - Revert "fix: set termion backend to workaround numpad issue under KMSCON" ([`31e7160`](https://github.com/AOSC-Dev/aoscdk-rs/commit/31e716094a91af26b837fac3a473b4d24f39eaa4))
+</details>
+
 ## v0.6.0 (2023-04-28)
+
+<csr-id-6a539a850fb60ab3be499a16daa4414a652d1631/>
+<csr-id-3f89b6a367fc70de21b70ef4d75ded6930188081/>
 
 ### Chore
 
@@ -25,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release.
+ - 8 commits contributed to the release.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -36,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.6.0 ([`04b7409`](https://github.com/AOSC-Dev/aoscdk-rs/commit/04b74093cca2c5632d082f48141a30b1f3f10af2))
     - Use cargo-fmt to format code ([`6a539a8`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6a539a850fb60ab3be499a16daa4414a652d1631))
     - Set termion backend to workaround numpad issue under KMSCON ([`6fc6db1`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6fc6db1dd06fd14712cb204060c7e32b9b8c4f47))
     - Mbr_is_primary_partition method need parent_path and part_path argument ([`49724d7`](https://github.com/AOSC-Dev/aoscdk-rs/commit/49724d735fac2261ea88d1e731173466d89eaa36))
