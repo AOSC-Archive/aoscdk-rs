@@ -212,7 +212,7 @@ async fn get_mirror_speed_score(mirror_url: &str, client: &Client) -> Result<f32
     let mut hasher = Sha256::new();
     hasher.write_all(&file)?;
 
-    if hex::encode( hasher.finalize()) == SPEEDTEST_FILE_CHECKSUM {
+    if hex::encode(hasher.finalize()) == SPEEDTEST_FILE_CHECKSUM {
         let result_time = timer.elapsed().as_secs_f32();
         return Ok(result_time);
     }
