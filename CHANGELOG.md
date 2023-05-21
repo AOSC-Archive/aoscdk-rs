@@ -5,7 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.6.2 (2023-05-21)
+
+### New Features
+
+ - <csr-id-ef5e61ff674a37ef1fc6e090d0c3ffec40f4606d/> Use systemd reboot to reboot system
+   - Also fix mirror benchmark
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 22 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use systemd reboot to reboot system ([`ef5e61f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/ef5e61ff674a37ef1fc6e090d0c3ffec40f4606d))
+</details>
+
 ## v0.6.1 (2023-04-29)
+
+<csr-id-87db8ec5a7e87d27352167f26d78c26229d9a65d/>
 
 ### Chore
 
@@ -15,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -27,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.6.1 ([`f8cfcd8`](https://github.com/AOSC-Dev/aoscdk-rs/commit/f8cfcd8afc85b5bc101cb6660e8f347f5c8402e3))
     - Update all deps ([`87db8ec`](https://github.com/AOSC-Dev/aoscdk-rs/commit/87db8ec5a7e87d27352167f26d78c26229d9a65d))
     - Revert "fix: set termion backend to workaround numpad issue under KMSCON" ([`31e7160`](https://github.com/AOSC-Dev/aoscdk-rs/commit/31e716094a91af26b837fac3a473b4d24f39eaa4))
 </details>
@@ -43,12 +72,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
- - <csr-id-6b6e135b5fda6134b6c7f750b8f81569192af18b/> allow user set useless swap size
+ - <csr-id-6b6e135b5fda6134b6c7f750b8f81569192af18b/> Allow user set useless swap size
 
 ### Bug Fixes
 
- - <csr-id-6fc6db1dd06fd14712cb204060c7e32b9b8c4f47/> set termion backend to workaround numpad issue under KMSCON
- - <csr-id-49724d735fac2261ea88d1e731173466d89eaa36/> mbr_is_primary_partition method need parent_path and part_path argument
+ - <csr-id-6fc6db1dd06fd14712cb204060c7e32b9b8c4f47/> Set termion backend to workaround numpad issue under KMSCON
+ - <csr-id-49724d735fac2261ea88d1e731173466d89eaa36/> Mbr_is_primary_partition method need parent_path and part_path argument
 
 ### Commit Statistics
 
@@ -86,11 +115,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
- - <csr-id-63b3d81041b21eb0a77b96b6f07e5e8d77c79bce/> do not set parent_path as argument to mbr_is_primary_partition method
- - <csr-id-9fc4227e0c37d3acc7bb4ef3434b7c3f639e6d41/> avoid overlapping windows upon resumed setup on MBR drives
- - <csr-id-af4660e9d76a3b007ede3e6db3f1479deacbb400/> set debug mode disk path as /dev/loop10 to fix conflict with snap
- - <csr-id-941fe8c0a02c4def9d8fd24cf9a882724df55c23/> allow installing on !GPT partition tables on ppc64el
- - <csr-id-d303ec80310f2d2a4bdb38a82c1331903538d386/> disable grub-install for PowerNV/OPAL systems
+ - <csr-id-63b3d81041b21eb0a77b96b6f07e5e8d77c79bce/> Do not set parent_path as argument to mbr_is_primary_partition method
+ - <csr-id-9fc4227e0c37d3acc7bb4ef3434b7c3f639e6d41/> Avoid overlapping windows upon resumed setup on MBR drives
+ - <csr-id-af4660e9d76a3b007ede3e6db3f1479deacbb400/> Set debug mode disk path as /dev/loop10 to fix conflict with snap
+ - <csr-id-941fe8c0a02c4def9d8fd24cf9a882724df55c23/> Allow installing on !GPT partition tables on ppc64el
+ - <csr-id-d303ec80310f2d2a4bdb38a82c1331903538d386/> Disable grub-install for PowerNV/OPAL systems
    These systems uses Petitboot/Skiboot, which picks up boot entries from GRUB
    configuration. No need for installed bootloaders.
 
@@ -136,7 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
- - <csr-id-e68b7328c6fb774bfd4d001431d34b85012ac5d4/> add set fullname feature
+ - <csr-id-e68b7328c6fb774bfd4d001431d34b85012ac5d4/> Add set fullname feature
 
 ### Bug Fixes
 
@@ -181,7 +210,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
- - <csr-id-1e387238bfe9f58bb9fa3a227192da3f8b22be7c/> do not disable hibernate in deploykit
+ - <csr-id-1e387238bfe9f58bb9fa3a227192da3f8b22be7c/> Do not disable hibernate in deploykit
 
 ### Style
 
@@ -227,12 +256,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
- - <csr-id-9d540bf87c29a9d16e713ffb80da96974ad508c0/> add changelog
+ - <csr-id-9d540bf87c29a9d16e713ffb80da96974ad508c0/> Add changelog
 
 ### Bug Fixes
 
- - <csr-id-92a8ae90ace55f2a367131c3494ddaf1e63f5457/> use libc::fallocate64 to fallocate swapfile to fix retro create swapfile
- - <csr-id-3ef14fc6f5f3e3b23853147d2c325daebd92129d/> fix swapfile crate size
+ - <csr-id-92a8ae90ace55f2a367131c3494ddaf1e63f5457/> Use libc::fallocate64 to fallocate swapfile to fix retro create swapfile
+ - <csr-id-3ef14fc6f5f3e3b23853147d2c325daebd92129d/> Fix swapfile crate size
 
 ### Other
 
