@@ -12,7 +12,7 @@ use std::{
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
 const IS_RETRO: bool = cfg!(feature = "is_retro");
 const SPEEDTEST_FILE_CHECKSUM: &str =
-    "98900564fb4d9c7d3b63f44686c5b8a120af94a51fc6ca595e1406d5d8cc0416";
+    "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58";
 
 macro_rules! DEPLOYKIT_USER_AGENT {
     () => {
@@ -201,18 +201,18 @@ pub fn speedtest_mirrors(mirrors: Vec<Mirror>) -> Vec<Mirror> {
             let index = mirrors.iter().position(|x| x.loc_tr == name).unwrap();
             new_mirrors.push(mirrors[index].to_owned());
         }
-
         new_mirrors
     })
 }
 
 async fn get_mirror_speed_score(mirror_url: &str, client: &Client) -> Result<f32> {
-    let download_url = Url::parse(mirror_url)?.join("../misc/u-boot-sunxi-with-spl.bin")?;
+    let download_url = Url::parse(mirror_url)?.join("../.repotest")?;
     let timer = Instant::now();
     let file = client.get(download_url).send().await?.bytes().await?;
     let mut hasher = Sha256::new();
     hasher.write_all(&file)?;
-    if hex::encode(hasher.finalize()) == SPEEDTEST_FILE_CHECKSUM {
+
+    if hex::encode( hasher.finalize()) == SPEEDTEST_FILE_CHECKSUM {
         let result_time = timer.elapsed().as_secs_f32();
         return Ok(result_time);
     }

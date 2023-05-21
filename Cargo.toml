@@ -24,13 +24,13 @@ sha2 = "0.10"
 hex = "0.4"
 tempfile = "3.2"
 cursive-async-view = "0.6"
-tokio = { version = "1.15", features = ["rt", "rt-multi-thread"]}
+tokio = { version = "1.15", features = ["rt", "rt-multi-thread", "macros"]}
 futures = "0.3"
 rand = "0.8"
 ctrlc = { version = "3.2", features = ["termination"] }
 fstab-generate = "0.1"
 disk-types = "0.1"
-sysinfo = "0.28"
+sysinfo = "0.29"
 clap = { version = "4.2", features = ["derive"] }
 indicatif = "0.17"
 libparted-sys = "0.3"

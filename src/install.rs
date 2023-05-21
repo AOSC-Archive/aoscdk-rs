@@ -4,7 +4,6 @@ use nix::dir::Dir;
 use nix::errno::Errno;
 use nix::fcntl::{FallocateFlags, OFlag};
 use nix::mount;
-use nix::sys::reboot::{reboot, RebootMode};
 use nix::sys::stat::Mode;
 use nix::unistd::{chroot, fchdir, sync};
 use std::ffi::OsStr;
@@ -128,7 +127,7 @@ pub fn auto_mount_root_path(tmp_path: &Path, partition: &Partition) -> Result<Pa
 /// Sync the filesystem and then reboot IMMEDIATELY (ignores init)
 pub fn sync_and_reboot() -> Result<()> {
     sync();
-    reboot(RebootMode::RB_AUTOBOOT)?;
+    Command::new("systemctl").arg("reboot").output()?;
 
     Ok(())
 }
