@@ -489,8 +489,8 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     // prevent developer/tester accidentally delete their partitions
                     Rc::new(disks::Partition {
                         fs_type: None,
-                        path: Some(PathBuf::from("/dev/loop10p1")),
-                        parent_path: Some(PathBuf::from("/dev/loop10")),
+                        path: Some(PathBuf::from("/dev/loop20p1")),
+                        parent_path: Some(PathBuf::from("/dev/loop20")),
                         size: required_size,
                     })
                 } else {
@@ -1283,7 +1283,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     add_main_callback(siv);
-    ctrlc::set_handler(|| {}).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
+    
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
