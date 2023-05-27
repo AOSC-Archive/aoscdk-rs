@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.6.3 (2023-05-27)
+
+### Chore
+
+ - <csr-id-d7a9dedc98fd9f815b673eb5e25ea5f0dede879c/> Use cargo-fmt to format code
+ - <csr-id-210a679d076a058bdf8456528df3ac9d8e274a69/> Update all deps
+ - <csr-id-439bd899f17fe8398df3ead37099f43dcfbf2ee6/> Update all deps
+
+### Bug Fixes
+
+ - <csr-id-532b757a0cf4fd18354e767a5bd308ef85e7ccd3/> Do not set tui ctrlc handler
+   This fix solves the problem that aoscdk-rs crashes when it is first installed
+   
+   Since the ctrlc-c binding has been cleared from the cursive level, there is no need to use ctrlc create to set the ctrlc handler
+
+### Style
+
+ - <csr-id-329d420ea48c90c630e04d0d88afea3251008845/> Use cargo-fmt to format code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 5 commits contributed to the release over the course of 5 calendar days.
+ - 5 days passed between releases.
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`d7a9ded`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d7a9dedc98fd9f815b673eb5e25ea5f0dede879c))
+    - Update all deps ([`210a679`](https://github.com/AOSC-Dev/aoscdk-rs/commit/210a679d076a058bdf8456528df3ac9d8e274a69))
+    - Do not set tui ctrlc handler ([`532b757`](https://github.com/AOSC-Dev/aoscdk-rs/commit/532b757a0cf4fd18354e767a5bd308ef85e7ccd3))
+    - Use cargo-fmt to format code ([`329d420`](https://github.com/AOSC-Dev/aoscdk-rs/commit/329d420ea48c90c630e04d0d88afea3251008845))
+    - Update all deps ([`439bd89`](https://github.com/AOSC-Dev/aoscdk-rs/commit/439bd899f17fe8398df3ead37099f43dcfbf2ee6))
+</details>
+
 ## v0.6.2 (2023-05-21)
 
 ### New Features
@@ -16,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 22 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -28,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.6.2 ([`503911a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/503911a66ea8b7f9ca6323840e6a46114d4520c3))
     - Use systemd reboot to reboot system ([`ef5e61f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/ef5e61ff674a37ef1fc6e090d0c3ffec40f4606d))
 </details>
 
