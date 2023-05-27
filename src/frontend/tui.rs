@@ -1283,7 +1283,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     add_main_callback(siv);
-    
+
     save_user_config_to_file(config.clone(), LAST_USER_CONFIG_FILE).ok();
     siv.pop_layer();
     let counter = Counter::new(0);
