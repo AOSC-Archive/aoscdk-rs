@@ -307,10 +307,7 @@ fn begin_install(
             &mount_path,
             counter_clone,
         ) {
-            let e = anyhow!(
-                "Installer failed to unpack system release:\n\n{}",
-                e
-            );
+            let e = anyhow!("Installer failed to unpack system release:\n\n{}", e);
             send_error!(error_channel_tx_copy, e);
         }
 

@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
-use log::info;
 use cursive::utils::ProgressReader;
+use log::info;
 use nix::dir::Dir;
 use nix::errno::Errno;
 use nix::fcntl::{FallocateFlags, OFlag};
@@ -130,9 +130,11 @@ fn extract_squashfs<P: AsRef<Path>>(
     path: P,
     counter: cursive::utils::Counter,
 ) -> Result<()> {
-    Ok(distinst_squashfs::extract(archive, path, move |count| {
+    distinst_squashfs::extract(archive, path, move |count| {
         counter.set((file_size * count as f64 / 100.0) as usize);
-    })?)
+    })?;
+
+    Ok(())
 }
 
 /// Extract .tar.xz or .squashfs

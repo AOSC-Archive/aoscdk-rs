@@ -44,6 +44,19 @@ pub struct Tarball {
     pub sha256sum: String,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct Squashfs {
+    pub arch: String,
+    pub date: String,
+    #[serde(rename = "downloadSize")]
+    pub download_size: i64,
+    #[serde(rename = "instSize")]
+    pub inst_size: i64,
+    pub path: String,
+    pub sha256sum: String,
+    pub inodes: u32,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Variant {
     name: String,
@@ -52,6 +65,7 @@ pub struct Variant {
     #[serde(rename = "description-tr")]
     pub description_tr: String,
     tarballs: Vec<Tarball>,
+    squashfs: Vec<Squashfs>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -245,8 +259,17 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
             .into_iter()
             .filter(|x| x.arch == arch_name)
             .collect();
+
+        let mut sorted_squashfs: Vec<Squashfs> = recipe
+            .squashfs
+            .into_iter()
+            .filter(|x| x.arch == arch_name)
+            .collect();
+
         sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
-        if sorted_tarballs.is_empty() {
+        sorted_squashfs.sort_by(|a, b| b.date.cmp(&a.date));
+
+        if sorted_tarballs.is_empty() && sorted_squashfs.is_empty() {
             if all_empty && index == right_recipes_len - 1 {
                 return Err(anyhow!(
                     "Installer could not find any available system release for your device."
@@ -255,14 +278,25 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
             continue;
         }
         all_empty = false;
-        let candidate = sorted_tarballs.first().unwrap();
+
+        let candidate_tar = sorted_tarballs.first().unwrap();
         results.push(VariantEntry {
             name: recipe.name.clone(),
-            size: candidate.download_size as u64,
-            install_size: candidate.inst_size as u64,
-            date: candidate.date.clone(),
-            url: candidate.path.clone(),
-            sha256sum: candidate.sha256sum.clone(),
+            size: candidate_tar.download_size as u64,
+            install_size: candidate_tar.inst_size as u64,
+            date: candidate_tar.date.clone(),
+            url: candidate_tar.path.clone(),
+            sha256sum: candidate_tar.sha256sum.clone(),
+        });
+
+        let candidate_sq = sorted_squashfs.first().unwrap();
+        results.push(VariantEntry {
+            name: format!("{} (Squashfs)", recipe.name),
+            size: candidate_sq.download_size as u64,
+            install_size: candidate_sq.inst_size as u64,
+            date: candidate_sq.date.clone(),
+            url: candidate_sq.path.clone(),
+            sha256sum: candidate_sq.sha256sum.clone(),
         });
     }
     results.sort_by(|a, b| a.name.cmp(&b.name));
