@@ -59,6 +59,7 @@ fn no_need_to_run_info(s: &str, str_is_retro: bool) {
     }
 }
 
+#[derive(Debug)]
 pub enum ExtractFileType {
     Tar,
     Squashfs,

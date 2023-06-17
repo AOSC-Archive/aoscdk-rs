@@ -300,6 +300,7 @@ fn begin_install(
         counter_clone.set(0);
 
         info!("Trying extract tarball file: {:?}", tarball_file);
+        drop(output);
         if let Err(e) = install::extract_file(
             file_size as f64,
             url,
