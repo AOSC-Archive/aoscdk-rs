@@ -5,7 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.0 (2023-06-18)
+
+### Chore
+
+ - <csr-id-bfae4800da3880bd2a156b444c0334460f03952b/> Use cargo-fmt to format code
+ - <csr-id-ff8f76a3ccd9c15d431c321567a2d340bb80fc1b/> Update all deps
+
+### New Features
+
+ - <csr-id-d94587836076f0e1b0fc28154c3cfeba49900626/> Only display squashfs option in download list
+ - <csr-id-0830473739b8f0f7bed92c61e2c079c26ca3af2f/> Add squashfs option to variant list
+
+### Other
+
+ - <csr-id-b1c66da54dd953bd619163b95c12ab1cafdc4663/> Update dependencies
+ - <csr-id-4f1196630a8f12352317109e866d40c095aa3730/> Add extract squashfs support
+
+### Refactor
+
+ - <csr-id-7dce115764e6f2abf6e4f1eebb318456bc8d1352/> Drop tarball file after download done
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 7 commits contributed to the release over the course of 7 calendar days.
+ - 22 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`bfae480`](https://github.com/AOSC-Dev/aoscdk-rs/commit/bfae4800da3880bd2a156b444c0334460f03952b))
+    - Update all deps ([`ff8f76a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/ff8f76a3ccd9c15d431c321567a2d340bb80fc1b))
+    - Only display squashfs option in download list ([`d945878`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d94587836076f0e1b0fc28154c3cfeba49900626))
+    - Drop tarball file after download done ([`7dce115`](https://github.com/AOSC-Dev/aoscdk-rs/commit/7dce115764e6f2abf6e4f1eebb318456bc8d1352))
+    - Add squashfs option to variant list ([`0830473`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0830473739b8f0f7bed92c61e2c079c26ca3af2f))
+    - Update dependencies ([`b1c66da`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b1c66da54dd953bd619163b95c12ab1cafdc4663))
+    - Add extract squashfs support ([`4f11966`](https://github.com/AOSC-Dev/aoscdk-rs/commit/4f1196630a8f12352317109e866d40c095aa3730))
+</details>
+
 ## v0.6.3 (2023-05-27)
+
+<csr-id-d7a9dedc98fd9f815b673eb5e25ea5f0dede879c/>
+<csr-id-210a679d076a058bdf8456528df3ac9d8e274a69/>
+<csr-id-439bd899f17fe8398df3ead37099f43dcfbf2ee6/>
+<csr-id-329d420ea48c90c630e04d0d88afea3251008845/>
 
 ### Chore
 
@@ -28,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 5 calendar days.
+ - 6 commits contributed to the release over the course of 5 calendar days.
  - 5 days passed between releases.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -40,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.6.3 ([`4ce7a87`](https://github.com/AOSC-Dev/aoscdk-rs/commit/4ce7a871635068eb5c3742c3fb39f6c664a52da0))
     - Use cargo-fmt to format code ([`d7a9ded`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d7a9dedc98fd9f815b673eb5e25ea5f0dede879c))
     - Update all deps ([`210a679`](https://github.com/AOSC-Dev/aoscdk-rs/commit/210a679d076a058bdf8456528df3ac9d8e274a69))
     - Do not set tui ctrlc handler ([`532b757`](https://github.com/AOSC-Dev/aoscdk-rs/commit/532b757a0cf4fd18354e767a5bd308ef85e7ccd3))
