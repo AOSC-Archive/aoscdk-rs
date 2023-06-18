@@ -64,7 +64,6 @@ pub struct Variant {
     pub description: String,
     #[serde(rename = "description-tr")]
     pub description_tr: String,
-    tarballs: Vec<Tarball>,
     squashfs: Vec<Squashfs>,
 }
 
@@ -249,16 +248,11 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     let right_recipes = recipes
         .variants
         .into_iter()
-        .filter(|x| x.retro == IS_RETRO && !x.tarballs.is_empty() && x.name != "BuildKit")
+        .filter(|x| x.retro == IS_RETRO && !x.squashfs.is_empty() && x.name != "BuildKit")
         .collect::<Vec<Variant>>();
 
     let right_recipes_len = right_recipes.len();
     for (index, recipe) in right_recipes.into_iter().enumerate() {
-        let mut sorted_tarballs: Vec<Tarball> = recipe
-            .tarballs
-            .into_iter()
-            .filter(|x| x.arch == arch_name)
-            .collect();
 
         let mut sorted_squashfs: Vec<Squashfs> = recipe
             .squashfs
@@ -266,10 +260,9 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
             .filter(|x| x.arch == arch_name)
             .collect();
 
-        sorted_tarballs.sort_by(|a, b| b.date.cmp(&a.date));
         sorted_squashfs.sort_by(|a, b| b.date.cmp(&a.date));
 
-        if sorted_tarballs.is_empty() && sorted_squashfs.is_empty() {
+        if sorted_squashfs.is_empty() {
             if all_empty && index == right_recipes_len - 1 {
                 return Err(anyhow!(
                     "Installer could not find any available system release for your device."
@@ -279,19 +272,9 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
         }
         all_empty = false;
 
-        let candidate_tar = sorted_tarballs.first().unwrap();
-        results.push(VariantEntry {
-            name: recipe.name.clone(),
-            size: candidate_tar.download_size as u64,
-            install_size: candidate_tar.inst_size as u64,
-            date: candidate_tar.date.clone(),
-            url: candidate_tar.path.clone(),
-            sha256sum: candidate_tar.sha256sum.clone(),
-        });
-
         let candidate_sq = sorted_squashfs.first().unwrap();
         results.push(VariantEntry {
-            name: format!("{} (Squashfs)", recipe.name),
+            name: recipe.name,
             size: candidate_sq.download_size as u64,
             install_size: candidate_sq.inst_size as u64,
             date: candidate_sq.date.clone(),
