@@ -253,7 +253,6 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
 
     let right_recipes_len = right_recipes.len();
     for (index, recipe) in right_recipes.into_iter().enumerate() {
-
         let mut sorted_squashfs: Vec<Squashfs> = recipe
             .squashfs
             .into_iter()
