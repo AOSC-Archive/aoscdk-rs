@@ -595,7 +595,7 @@ dependencies = [
 [[package]]
 name = "distinst-squashfs"
 version = "0.1.0"
-source = "git+https://github.com/AOSC-Dev/distinst-squashfs?rev=9377585c839336fcc1c50ab698e507e3740cb4d8#9377585c839336fcc1c50ab698e507e3740cb4d8"
+source = "git+https://github.com/AOSC-Dev/distinst-squashfs?rev=a5c59fe2f429ee9b57327b7423c5c70e14a63fe8#a5c59fe2f429ee9b57327b7423c5c70e14a63fe8"
 dependencies = [
  "libc",
  "log",
