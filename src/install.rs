@@ -135,11 +135,7 @@ fn extract_squashfs<P: AsRef<Path>>(
     sys.refresh_memory();
     let total_memory = sys.total_memory() / 1024 / 1024 / 1024;
 
-    let limit_thread = if total_memory <= 2 {
-        Some(1)
-    } else {
-        None
-    };
+    let limit_thread = if total_memory <= 2 { Some(1) } else { None };
 
     distinst_squashfs::extract(archive, path, limit_thread, move |count| {
         counter.set((file_size * count as f64 / 100.0) as usize);
