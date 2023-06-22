@@ -5,7 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.1 (2023-06-22)
+
+### Chore
+
+ - <csr-id-8f8881f3971261905ec2532ec6db7587b58c2dff/> Update all deps
+
+### New Features
+
+ - <csr-id-4b0275db4895bcd88313efdc7f2e229f3363acca/> Limit unsquashfs thread to 1 if total ram <= 2GiB
+
+### Style
+
+ - <csr-id-1152a702f5a01d914db765af7fca0dfb83bd7dec/> Use cargo-fmt and cargo-clippy to lint code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 4 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt and cargo-clippy to lint code ([`1152a70`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1152a702f5a01d914db765af7fca0dfb83bd7dec))
+    - Update all deps ([`8f8881f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8f8881f3971261905ec2532ec6db7587b58c2dff))
+    - Limit unsquashfs thread to 1 if total ram <= 2GiB ([`4b0275d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/4b0275db4895bcd88313efdc7f2e229f3363acca))
+</details>
+
 ## v0.7.0 (2023-06-18)
+
+<csr-id-bfae4800da3880bd2a156b444c0334460f03952b/>
+<csr-id-ff8f76a3ccd9c15d431c321567a2d340bb80fc1b/>
+<csr-id-b1c66da54dd953bd619163b95c12ab1cafdc4663/>
+<csr-id-4f1196630a8f12352317109e866d40c095aa3730/>
+<csr-id-7dce115764e6f2abf6e4f1eebb318456bc8d1352/>
 
 ### Chore
 
@@ -30,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release over the course of 7 calendar days.
+ - 8 commits contributed to the release over the course of 7 calendar days.
  - 22 days passed between releases.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -42,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.7.0 ([`ffe89c3`](https://github.com/AOSC-Dev/aoscdk-rs/commit/ffe89c33a7effd036b61ab049624e2213f2ca05d))
     - Use cargo-fmt to format code ([`bfae480`](https://github.com/AOSC-Dev/aoscdk-rs/commit/bfae4800da3880bd2a156b444c0334460f03952b))
     - Update all deps ([`ff8f76a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/ff8f76a3ccd9c15d431c321567a2d340bb80fc1b))
     - Only display squashfs option in download list ([`d945878`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d94587836076f0e1b0fc28154c3cfeba49900626))
