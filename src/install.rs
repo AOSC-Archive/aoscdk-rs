@@ -180,7 +180,7 @@ pub fn auto_mount_root_path(tmp_path: &Path, partition: &Partition) -> Result<Pa
 /// Sync the filesystem and then reboot IMMEDIATELY (ignores init)
 pub fn sync_and_reboot() -> Result<()> {
     sync();
-    run_command("systemctl", &["reboot"])?;
+    run_command("systemctl", ["reboot"])?;
 
     Ok(())
 }
