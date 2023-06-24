@@ -171,7 +171,6 @@ pub fn extract_file(
     }
 }
 
-/// Mount the filesystem to a temporary directory
 pub fn auto_mount_root_path(tmp_path: &Path, partition: &Partition) -> Result<PathBuf> {
     mount_root_path(partition, tmp_path)?;
 
@@ -181,7 +180,7 @@ pub fn auto_mount_root_path(tmp_path: &Path, partition: &Partition) -> Result<Pa
 /// Sync the filesystem and then reboot IMMEDIATELY (ignores init)
 pub fn sync_and_reboot() -> Result<()> {
     sync();
-    Command::new("systemctl").arg("reboot").output()?;
+    run_command("systemctl", &["reboot"])?;
 
     Ok(())
 }
