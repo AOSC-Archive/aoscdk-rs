@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.4 (2023-06-24)
+
+### New Features
+
+ - <csr-id-1d519034b0acfdaa9925cc5e14f982c4c115106c/> Add nofail option to fstab esp entry
+ - <csr-id-b9ee09f748e38358af75a6b3cb1b332daa2748aa/> Do not write esp partition entry to fstab
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add nofail option to fstab esp entry ([`1d51903`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1d519034b0acfdaa9925cc5e14f982c4c115106c))
+    - Revert "feat: do not write esp partition entry to fstab" ([`9f5844a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/9f5844af428a4aa8d269df8f8befc52ec265c68a))
+    - Do not write esp partition entry to fstab ([`b9ee09f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b9ee09f748e38358af75a6b3cb1b332daa2748aa))
+</details>
+
 ## v0.7.3 (2023-06-24)
 
 ### Bug Fixes
@@ -16,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -27,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.7.3 ([`dadac73`](https://github.com/AOSC-Dev/aoscdk-rs/commit/dadac7358602dc2b48ab12983ad501fca6a57f6a))
     - Do not set fullname if user setting fullname is empty ([`af19c0f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/af19c0f97323360e584362d5b573a7c4bf928ae9))
     - Do not write swapfile entry to fstab if use_swap is false ([`cae9b39`](https://github.com/AOSC-Dev/aoscdk-rs/commit/cae9b397a968f42c3bc44d9ead835e336c37aec4))
 </details>
