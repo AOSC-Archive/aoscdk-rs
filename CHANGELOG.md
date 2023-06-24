@@ -5,7 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.2 (2023-06-24)
+
+### Chore
+
+ - <csr-id-90f448d4ce42b04cc351cb810b04797f6982b58e/> Update all deps
+
+### New Features
+
+ - <csr-id-09b4e6439a3da30136ceb633657aa0b227e375e9/> Only allow ext4 and xfs as system disk type
+
+### Bug Fixes
+
+ - <csr-id-7ab5d1a2f0f3662b9d146878745986b43d2fb066/> 'Use Ext4' after shuld pop layer window
+   - Also set 'Use ext4' button as default option
+
+### Refactor
+
+ - <csr-id-e7d8227e92f7a363ff7dc0d55a81d31b898b8b8f/> Use run_command function to run systemctl reboot
+
+### Style
+
+ - <csr-id-70c89b624e5836b96022e170e422920db83a19c6/> Use cargo-fmt and cargo-clippy to lint code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 5 commits contributed to the release.
+ - 1 day passed between releases.
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt and cargo-clippy to lint code ([`70c89b6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/70c89b624e5836b96022e170e422920db83a19c6))
+    - Update all deps ([`90f448d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/90f448d4ce42b04cc351cb810b04797f6982b58e))
+    - Only allow ext4 and xfs as system disk type ([`09b4e64`](https://github.com/AOSC-Dev/aoscdk-rs/commit/09b4e6439a3da30136ceb633657aa0b227e375e9))
+    - 'Use Ext4' after shuld pop layer window ([`7ab5d1a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/7ab5d1a2f0f3662b9d146878745986b43d2fb066))
+    - Use run_command function to run systemctl reboot ([`e7d8227`](https://github.com/AOSC-Dev/aoscdk-rs/commit/e7d8227e92f7a363ff7dc0d55a81d31b898b8b8f))
+</details>
+
 ## v0.7.1 (2023-06-22)
+
+<csr-id-8f8881f3971261905ec2532ec6db7587b58c2dff/>
+<csr-id-1152a702f5a01d914db765af7fca0dfb83bd7dec/>
 
 ### Chore
 
@@ -23,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 4 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -35,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.7.1 ([`0293f4d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0293f4db8342c9de87953837808000cdd2681e19))
     - Use cargo-fmt and cargo-clippy to lint code ([`1152a70`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1152a702f5a01d914db765af7fca0dfb83bd7dec))
     - Update all deps ([`8f8881f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8f8881f3971261905ec2532ec6db7587b58c2dff))
     - Limit unsquashfs thread to 1 if total ram <= 2GiB ([`4b0275d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/4b0275db4895bcd88313efdc7f2e229f3363acca))
