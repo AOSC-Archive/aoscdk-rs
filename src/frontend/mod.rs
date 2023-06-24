@@ -436,8 +436,10 @@ fn begin_install(
     let fake_counter: usize = rng.gen_range(0..100);
     sender.send(InstallProgress::Pending(STEP8.to_string(), fake_counter))?;
 
-    info!("Generating swapfile entry to fstab");
-    install::write_swap_entry_to_fstab()?;
+    if use_swap {
+        info!("Generating swapfile entry to fstab");
+        install::write_swap_entry_to_fstab()?;
+    }
 
     let tz = config.timezone.unwrap();
     info!("Setting timezone as {}", &tz);
