@@ -395,11 +395,6 @@ fn begin_install(
     info!("Generating fstab ...");
     install::genfstab_to_file(partition, &tempdir, Path::new("/"))?;
 
-    if disks::is_efi_booted() {
-        info!("Generating fstab efi entry...");
-        let esp_part = disks::find_esp_partition(partition.parent_path.as_ref().unwrap())?;
-        install::genfstab_to_file(&esp_part, &tempdir, Path::new("/efi"))?;
-    }
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
 
