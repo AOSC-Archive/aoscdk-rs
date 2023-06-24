@@ -461,7 +461,9 @@ fn begin_install(
     install::add_new_user(&config.user.clone().unwrap(), &config.password.unwrap())?;
 
     info!("Setting fullname ...");
-    install::passwd_set_fullname(&config.full_name.unwrap(), &config.user.unwrap())?;
+    if config.full_name.is_some() && config.full_name != Some("".to_string().into()) {
+        install::passwd_set_fullname(&config.full_name.unwrap(), &config.user.unwrap())?;
+    }
 
     let locale = config.locale.as_ref().unwrap();
     info!("Setting locale as {}", locale);
