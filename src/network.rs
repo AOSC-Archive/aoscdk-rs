@@ -6,7 +6,7 @@ use std::{
     io::Write,
     sync::mpsc,
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant}, path::Path,
 };
 
 const MANIFEST_URL: &str = "https://releases.aosc.io/manifest/recipe.json";
@@ -98,7 +98,12 @@ pub struct VariantEntry {
 }
 
 pub fn fetch_recipe() -> Result<Recipe> {
-    Ok(reqwest::blocking::get(MANIFEST_URL)?.json()?)
+    let local_recipe =  Path::new("/run/initramfs/live/os/recipe.json");
+
+    match local_recipe.exists() {
+        true => Ok(serde_json::from_slice(&std::fs::read(local_recipe)?)?),
+        false => Ok(reqwest::blocking::get(MANIFEST_URL)?.json()?)
+    }
 }
 
 pub fn fetch_mirrors(recipe: &Recipe) -> Vec<Mirror> {
