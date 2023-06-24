@@ -249,7 +249,7 @@ pub fn fstab_entries(
         )
     })?;
     let (fs_type, option) = match fs_type {
-        "vfat" | "fat16" | "fat32" => (FileSystem::Fat32, "defaults"),
+        "vfat" | "fat16" | "fat32" => (FileSystem::Fat32, "defaults,nofail"),
         "ext4" => (FileSystem::Ext4, "defaults"),
         "btrfs" => (FileSystem::Btrfs, "defaults"),
         "xfs" => (FileSystem::Xfs, "defaults"),
