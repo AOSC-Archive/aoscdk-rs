@@ -13,7 +13,7 @@ use std::process::Command;
 use sysinfo::SystemExt;
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
-pub(crate) const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs", "btrfs", "f2fs"];
+pub const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
 const MBR_NON_PRIMARY_PART_ERROR: &str = r#"Installer has detected that you are attempting to install AOSC OS on an MBR extended partition. This is not allowed as it may cause startup issues.
