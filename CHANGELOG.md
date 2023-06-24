@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.3 (2023-06-24)
+
+### Bug Fixes
+
+ - <csr-id-af19c0f97323360e584362d5b573a7c4bf928ae9/> Do not set fullname if user setting fullname is empty
+ - <csr-id-cae9b397a968f42c3bc44d9ead835e336c37aec4/> Do not write swapfile entry to fstab if use_swap is false
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Do not set fullname if user setting fullname is empty ([`af19c0f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/af19c0f97323360e584362d5b573a7c4bf928ae9))
+    - Do not write swapfile entry to fstab if use_swap is false ([`cae9b39`](https://github.com/AOSC-Dev/aoscdk-rs/commit/cae9b397a968f42c3bc44d9ead835e336c37aec4))
+</details>
+
 ## v0.7.2 (2023-06-24)
+
+<csr-id-90f448d4ce42b04cc351cb810b04797f6982b58e/>
+<csr-id-e7d8227e92f7a363ff7dc0d55a81d31b898b8b8f/>
+<csr-id-70c89b624e5836b96022e170e422920db83a19c6/>
 
 ### Chore
 
@@ -32,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release.
+ - 6 commits contributed to the release.
  - 1 day passed between releases.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -44,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.7.2 ([`34f6d53`](https://github.com/AOSC-Dev/aoscdk-rs/commit/34f6d53aefd761c3f79d19002fb468ea58f0a66e))
     - Use cargo-fmt and cargo-clippy to lint code ([`70c89b6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/70c89b624e5836b96022e170e422920db83a19c6))
     - Update all deps ([`90f448d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/90f448d4ce42b04cc351cb810b04797f6982b58e))
     - Only allow ext4 and xfs as system disk type ([`09b4e64`](https://github.com/AOSC-Dev/aoscdk-rs/commit/09b4e6439a3da30136ceb633657aa0b227e375e9))
