@@ -9,7 +9,7 @@ use std::{
         Arc,
     },
     thread,
-    time::Instant,
+    time::{Instant, Duration},
 };
 
 use crate::{
@@ -266,24 +266,38 @@ fn begin_install(
 
                 info!("Starting download tarball_file: {:?}", tarball_file);
                 let mut tarball_size = 0;
+                let mut bytes = vec![];
+                let mut secs = vec![];
+                
+
+                let mut step = 0;
                 loop {
+                    let mut buf = vec![0; 8192];
                     let timer = Instant::now();
-                    let mut buf = vec![0; 4096];
-                    let reader_size = match reader.read(&mut buf[..]) {
+                    let reader_size = match reader.read(&mut buf) {
                         Ok(size) => size,
                         Err(e) => {
                             send_error!(error_channel_tx_copy, e);
                         }
                     };
                     let now = timer.elapsed().as_secs_f32();
-                    let kib_by_sec = reader_size as f32 / 1024.0 / now;
-                    let s = if kib_by_sec.is_nan() {
-                        "0.0 KiB/s".to_string()
-                    } else if kib_by_sec < 1000.0 {
-                        format!("{:.1} KiB/s", kib_by_sec)
-                    } else {
-                        format!("{:.1} MiB/s", kib_by_sec / 1024.0)
-                    };
+                    secs.push(now);
+                    bytes.push(reader_size);
+
+                    if step == 15 {
+                        step = 0;
+                        let all_secs: f32 = secs.iter().sum();
+                        let all_bytes: usize = bytes.iter().sum();
+                        let step_byte = all_bytes / 15; // 多少个 bytes 一步
+                        let step_secs = all_secs / 15.0; // 多少秒一步
+                        let secs_step = 1.0 / step_secs; // 多少步一秒
+                        let res = secs_step * step_byte as f32 / 1024.0 / 1024.0; // 多少步一秒 * 一步多少 bytes
+                        vaild_tx.send(format!("{:.1}", res)).unwrap();
+                        secs.clear();
+                        bytes.clear();
+                    }
+
+                    // vaild_tx.send(format!("{:.1}", reader_size as f32 / 1024.0 / now)).unwrap();
 
                     tarball_size += reader_size;
                     if let Err(e) = output.write_all(&buf[..reader_size]) {
@@ -299,7 +313,7 @@ fn begin_install(
                         break;
                     }
 
-                    vaild_tx.send(s).unwrap();
+                    step += 1;
                 }
                 drop(sha256_work_tx);
                 loop {

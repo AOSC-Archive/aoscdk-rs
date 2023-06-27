@@ -314,6 +314,9 @@ fn start_install(ic: InstallCommand) -> Result<()> {
             match progress {
                 super::InstallProgress::Pending(msg, pct, v) => {
                     bar.set_message(format!("{msg} ({pct}/100)"));
+                    if let Some(v) = v {
+                        dbg!(v);
+                    }
                 }
                 super::InstallProgress::Finished => {
                     bar.finish_with_message("AOSC OS installation has successfully completed! Good luck to you, Dungeon Master :)");
