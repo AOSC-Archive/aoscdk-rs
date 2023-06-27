@@ -266,8 +266,8 @@ fn begin_install(
 
                 info!("Starting download tarball_file: {:?}", tarball_file);
                 let mut tarball_size = 0;
-                let timer = Instant::now();
                 loop {
+                    let timer = Instant::now();
                     let mut buf = vec![0; 4096];
                     let reader_size = match reader.read(&mut buf[..]) {
                         Ok(size) => size,
@@ -275,6 +275,16 @@ fn begin_install(
                             send_error!(error_channel_tx_copy, e);
                         }
                     };
+                    let now = timer.elapsed().as_secs_f32();
+                    let kib_by_sec = reader_size as f32 / 1024.0 / now;
+                    let s = if kib_by_sec.is_nan() {
+                        "0.0 KiB/s".to_string()
+                    } else if kib_by_sec < 1000.0 {
+                        format!("{:.1} KiB/s", kib_by_sec)
+                    } else {
+                        format!("{:.1} MiB/s", kib_by_sec / 1024.0)
+                    };
+
                     tarball_size += reader_size;
                     if let Err(e) = output.write_all(&buf[..reader_size]) {
                         let e = anyhow!("Installer failed to write system release:\n\n{}", e);
@@ -288,13 +298,6 @@ fn begin_install(
                         // dbg!("download complete");
                         break;
                     }
-                    let now = timer.elapsed().as_secs_f32();
-                    let kib_by_sec = tarball_size as f32 / 1024.0 / now;
-                    let s = if kib_by_sec < 1000.0 {
-                        format!("{:.1} KiB/s", kib_by_sec)
-                    } else {
-                        format!("{:.1} MiB/s", kib_by_sec / 1024.0)
-                    };
 
                     vaild_tx.send(s).unwrap();
                 }
