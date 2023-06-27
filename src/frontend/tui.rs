@@ -1301,7 +1301,8 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             ))
             .child(DummyView {})
             .child(ProgressBar::new().max(100).with_value(counter))
-            .child(status_message),
+            .child(status_message)
+            .child(vaild_msg),
         "Installing",
         None,
     ).button("Cancel", move |s| {

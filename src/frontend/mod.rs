@@ -6,9 +6,10 @@ use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Sender},
-        Arc, Mutex,
+        Arc,
     },
-    thread, time::{Duration, SystemTime, Instant}, cell::RefCell,
+    thread,
+    time::Instant,
 };
 
 use crate::{
@@ -226,8 +227,7 @@ fn begin_install(
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
 
-    let vail = Arc::new(Mutex::new(String::new()));
-    let vcc = vail.clone();
+    let (vaild_tx, vaild_rx) = std::sync::mpsc::channel();
 
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
@@ -289,14 +289,14 @@ fn begin_install(
                         break;
                     }
                     let now = timer.elapsed().as_secs_f32();
-                    let s = if tarball_size / 1024 < 1000 {
-                        format!("{:.1} KiB/s", tarball_size as f32 / 1024.0 / now)
+                    let kib_by_sec = tarball_size as f32 / 1024.0 / now;
+                    let s = if kib_by_sec < 1000.0 {
+                        format!("{:.1} KiB/s", kib_by_sec)
                     } else {
-                        format!("{:.1} MiB/s", tarball_size as f32 / 1024.0 / 1024.0 / now)
+                        format!("{:.1} MiB/s", kib_by_sec / 1024.0)
                     };
-                    
-                    *vcc.lock().unwrap() = s;
 
+                    vaild_tx.send(s).unwrap();
                 }
                 drop(sha256_work_tx);
                 loop {
@@ -361,8 +361,9 @@ fn begin_install(
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
-        let v = vail.lock().unwrap();
-        sender.send(InstallProgress::Pending(STEP2.to_string(), count, Some(v.to_string())))?;
+        let v = vaild_rx.try_recv().ok();
+
+        sender.send(InstallProgress::Pending(STEP2.to_string(), count, v))?;
         std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;
@@ -372,7 +373,11 @@ fn begin_install(
 
     info!("{}", STEP3);
     loop {
-        sender.send(InstallProgress::Pending(STEP3.to_string(), fake_counter, None))?;
+        sender.send(InstallProgress::Pending(
+            STEP3.to_string(),
+            fake_counter,
+            None,
+        ))?;
         std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
             let final_hash = hex::encode(hasher.finalize());
@@ -417,7 +422,11 @@ fn begin_install(
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
 
-    sender.send(InstallProgress::Pending(STEP5.to_string(), fake_counter, None))?;
+    sender.send(InstallProgress::Pending(
+        STEP5.to_string(),
+        fake_counter,
+        None,
+    ))?;
     info!("{}", STEP5);
 
     info!("Chroot to installed system ...");
@@ -428,7 +437,11 @@ fn begin_install(
     install::execute_dracut()?;
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(STEP6.to_string(), fake_counter, None))?;
+    sender.send(InstallProgress::Pending(
+        STEP6.to_string(),
+        fake_counter,
+        None,
+    ))?;
     info!("{}", STEP6);
 
     if disks::is_efi_booted() {
@@ -440,7 +453,11 @@ fn begin_install(
     };
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(STEP7.to_string(), fake_counter, None))?;
+    sender.send(InstallProgress::Pending(
+        STEP7.to_string(),
+        fake_counter,
+        None,
+    ))?;
     info!("{}", STEP7);
 
     info!("Generating SSH key ...");
@@ -448,7 +465,11 @@ fn begin_install(
 
     info!("{}", STEP8);
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(STEP8.to_string(), fake_counter, None))?;
+    sender.send(InstallProgress::Pending(
+        STEP8.to_string(),
+        fake_counter,
+        None,
+    ))?;
 
     if use_swap {
         info!("Generating swapfile entry to fstab");
