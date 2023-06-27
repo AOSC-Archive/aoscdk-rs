@@ -1291,6 +1291,8 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let counter_clone = counter.clone();
     let mut status_message = TextView::new("");
     let status_text = Arc::new(status_message.get_shared_content());
+    let mut vaild_msg = TextView::new("");
+    let vaild_text = Arc::new(vaild_msg.get_shared_content());
     let (user_interrup_tx, user_interrup_rx) = std::sync::mpsc::channel();
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
@@ -1344,9 +1346,12 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
-                super::InstallProgress::Pending(msg, pct) => {
+                super::InstallProgress::Pending(msg, pct, v) => {
                     counter_clone.set(pct);
                     status_text.set_content(&msg);
+                    if let Some(v) = v {
+                        vaild_text.set_content(v);
+                    }
                 }
                 super::InstallProgress::Finished => {
                     cb_sink.send(Box::new(show_finished)).unwrap();

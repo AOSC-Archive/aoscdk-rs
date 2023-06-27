@@ -6,9 +6,9 @@ use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Sender},
-        Arc,
+        Arc, Mutex,
     },
-    thread,
+    thread, time::{Duration, SystemTime, Instant}, cell::RefCell,
 };
 
 use crate::{
@@ -44,7 +44,7 @@ const STEP7: &str = "Step 7 of 8: Generating OpenSSH host keys ...";
 const STEP8: &str = "Step 8 of 8: Finalising installation ...";
 
 pub(crate) enum InstallProgress {
-    Pending(String, usize),
+    Pending(String, usize, Option<String>),
     Finished,
 }
 
@@ -165,7 +165,7 @@ fn begin_install(
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let hasher_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
-    sender.send(InstallProgress::Pending(STEP1.to_string(), 0))?;
+    sender.send(InstallProgress::Pending(STEP1.to_string(), 0, None))?;
     info!("{}", STEP1);
 
     let partition = &config.partition.unwrap();
@@ -226,6 +226,9 @@ fn begin_install(
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
 
+    let vail = Arc::new(Mutex::new(String::new()));
+    let vcc = vail.clone();
+
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
         tarball_file.push("tarball");
@@ -263,6 +266,7 @@ fn begin_install(
 
                 info!("Starting download tarball_file: {:?}", tarball_file);
                 let mut tarball_size = 0;
+                let timer = Instant::now();
                 loop {
                     let mut buf = vec![0; 4096];
                     let reader_size = match reader.read(&mut buf[..]) {
@@ -284,6 +288,15 @@ fn begin_install(
                         // dbg!("download complete");
                         break;
                     }
+                    let now = timer.elapsed().as_secs_f32();
+                    let s = if tarball_size / 1024 < 1000 {
+                        format!("{:.1} KiB/s", tarball_size as f32 / 1024.0 / now)
+                    } else {
+                        format!("{:.1} MiB/s", tarball_size as f32 / 1024.0 / 1024.0 / now)
+                    };
+                    
+                    *vcc.lock().unwrap() = s;
+
                 }
                 drop(sha256_work_tx);
                 loop {
@@ -348,7 +361,8 @@ fn begin_install(
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
-        sender.send(InstallProgress::Pending(STEP2.to_string(), count))?;
+        let v = vail.lock().unwrap();
+        sender.send(InstallProgress::Pending(STEP2.to_string(), count, Some(v.to_string())))?;
         std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;
@@ -358,7 +372,7 @@ fn begin_install(
 
     info!("{}", STEP3);
     loop {
-        sender.send(InstallProgress::Pending(STEP3.to_string(), fake_counter))?;
+        sender.send(InstallProgress::Pending(STEP3.to_string(), fake_counter, None))?;
         std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
             let final_hash = hex::encode(hasher.finalize());
@@ -381,7 +395,7 @@ fn begin_install(
     loop {
         let tarball_unpack_size = counter.get() as f64;
         let count = (tarball_unpack_size / file_size * 100.0) as usize;
-        sender.send(InstallProgress::Pending(STEP4.to_string(), count))?;
+        sender.send(InstallProgress::Pending(STEP4.to_string(), count, None))?;
         std::thread::sleep(refresh_interval);
         if extract_done.load(Ordering::SeqCst) {
             break;
@@ -403,7 +417,7 @@ fn begin_install(
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
 
-    sender.send(InstallProgress::Pending(STEP5.to_string(), fake_counter))?;
+    sender.send(InstallProgress::Pending(STEP5.to_string(), fake_counter, None))?;
     info!("{}", STEP5);
 
     info!("Chroot to installed system ...");
@@ -414,7 +428,7 @@ fn begin_install(
     install::execute_dracut()?;
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(STEP6.to_string(), fake_counter))?;
+    sender.send(InstallProgress::Pending(STEP6.to_string(), fake_counter, None))?;
     info!("{}", STEP6);
 
     if disks::is_efi_booted() {
@@ -426,7 +440,7 @@ fn begin_install(
     };
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(STEP7.to_string(), fake_counter))?;
+    sender.send(InstallProgress::Pending(STEP7.to_string(), fake_counter, None))?;
     info!("{}", STEP7);
 
     info!("Generating SSH key ...");
@@ -434,7 +448,7 @@ fn begin_install(
 
     info!("{}", STEP8);
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(STEP8.to_string(), fake_counter))?;
+    sender.send(InstallProgress::Pending(STEP8.to_string(), fake_counter, None))?;
 
     if use_swap {
         info!("Generating swapfile entry to fstab");
