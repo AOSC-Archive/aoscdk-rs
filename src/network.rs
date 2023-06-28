@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     io::Write,
-    sync::mpsc,
-    thread,
     time::{Duration, Instant},
 };
 
@@ -14,6 +12,7 @@ const IS_RETRO: bool = cfg!(feature = "is_retro");
 const SPEEDTEST_FILE_CHECKSUM: &str =
     "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58";
 
+#[macro_export]
 macro_rules! DEPLOYKIT_USER_AGENT {
     () => {
         format!("AOSC DeployKit/{}", env!("CARGO_PKG_VERSION"))
@@ -164,24 +163,6 @@ pub fn query_file_meta(url: &String) -> Result<reqwest::blocking::Response> {
         .map_err(|e| anyhow!("{}", e))?;
 
     Ok(server_success)
-}
-
-pub fn download_file(url: String) -> Result<reqwest::blocking::Response> {
-    let client = reqwest::blocking::ClientBuilder::new()
-        .user_agent(DEPLOYKIT_USER_AGENT!())
-        .build()?;
-    let (tx, rx) = mpsc::channel();
-    let worker = thread::spawn(move || {
-        let resp = client.get(url).send();
-        tx.send(resp).unwrap();
-    });
-    worker.join().unwrap();
-    let resp_result = rx
-        .recv_timeout(Duration::from_secs(30))
-        .map_err(|e| anyhow!("Installer detected a network response timeout: {}", e))?;
-    let resp = resp_result?.error_for_status().map_err(|e| anyhow!("Installer failed to download system release: distribution is not found on the specified mirror.\n\nThis may have resulted from a newly uploaded system release that's not yet available from the mirror you have selected.\n\n{}", e))?;
-
-    Ok(resp)
 }
 
 pub fn speedtest_mirrors(mirrors: Vec<Mirror>) -> Vec<Mirror> {

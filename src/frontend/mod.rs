@@ -1,6 +1,6 @@
 use std::{
     convert::TryInto,
-    io::{Read, Write},
+    io::Write,
     os::unix::prelude::AsRawFd,
     path::{Path, PathBuf},
     sync::{
@@ -9,13 +9,12 @@ use std::{
         Arc,
     },
     thread,
-    time::{Instant, Duration},
 };
 
 use crate::{
     disks,
     install::{self, log_system_info},
-    network,
+    network, DEPLOYKIT_USER_AGENT,
 };
 use anyhow::{anyhow, Result};
 use cursive::utils::Counter;
@@ -158,7 +157,6 @@ fn begin_install(
 
     let refresh_interval = std::time::Duration::from_millis(30);
     let counter = Counter::new(0);
-    let counter_clone = counter.clone();
     let url;
     let file_size: usize;
     let right_sha256;
@@ -227,7 +225,9 @@ fn begin_install(
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
 
-    let (vaild_tx, vaild_rx) = std::sync::mpsc::channel();
+    // let (vaild_tx, vaild_rx) = std::sync::mpsc::channel();
+
+    let cc = counter.clone();
 
     let worker = thread::spawn(move || {
         let mut tarball_file = mount_path.clone();
@@ -242,104 +242,95 @@ fn begin_install(
                 send_error!(error_channel_tx_copy, e);
             }
         };
-        match network::download_file(url.clone()) {
-            Ok(mut reader) => {
-                info!("Allocating tarball file: {:?}", tarball_file);
-                if let Err(e) = nix::fcntl::fallocate(
-                    output.as_raw_fd(),
-                    FallocateFlags::empty(),
-                    0,
-                    file_size.try_into().unwrap(),
-                ) {
-                    let e = anyhow!(
-                        "Installer failed to create temporary file for the download process:\n\n{}",
-                        e
-                    );
+
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .worker_threads(2)
+            .build()
+            .unwrap();
+        let client = reqwest::Client::builder()
+            .user_agent(DEPLOYKIT_USER_AGENT!())
+            // .timeout(Duration::from_secs(10))
+            .build()
+            .unwrap();
+
+        let urlc = url.clone();
+
+        let tbl_file_c = tarball_file.clone();
+
+        let ccc = cc.clone();
+
+        let error_channel_tx_copy_copy = error_channel_tx_copy.clone();
+
+        runtime.block_on(async move {
+            let mut resp = match client.get(urlc).send().await {
+                Ok(resp) => resp,
+                Err(e) => {
                     send_error!(error_channel_tx_copy, e);
                 }
+            };
 
-                info!("Flushing tarball_file: {:?}", tarball_file);
-                if let Err(e) = output.flush() {
-                    let e = anyhow!("Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
-                    send_error!(error_channel_tx_copy, e);
-                }
-
-                info!("Starting download tarball_file: {:?}", tarball_file);
-                let mut tarball_size = 0;
-                let mut bytes = vec![];
-                let mut secs = vec![];
-                
-
-                let mut step = 0;
-                loop {
-                    let mut buf = vec![0; 8192];
-                    let timer = Instant::now();
-                    let reader_size = match reader.read(&mut buf) {
-                        Ok(size) => size,
-                        Err(e) => {
-                            send_error!(error_channel_tx_copy, e);
-                        }
-                    };
-                    let now = timer.elapsed().as_secs_f32();
-                    secs.push(now);
-                    bytes.push(reader_size);
-
-                    if step == 15 {
-                        step = 0;
-                        let all_secs: f32 = secs.iter().sum();
-                        let all_bytes: usize = bytes.iter().sum();
-                        let step_byte = all_bytes / 15; // 多少个 bytes 一步
-                        let step_secs = all_secs / 15.0; // 多少秒一步
-                        let secs_step = 1.0 / step_secs; // 多少步一秒
-                        let res = secs_step * step_byte as f32 / 1024.0 / 1024.0; // 多少步一秒 * 一步多少 bytes
-                        vaild_tx.send(format!("{:.1}", res)).unwrap();
-                        secs.clear();
-                        bytes.clear();
-                    }
-
-                    // vaild_tx.send(format!("{:.1}", reader_size as f32 / 1024.0 / now)).unwrap();
-
-                    tarball_size += reader_size;
-                    if let Err(e) = output.write_all(&buf[..reader_size]) {
-                        let e = anyhow!("Installer failed to write system release:\n\n{}", e);
-                        send_error!(error_channel_tx_copy, e);
-                    }
-                    sha256_work_tx.send((buf, reader_size)).unwrap();
-                    counter_clone.set(tarball_size);
-                    if tarball_size == file_size {
-                        info!("Download complete");
-                        download_done_copy.fetch_or(true, Ordering::SeqCst);
-                        // dbg!("download complete");
-                        break;
-                    }
-
-                    step += 1;
-                }
-                drop(sha256_work_tx);
-                loop {
-                    if hasher_done.load(Ordering::SeqCst) {
-                        info!("Hash done");
-                        break;
-                    }
-                }
-            }
-            Err(e) => {
+            info!("Allocating tarball file: {:?}", &tbl_file_c);
+            if let Err(e) = nix::fcntl::fallocate(
+                output.as_raw_fd(),
+                FallocateFlags::empty(),
+                0,
+                file_size.try_into().unwrap(),
+            ) {
+                let e = anyhow!(
+                    "Installer failed to create temporary file for the download process:\n\n{}",
+                    e
+                );
                 send_error!(error_channel_tx_copy, e);
             }
-        }
-        counter_clone.set(0);
 
-        info!("Trying extract tarball file: {:?}", tarball_file);
-        drop(output);
+            info!("Flushing tarball_file: {:?}", &tbl_file_c);
+            if let Err(e) = output.flush() {
+                let e = anyhow!("Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
+                send_error!(error_channel_tx_copy, e);
+            }
+            
+            let mut tarball_size = 0;
+
+            loop {
+                if tarball_size == file_size {
+                    info!("Download complete");
+                    download_done_copy.fetch_or(true, Ordering::SeqCst);
+                    break;
+                }
+                match resp.chunk().await {
+                    Ok(v) => {
+                        if let Some(chunk) = v {
+                            if let Err(e) = output.write_all(&chunk) {
+                                send_error!(error_channel_tx_copy, e);
+                            }
+                            tarball_size += chunk.len();
+                            cc.set(tarball_size);
+                            sha256_work_tx.send((chunk.to_vec(), chunk.len())).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                         send_error!(error_channel_tx_copy, e);
+                    }
+                }
+            }
+        });
+
+        info!("Trying extract tarball file: {:?}", &tarball_file);
+
+        ccc.set(0);
+
+        // let cc = cc.clone();
+
         if let Err(e) = install::extract_file(
             file_size as f64,
             url,
             &tarball_file,
             &mount_path,
-            counter_clone,
+            ccc,
         ) {
             let e = anyhow!("Installer failed to unpack system release:\n\n{}", e);
-            send_error!(error_channel_tx_copy, e);
+            send_error!(error_channel_tx_copy_copy, e);
         }
 
         extract_done_copy.fetch_or(true, Ordering::SeqCst);
@@ -373,14 +364,15 @@ fn begin_install(
     // Progress update
     info!("{}", STEP2);
     loop {
+        // let counter_clone = counter.clone();
         let tarball_downloaded_size = counter.get() as f64;
         let count = (tarball_downloaded_size / file_size * 100.0) as usize;
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
-        let v = vaild_rx.try_recv().ok();
+        // let v = vaild_rx.recv().ok();
 
-        sender.send(InstallProgress::Pending(STEP2.to_string(), count, v))?;
+        sender.send(InstallProgress::Pending(STEP2.to_string(), count, None))?;
         std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;
