@@ -162,7 +162,6 @@ fn begin_install(
     let right_sha256;
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-    let hasher_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
     sender.send(InstallProgress::Pending(STEP1.to_string(), 0, None))?;
     info!("{}", STEP1);
@@ -219,7 +218,6 @@ fn begin_install(
 
     let extract_done_copy = extract_done.clone();
     let download_done_copy = download_done.clone();
-    let hasher_done_copy = hasher_done.clone();
     let (sha256_work_tx, sha256_work_rx) = mpsc::channel();
     let (get_sha256_tx, get_sha256_rx) = mpsc::channel();
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
@@ -291,7 +289,7 @@ fn begin_install(
                 let e = anyhow!("Installer failed to save system release:\n\n{}\n\nPlease restart your installation environment.", e);
                 send_error!(error_channel_tx_copy, e);
             }
-            
+
             let mut tarball_size = 0;
 
             let mut timer = tokio::time::Instant::now();
@@ -333,7 +331,7 @@ fn begin_install(
                             } else {
                                 tarball_size_1s += chunk.len();
                             }
-                            
+
                             if let Err(e) = output.write_all(&chunk) {
                                 send_error!(error_channel_tx_copy, e);
                             }
@@ -358,13 +356,9 @@ fn begin_install(
 
         // let cc = cc.clone();
 
-        if let Err(e) = install::extract_file(
-            file_size as f64,
-            url,
-            &tarball_file,
-            &mount_path,
-            ccc,
-        ) {
+        if let Err(e) =
+            install::extract_file(file_size as f64, url, &tarball_file, &mount_path, ccc)
+        {
             let e = anyhow!("Installer failed to unpack system release:\n\n{}", e);
             send_error!(error_channel_tx_copy_copy, e);
         }
@@ -383,7 +377,6 @@ fn begin_install(
             } else {
                 // dbg!("sha256sum complete");
                 get_sha256_tx.send(hasher).unwrap();
-                hasher_done_copy.fetch_or(true, Ordering::SeqCst);
                 return;
             };
             let (buf, reader_size) = rx;
