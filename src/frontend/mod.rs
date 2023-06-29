@@ -34,17 +34,17 @@ pub use tui::tui_main;
 
 pub const DEFAULT_EMPTY_SIZE: u64 = 5 * 1024 * 1024 * 1024;
 
-const STEP1: &str = "Step 1 of 8: Formatting partitions ...";
-const STEP2: &str = "Step 2 of 8: Downloading system release ...";
-const STEP3: &str = "Step 3 of 8: Verifying system release ...";
+const STEP1: &str = "Step 1 of 8: Formatting partitions";
+const STEP2: &str = "Step 2 of 8: Downloading system release";
+const STEP3: &str = "Step 3 of 8: Verifying system release";
 const STEP4: &str = "Step 4 of 8: Unpacking system release ...";
-const STEP5: &str = "Step 5 of 8: Generating initramfs (initial RAM filesystem) ...";
-const STEP6: &str = "Step 6 of 8: Installing and configuring GRUB bootloader ...";
-const STEP7: &str = "Step 7 of 8: Generating OpenSSH host keys ...";
-const STEP8: &str = "Step 8 of 8: Finalising installation ...";
+const STEP5: &str = "Step 5 of 8: Generating initramfs (initial RAM filesystem)";
+const STEP6: &str = "Step 6 of 8: Installing and configuring GRUB bootloader";
+const STEP7: &str = "Step 7 of 8: Generating OpenSSH host keys";
+const STEP8: &str = "Step 8 of 8: Finalising installation";
 
 pub(crate) enum InstallProgress {
-    Pending(String, usize, Option<String>),
+    Pending(String, usize, Option<(String, String)>),
     Finished,
 }
 
@@ -225,7 +225,7 @@ fn begin_install(
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
 
-    // let (vaild_tx, vaild_rx) = std::sync::mpsc::channel();
+    let (vaild_tx, vaild_rx) = std::sync::mpsc::channel();
 
     let cc = counter.clone();
 
@@ -262,6 +262,8 @@ fn begin_install(
 
         let error_channel_tx_copy_copy = error_channel_tx_copy.clone();
 
+        // let (speed_tx, speed_rx) = std::sync::mpsc::channel();
+
         runtime.block_on(async move {
             let mut resp = match client.get(urlc).send().await {
                 Ok(resp) => resp,
@@ -292,6 +294,9 @@ fn begin_install(
             
             let mut tarball_size = 0;
 
+            let mut timer = tokio::time::Instant::now();
+            let mut tarball_size_1s = 0;
+
             loop {
                 if tarball_size == file_size {
                     info!("Download complete");
@@ -301,6 +306,34 @@ fn begin_install(
                 match resp.chunk().await {
                     Ok(v) => {
                         if let Some(chunk) = v {
+                            let now = timer.elapsed().as_secs_f64();
+                            if now >= 1.0 {
+                                let speed = tarball_size_1s as f64 / 1024.0 / now;
+                                let eta = (file_size - tarball_size) as f64 / 1024.0 / speed;
+                                let s = if speed > 1000.0 * 1000.0 {
+                                    format!("{:.1}GiB/s", speed / 1024.0 / 1024.0)
+                                } else if speed > 1000.0 {
+                                    format!("{:.1}MiB/s", speed / 1024.0)
+                                } else {
+                                    format!("{:.1}KiB/s", speed)
+                                };
+
+                                let s2 = if eta >= 60.0 * 60.0 * 24.0 {
+                                    format!("{:.1}d", (eta / 60.0 / 60.0 / 24.0).round())
+                                } else if eta >= 60.0 * 60.0 {
+                                    format!("{:.1}h", (eta / 60.0 / 60.0).round())
+                                } else if eta >= 60.0 {
+                                    format!("{:.1}m", (eta / 60.0).round())
+                                } else {
+                                    format!("{:.0}s", eta.round())
+                                };
+                                vaild_tx.send((s, s2)).unwrap();
+                                tarball_size_1s = 0;
+                                timer = tokio::time::Instant::now();
+                            } else {
+                                tarball_size_1s += chunk.len();
+                            }
+                            
                             if let Err(e) = output.write_all(&chunk) {
                                 send_error!(error_channel_tx_copy, e);
                             }
@@ -341,6 +374,7 @@ fn begin_install(
         info!("Trying remove tarball file: {:?}", tarball_file);
         std::fs::remove_file(tarball_file).ok();
     });
+
     let sha256sum_work = thread::spawn(move || {
         let mut hasher = Sha256::new();
         loop {
@@ -373,9 +407,9 @@ fn begin_install(
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
-        // let v = vaild_rx.recv().ok();
+        let v = vaild_rx.recv().ok();
 
-        sender.send(InstallProgress::Pending(STEP2.to_string(), count, None))?;
+        sender.send(InstallProgress::Pending(STEP2.to_string(), count, v))?;
         std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;

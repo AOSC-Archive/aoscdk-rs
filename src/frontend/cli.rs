@@ -313,9 +313,10 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         if let Ok(progress) = rx.recv() {
             match progress {
                 super::InstallProgress::Pending(msg, pct, v) => {
-                    bar.set_message(format!("{msg} ({pct}/100)"));
-                    if let Some(v) = v {
-                        dbg!(v);
+                    if let Some((speed, eta)) = v {
+                        bar.set_message(format!("{msg} ({speed}, {eta}) ({pct}/100)"));
+                    } else {
+                        bar.set_message(format!("{msg} ({pct}/100)"));
                     }
                 }
                 super::InstallProgress::Finished => {
