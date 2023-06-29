@@ -5,7 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.8.1 (2023-06-29)
+
+### New Features
+
+ - <csr-id-399d19a0988bb3117fcea335b4058d9a8e97decd/> Improve ui string
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Improve ui string ([`399d19a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/399d19a0988bb3117fcea335b4058d9a8e97decd))
+    - Revert "feat: improve ui string" ([`0cb5447`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0cb5447f33fc17935a454b0eff3e9da6704ecaed))
+</details>
+
 ## v0.8.0 (2023-06-29)
+
+<csr-id-89c3438c87140d20cda364706d0078749c00429f/>
+<csr-id-66ff0f1082bd5ce47e99ae457e91bc5bb367f21b/>
+<csr-id-b1acdb5aed3d2c7196bda22a289bee1bcaa77341/>
+<csr-id-b03e080588fadbbe7ba69ae2e2338cb9adbafb47/>
+<csr-id-2c39c88a4edaf7dfd6261b6b253740c89b7c7509/>
 
 ### Chore
 
@@ -15,10 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
+<csr-id-576cb12cd03c6aa58cc293b6e9324f74c0285863/>
+
  - <csr-id-2bc3dee568862fa1febf7cafcc46c467ac4d4d63/> Improve ui string
  - <csr-id-40d7ce1c3c0f96dd6be3238d0ca4048c925a20c0/> Improve speed display
    - Also add download eta display
- - <csr-id-576cb12cd03c6aa58cc293b6e9324f74c0285863/> Add velocity display in installing view
 
 ### Bug Fixes
 
@@ -39,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 11 commits contributed to the release over the course of 4 calendar days.
+ - 12 commits contributed to the release over the course of 4 calendar days.
  - 5 days passed between releases.
  - 11 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -51,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.8.0 ([`4f64757`](https://github.com/AOSC-Dev/aoscdk-rs/commit/4f6475701fe74c10d28a132b4c2a4f4628f966c4))
     - Update all deps ([`89c3438`](https://github.com/AOSC-Dev/aoscdk-rs/commit/89c3438c87140d20cda364706d0078749c00429f))
     - Improve ui string ([`2bc3dee`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2bc3dee568862fa1febf7cafcc46c467ac4d4d63))
     - Use cargo-fmt and cargo-clippy to lint code ([`2c39c88`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2c39c88a4edaf7dfd6261b6b253740c89b7c7509))
@@ -63,6 +96,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add velocity display in installing view ([`576cb12`](https://github.com/AOSC-Dev/aoscdk-rs/commit/576cb12cd03c6aa58cc293b6e9324f74c0285863))
     - Use AGPLv3 LICENSE ([`66ff0f1`](https://github.com/AOSC-Dev/aoscdk-rs/commit/66ff0f1082bd5ce47e99ae457e91bc5bb367f21b))
 </details>
+
+<csr-unknown>
+ Add velocity display in installing view<csr-unknown/>
 
 ## v0.7.4 (2023-06-24)
 
