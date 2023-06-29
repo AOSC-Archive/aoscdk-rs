@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.8.0 (2023-06-29)
+
+### Chore
+
+ - <csr-id-89c3438c87140d20cda364706d0078749c00429f/> Update all deps
+ - <csr-id-66ff0f1082bd5ce47e99ae457e91bc5bb367f21b/> Use AGPLv3 LICENSE
+   sudoku use AGPLv3 license...so, AGPLv3.
+
+### New Features
+
+ - <csr-id-2bc3dee568862fa1febf7cafcc46c467ac4d4d63/> Improve ui string
+ - <csr-id-40d7ce1c3c0f96dd6be3238d0ca4048c925a20c0/> Improve speed display
+   - Also add download eta display
+ - <csr-id-576cb12cd03c6aa58cc293b6e9324f74c0285863/> Add velocity display in installing view
+
+### Bug Fixes
+
+ - <csr-id-3a1e86bc65fe387c8666a843e65f719de3262c50/> Fix velocity calc
+ - <csr-id-219102d2ae0258e8164b414a395bdaf0df430c0c/> Handle if reader_size / 0
+ - <csr-id-b692fd7f950bf192b3248f7ffec1c9fce46756ea/> Velocity display issue
+
+### Refactor
+
+ - <csr-id-b1acdb5aed3d2c7196bda22a289bee1bcaa77341/> Improve download error handle
+ - <csr-id-b03e080588fadbbe7ba69ae2e2338cb9adbafb47/> Use async reqwest to download squashfs
+
+### Style
+
+ - <csr-id-2c39c88a4edaf7dfd6261b6b253740c89b7c7509/> Use cargo-fmt and cargo-clippy to lint code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 11 commits contributed to the release over the course of 4 calendar days.
+ - 5 days passed between releases.
+ - 11 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update all deps ([`89c3438`](https://github.com/AOSC-Dev/aoscdk-rs/commit/89c3438c87140d20cda364706d0078749c00429f))
+    - Improve ui string ([`2bc3dee`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2bc3dee568862fa1febf7cafcc46c467ac4d4d63))
+    - Use cargo-fmt and cargo-clippy to lint code ([`2c39c88`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2c39c88a4edaf7dfd6261b6b253740c89b7c7509))
+    - Improve speed display ([`40d7ce1`](https://github.com/AOSC-Dev/aoscdk-rs/commit/40d7ce1c3c0f96dd6be3238d0ca4048c925a20c0))
+    - Improve download error handle ([`b1acdb5`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b1acdb5aed3d2c7196bda22a289bee1bcaa77341))
+    - Use async reqwest to download squashfs ([`b03e080`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b03e080588fadbbe7ba69ae2e2338cb9adbafb47))
+    - Fix velocity calc ([`3a1e86b`](https://github.com/AOSC-Dev/aoscdk-rs/commit/3a1e86bc65fe387c8666a843e65f719de3262c50))
+    - Handle if reader_size / 0 ([`219102d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/219102d2ae0258e8164b414a395bdaf0df430c0c))
+    - Velocity display issue ([`b692fd7`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b692fd7f950bf192b3248f7ffec1c9fce46756ea))
+    - Add velocity display in installing view ([`576cb12`](https://github.com/AOSC-Dev/aoscdk-rs/commit/576cb12cd03c6aa58cc293b6e9324f74c0285863))
+    - Use AGPLv3 LICENSE ([`66ff0f1`](https://github.com/AOSC-Dev/aoscdk-rs/commit/66ff0f1082bd5ce47e99ae457e91bc5bb367f21b))
+</details>
+
 ## v0.7.4 (2023-06-24)
 
 ### New Features
@@ -16,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -27,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.7.4 ([`aa14200`](https://github.com/AOSC-Dev/aoscdk-rs/commit/aa14200117116914ba847a0feaacee26e3d8ef75))
     - Add nofail option to fstab esp entry ([`1d51903`](https://github.com/AOSC-Dev/aoscdk-rs/commit/1d519034b0acfdaa9925cc5e14f982c4c115106c))
     - Revert "feat: do not write esp partition entry to fstab" ([`9f5844a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/9f5844af428a4aa8d269df8f8befc52ec265c68a))
     - Do not write esp partition entry to fstab ([`b9ee09f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b9ee09f748e38358af75a6b3cb1b332daa2748aa))
