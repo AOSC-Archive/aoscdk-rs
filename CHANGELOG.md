@@ -5,17 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.8.1 (2023-06-29)
+## v0.8.2 (2023-06-29)
 
-### New Features
+### Bug Fixes
 
- - <csr-id-399d19a0988bb3117fcea335b4058d9a8e97decd/> Improve ui string
+ - <csr-id-6a78f7109bf62a16d0b2ce443fa4cf8165bd80a0/> Remove ui string useless text
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 1 commit contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +26,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Remove ui string useless text ([`6a78f71`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6a78f7109bf62a16d0b2ce443fa4cf8165bd80a0))
+</details>
+
+## v0.8.1 (2023-06-29)
+
+### New Features
+
+ - <csr-id-399d19a0988bb3117fcea335b4058d9a8e97decd/> Improve ui string
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Bump aoscdk-rs v0.8.1 ([`c92376b`](https://github.com/AOSC-Dev/aoscdk-rs/commit/c92376b336db85e75920282cfde9161f151da719))
     - Improve ui string ([`399d19a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/399d19a0988bb3117fcea335b4058d9a8e97decd))
     - Revert "feat: improve ui string" ([`0cb5447`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0cb5447f33fc17935a454b0eff3e9da6704ecaed))
 </details>
@@ -96,9 +121,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add velocity display in installing view ([`576cb12`](https://github.com/AOSC-Dev/aoscdk-rs/commit/576cb12cd03c6aa58cc293b6e9324f74c0285863))
     - Use AGPLv3 LICENSE ([`66ff0f1`](https://github.com/AOSC-Dev/aoscdk-rs/commit/66ff0f1082bd5ce47e99ae457e91bc5bb367f21b))
 </details>
-
-<csr-unknown>
- Add velocity display in installing view<csr-unknown/>
 
 ## v0.7.4 (2023-06-24)
 
