@@ -1296,7 +1296,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
-                "Please wait while the installation takes place. This may take minutes or in extreme cases, hours, depending on your device performance.\n\nGot some time to kill? Press <g> to start a game.",
+                "Please wait while installation takes place. This may take minutes or in extreme cases, hours, depending on your device's performance.\n\nGot some time to kill? Press <g> to start a game.",
             ))
             .child(DummyView {})
             .child(ProgressBar::new().max(100).with_value(counter))
