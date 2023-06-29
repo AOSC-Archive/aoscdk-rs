@@ -82,7 +82,7 @@ macro_rules! SURE_FS_FORMAT_INFO {
 const ADVANCED_METHOD_INFO: &str = "Installer detected an unsupported filesystem format in your system partition. If you proceed, the installer will format your system partition using the ext4 filesystem. Please refer to the manual installation guides if you prefer to use an unsupported filesystem.";
 const WELCOME_TEXT: &str = r#"Welcome to the AOSC OS Installer!
 
-In the following pages, Installer will guide you through the variant selection, partitioning, and other installation steps. The installation process should only take a few minutes, but will require more time on slower hardware."#;
+In the following pages, Installer will guide you through the variant selection, partitioning, and other installation steps. installation process should only take a few minutes, but will require more time on slower hardware."#;
 const VARIANT_TEXT: &str =
     "Shown below is a list of available AOSC OS distributions for your device.";
 const ENTER_USER_PASSWORD_TEXT: &str = r#"Please enter and confirm your desired username and password. Please note that your username must start with a lower-cased alphabetical letter (a-z), and contain only lower-cased letters a-z, numbers 0-9, and dash ("-").
@@ -1296,7 +1296,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
-                "Please wait while the installation takes place. This may take minutes or in extreme cases, hours, depending on your device performance.\n\nGot some time to kill? Press <g> to start a game.",
+                "Please wait while the installation takes place. This may take minutes or in extreme cases, hours, depending on your device's performance.\n\nGot some time to kill? Press <g> to start a game.",
             ))
             .child(DummyView {})
             .child(ProgressBar::new().max(100).with_value(counter))
