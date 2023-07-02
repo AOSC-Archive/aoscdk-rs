@@ -9,6 +9,7 @@ use std::{
         Arc,
     },
     thread,
+    time::Duration,
 };
 
 use crate::{
@@ -223,7 +224,7 @@ fn begin_install(
     let (error_channel_tx, error_channel_rx) = mpsc::channel();
     let error_channel_tx_copy = error_channel_tx.clone();
 
-    let (vaild_tx, vaild_rx) = std::sync::mpsc::channel();
+    let (speed_tx, speed_rx) = std::sync::mpsc::channel();
 
     let cc = counter.clone();
 
@@ -241,16 +242,29 @@ fn begin_install(
             }
         };
 
-        let runtime = tokio::runtime::Builder::new_multi_thread()
+        let runtime = match tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .worker_threads(2)
             .build()
-            .unwrap();
-        let client = reqwest::Client::builder()
+        {
+            Ok(rt) => rt,
+            Err(e) => {
+                let e = anyhow!("Failed to create tokio runtime: {e}");
+                send_error!(error_channel_tx_copy, e);
+            }
+        };
+
+        let client = match reqwest::Client::builder()
             .user_agent(DEPLOYKIT_USER_AGENT!())
-            // .timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(60))
             .build()
-            .unwrap();
+        {
+            Ok(c) => c,
+            Err(e) => {
+                let e = anyhow!("Failed to create reqwest client: {e}");
+                send_error!(error_channel_tx_copy, e);
+            }
+        };
 
         let urlc = url.clone();
 
@@ -259,8 +273,6 @@ fn begin_install(
         let ccc = cc.clone();
 
         let error_channel_tx_copy_copy = error_channel_tx_copy.clone();
-
-        // let (speed_tx, speed_rx) = std::sync::mpsc::channel();
 
         runtime.block_on(async move {
             let mut resp = match client.get(urlc).send().await {
@@ -325,7 +337,7 @@ fn begin_install(
                                 } else {
                                     format!("{:.0}s", eta.round())
                                 };
-                                vaild_tx.send((s, s2)).unwrap();
+                                speed_tx.send((s, s2)).unwrap();
                                 tarball_size_1s = 0;
                                 timer = tokio::time::Instant::now();
                             } else {
@@ -400,7 +412,7 @@ fn begin_install(
         if let Ok(err) = error_channel_rx.try_recv() {
             return Err(anyhow!(err));
         }
-        let v = vaild_rx.recv().ok();
+        let v = speed_rx.recv().ok();
 
         sender.send(InstallProgress::Pending(STEP2.to_string(), count, v))?;
         std::thread::sleep(refresh_interval);
