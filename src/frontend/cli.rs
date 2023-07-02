@@ -312,12 +312,8 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         }
         if let Ok(progress) = rx.recv() {
             match progress {
-                super::InstallProgress::Pending(msg, pct, v) => {
-                    if let Some((speed, eta)) = v {
-                        bar.set_message(format!("{msg} ({speed}, {eta}) ({pct}/100)"));
-                    } else {
-                        bar.set_message(format!("{msg} ({pct}/100)"));
-                    }
+                super::InstallProgress::Pending(msg, pct) => {
+                    bar.set_message(format!("{msg} ({pct}/100)"));
                 }
                 super::InstallProgress::Finished => {
                     bar.finish_with_message("AOSC OS installation has successfully completed! Good luck to you, Dungeon Master :)");

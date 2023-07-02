@@ -1346,13 +1346,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     thread::spawn(move || loop {
         if let Ok(progress) = rx.recv() {
             match progress {
-                super::InstallProgress::Pending(msg, pct, v) => {
+                super::InstallProgress::Pending(msg, pct) => {
                     counter_clone.set(pct);
-                    if let Some((v, eta)) = v {
-                        status_text.set_content(format!("{msg} ({v}, {eta}) ..."));
-                    } else {
-                        status_text.set_content(format!("{msg} ..."));
-                    }
+                    status_text.set_content(format!("{msg} ..."));
                 }
                 super::InstallProgress::Finished => {
                     cb_sink.send(Box::new(show_finished)).unwrap();

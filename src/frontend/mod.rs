@@ -45,7 +45,7 @@ const STEP7: &str = "Step 7 of 8: Generating OpenSSH host keys";
 const STEP8: &str = "Step 8 of 8: Finalising installation";
 
 pub(crate) enum InstallProgress {
-    Pending(String, usize, Option<(String, String)>),
+    Pending(String, usize),
     Finished,
 }
 
@@ -164,7 +164,7 @@ fn begin_install(
     let extract_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     let download_done: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 
-    sender.send(InstallProgress::Pending(STEP1.to_string(), 0, None))?;
+    sender.send(InstallProgress::Pending(STEP1.to_string(), 0))?;
     info!("{}", STEP1);
 
     let partition = &config.partition.unwrap();
@@ -256,7 +256,7 @@ fn begin_install(
 
         let client = match reqwest::Client::builder()
             .user_agent(DEPLOYKIT_USER_AGENT!())
-            .timeout(Duration::from_secs(60))
+            .timeout(Duration::from_secs(300))
             .build()
         {
             Ok(c) => c,
@@ -366,8 +366,6 @@ fn begin_install(
 
         ccc.set(0);
 
-        // let cc = cc.clone();
-
         if let Err(e) =
             install::extract_file(file_size as f64, url, &tarball_file, &mount_path, ccc)
         {
@@ -414,7 +412,13 @@ fn begin_install(
         }
         let v = speed_rx.recv().ok();
 
-        sender.send(InstallProgress::Pending(STEP2.to_string(), count, v))?;
+        let msg = if let Some((speed, eta)) = v {
+            format!("{STEP2} ({speed}, {eta})")
+        } else {
+            STEP2.to_string()
+        };
+
+        sender.send(InstallProgress::Pending(msg, count))?;
         std::thread::sleep(refresh_interval);
         if download_done.load(Ordering::SeqCst) {
             break;
@@ -426,8 +430,7 @@ fn begin_install(
     loop {
         sender.send(InstallProgress::Pending(
             STEP3.to_string(),
-            fake_counter,
-            None,
+            fake_counter
         ))?;
         std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
@@ -451,7 +454,7 @@ fn begin_install(
     loop {
         let tarball_unpack_size = counter.get() as f64;
         let count = (tarball_unpack_size / file_size * 100.0) as usize;
-        sender.send(InstallProgress::Pending(STEP4.to_string(), count, None))?;
+        sender.send(InstallProgress::Pending(STEP4.to_string(), count))?;
         std::thread::sleep(refresh_interval);
         if extract_done.load(Ordering::SeqCst) {
             break;
@@ -476,7 +479,6 @@ fn begin_install(
     sender.send(InstallProgress::Pending(
         STEP5.to_string(),
         fake_counter,
-        None,
     ))?;
     info!("{}", STEP5);
 
@@ -491,7 +493,6 @@ fn begin_install(
     sender.send(InstallProgress::Pending(
         STEP6.to_string(),
         fake_counter,
-        None,
     ))?;
     info!("{}", STEP6);
 
@@ -507,7 +508,6 @@ fn begin_install(
     sender.send(InstallProgress::Pending(
         STEP7.to_string(),
         fake_counter,
-        None,
     ))?;
     info!("{}", STEP7);
 
@@ -519,7 +519,6 @@ fn begin_install(
     sender.send(InstallProgress::Pending(
         STEP8.to_string(),
         fake_counter,
-        None,
     ))?;
 
     if use_swap {
