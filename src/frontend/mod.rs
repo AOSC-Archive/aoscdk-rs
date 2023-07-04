@@ -428,10 +428,7 @@ fn begin_install(
 
     info!("{}", STEP3);
     loop {
-        sender.send(InstallProgress::Pending(
-            STEP3.to_string(),
-            fake_counter
-        ))?;
+        sender.send(InstallProgress::Pending(STEP3.to_string(), fake_counter))?;
         std::thread::sleep(refresh_interval);
         if let Ok(hasher) = get_sha256_rx.try_recv() {
             let final_hash = hex::encode(hasher.finalize());
@@ -476,10 +473,7 @@ fn begin_install(
     let mut rng = thread_rng();
     let fake_counter: usize = rng.gen_range(0..100);
 
-    sender.send(InstallProgress::Pending(
-        STEP5.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP5.to_string(), fake_counter))?;
     info!("{}", STEP5);
 
     info!("Chroot to installed system ...");
@@ -490,10 +484,7 @@ fn begin_install(
     install::execute_dracut()?;
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(
-        STEP6.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP6.to_string(), fake_counter))?;
     info!("{}", STEP6);
 
     if disks::is_efi_booted() {
@@ -505,10 +496,7 @@ fn begin_install(
     };
 
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(
-        STEP7.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP7.to_string(), fake_counter))?;
     info!("{}", STEP7);
 
     info!("Generating SSH key ...");
@@ -516,10 +504,7 @@ fn begin_install(
 
     info!("{}", STEP8);
     let fake_counter: usize = rng.gen_range(0..100);
-    sender.send(InstallProgress::Pending(
-        STEP8.to_string(),
-        fake_counter,
-    ))?;
+    sender.send(InstallProgress::Pending(STEP8.to_string(), fake_counter))?;
 
     if use_swap {
         info!("Generating swapfile entry to fstab");
