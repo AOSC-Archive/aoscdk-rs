@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.8.3 (2023-07-04)
+
+### Chore
+
+ - <csr-id-5302905dbf6b9f2dbe64c8886f6245c45df4d5bf/> Update all deps
+
+### Refactor
+
+ - <csr-id-56c4c6998f6e6cab58492effbe44ae8b84ca4d03/> No need to 3 argument in InstallPtogress::Pending
+ - <csr-id-e493db75fdf0e6edb287861dd25ee4a629f200b0/> Improve frontend error handle
+
+### Style
+
+ - <csr-id-d3acdffa3494b425cb1e1fb877a79c770dc4057a/> Use cargo-fmt to format code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release over the course of 1 calendar day.
+ - 4 days passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`d3acdff`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d3acdffa3494b425cb1e1fb877a79c770dc4057a))
+    - Update all deps ([`5302905`](https://github.com/AOSC-Dev/aoscdk-rs/commit/5302905dbf6b9f2dbe64c8886f6245c45df4d5bf))
+    - No need to 3 argument in InstallPtogress::Pending ([`56c4c69`](https://github.com/AOSC-Dev/aoscdk-rs/commit/56c4c6998f6e6cab58492effbe44ae8b84ca4d03))
+    - Improve frontend error handle ([`e493db7`](https://github.com/AOSC-Dev/aoscdk-rs/commit/e493db75fdf0e6edb287861dd25ee4a629f200b0))
+</details>
+
 ## v0.8.2 (2023-06-29)
 
 ### Bug Fixes
@@ -15,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.8.2 ([`144a639`](https://github.com/AOSC-Dev/aoscdk-rs/commit/144a639bab98a46298d0f8ef6c658449eb224a03))
     - Remove ui string useless text ([`6a78f71`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6a78f7109bf62a16d0b2ce443fa4cf8165bd80a0))
 </details>
 
