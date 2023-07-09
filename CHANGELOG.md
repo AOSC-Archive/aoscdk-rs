@@ -5,7 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.8.4 (2023-07-09)
+
+### Chore
+
+ - <csr-id-22c21790221f405ab57b19a868946d11be06c685/> Update all deps
+
+### Bug Fixes
+
+ - <csr-id-0a8fd6f71cd673601c6a0d64cbc51d9804822123/> Do not set client timeout
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 5 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update all deps ([`22c2179`](https://github.com/AOSC-Dev/aoscdk-rs/commit/22c21790221f405ab57b19a868946d11be06c685))
+    - Do not set client timeout ([`0a8fd6f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0a8fd6f71cd673601c6a0d64cbc51d9804822123))
+</details>
+
 ## v0.8.3 (2023-07-04)
+
+<csr-id-5302905dbf6b9f2dbe64c8886f6245c45df4d5bf/>
+<csr-id-56c4c6998f6e6cab58492effbe44ae8b84ca4d03/>
+<csr-id-e493db75fdf0e6edb287861dd25ee4a629f200b0/>
+<csr-id-d3acdffa3494b425cb1e1fb877a79c770dc4057a/>
 
 ### Chore
 
@@ -24,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release over the course of 1 calendar day.
+ - 5 commits contributed to the release over the course of 1 calendar day.
  - 4 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -36,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.8.3 ([`343f937`](https://github.com/AOSC-Dev/aoscdk-rs/commit/343f937a3283f6644deaad52918f3eeccdf28aaf))
     - Use cargo-fmt to format code ([`d3acdff`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d3acdffa3494b425cb1e1fb877a79c770dc4057a))
     - Update all deps ([`5302905`](https://github.com/AOSC-Dev/aoscdk-rs/commit/5302905dbf6b9f2dbe64c8886f6245c45df4d5bf))
     - No need to 3 argument in InstallPtogress::Pending ([`56c4c69`](https://github.com/AOSC-Dev/aoscdk-rs/commit/56c4c6998f6e6cab58492effbe44ae8b84ca4d03))
