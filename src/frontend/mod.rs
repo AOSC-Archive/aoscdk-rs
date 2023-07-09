@@ -9,7 +9,6 @@ use std::{
         Arc,
     },
     thread,
-    time::Duration,
 };
 
 use crate::{
@@ -256,7 +255,6 @@ fn begin_install(
 
         let client = match reqwest::Client::builder()
             .user_agent(DEPLOYKIT_USER_AGENT!())
-            .timeout(Duration::from_secs(300))
             .build()
         {
             Ok(c) => c,
