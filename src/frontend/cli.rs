@@ -282,6 +282,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         is_hibernation: Arc::new(AtomicBoolWrapper {
             v: AtomicBool::new(is_hibernation),
         }),
+        root_password: None
     };
 
     let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();

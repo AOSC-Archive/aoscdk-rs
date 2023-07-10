@@ -414,13 +414,17 @@ pub fn add_new_user(name: &str, password: &str) -> Result<()> {
     run_command("useradd", ["-m", "-s", "/bin/bash", name])?;
     run_command("usermod", ["-aG", "audio,cdrom,video,wheel,plugdev", name])?;
 
+    chpasswd(name, password)?;
+
+    Ok(())
+}
+
+pub fn chpasswd(name: &str, password: &str) -> Result<()> {
     info!("Running chpasswd ...");
     let command = Command::new("chpasswd").stdin(Stdio::piped()).spawn()?;
-
     let mut stdin = command.stdin.ok_or_else(|| {
         anyhow!("Installer can not get your stdin! please restart your environment")
     })?;
-
     stdin.write_all(format!("{name}:{password}\n").as_bytes())?;
     stdin.flush()?;
     info!("Running chpasswd successfully");

@@ -647,9 +647,13 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
     let name_copy = Rc::clone(&name);
     let full_name = Rc::new(RefCell::new(String::new()));
     let full_name_copy = Rc::clone(&full_name);
-
     let user_password_textview = TextView::new(ENTER_USER_PASSWORD_TEXT).max_width(80);
-    let user_password_view = ListView::new()
+    let root_password = Rc::new(RefCell::new(String::new()));
+    let root_password_copy = Rc::clone(&root_password);
+    let root_password_confirm = Rc::new(RefCell::new(String::new()));
+    let root_password_confirm_copy = Rc::clone(&root_password_confirm);
+
+    let mut user_password_view = ListView::new()
         .child(
             "Full name",
             EditView::new()
@@ -688,6 +692,31 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
                 .min_width(20)
                 .with_name("pwd2"),
         );
+
+    if cfg!(feature = "is_retro") {
+        user_password_view = user_password_view
+            .child(
+                "Root Password",
+                EditView::new()
+                    .secret()
+                    .on_edit_mut(move |_, c, _| {
+                        root_password_copy.replace(c.to_owned());
+                    })
+                    .min_width(20)
+                    .with_name("root_pwd"),
+            )
+            .child(
+                "Root Passoword Confirm",
+                EditView::new()
+                    .secret()
+                    .on_edit_mut(move |_, c, _| {
+                        root_password_confirm_copy.replace(c.to_owned());
+                    })
+                    .min_width(20)
+                    .with_name("root_pwd2"),
+            )
+    }
+
     let config_clone = config.clone();
     let user_password_dialog = wrap_in_dialog(
         LinearLayout::vertical()
@@ -702,6 +731,8 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
         let password_confirm = password_confirm.as_ref().to_owned().into_inner();
         let name = name.as_ref().to_owned().into_inner();
         let full_name = full_name.as_ref().to_owned().into_inner();
+        let root_password = root_password.as_ref().to_owned().into_inner();
+        let root_password_confirm = root_password_confirm.as_ref().to_owned().into_inner();
 
         if full_name.contains('\n') || full_name.contains(':') {
             show_msg(s, "Full name is not valid, please refer to the criteria specified on top of the dialog.");
@@ -713,7 +744,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
             return;
         }
 
-        if password.is_empty() || password_confirm.is_empty() || name.is_empty() {
+        if password.is_empty() || password_confirm.is_empty() || name.is_empty() || (cfg!(feature = "is_retro") && (root_password.is_empty() || root_password_confirm.is_empty())) {
             fill_in_all_the_fields!(s);
         }
 
@@ -722,10 +753,20 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
             return;
         }
 
+        if root_password != root_password_confirm {
+            show_msg(s, "Passwords (root) password do not match.");
+            return;
+        }
+
         let mut config = config.clone();
         config.password = Some(Arc::new(password));
         config.user = Some(Arc::new(name));
         config.full_name = Some(Arc::new(full_name));
+        config.root_password = if !root_password.is_empty() {
+            Some(Arc::new(root_password))
+        } else {
+            None
+        };
         select_hostname(s, config);
     })
     .button("Back", move |s| {

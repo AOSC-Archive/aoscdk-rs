@@ -63,6 +63,7 @@ struct InstallConfig {
     full_name: Option<Arc<String>>,
     user: Option<Arc<String>>,
     password: Option<Arc<String>>,
+    root_password: Option<Arc<String>>,
     hostname: Option<String>,
     locale: Option<Arc<String>>,
     timezone: Option<Arc<String>>,
@@ -92,6 +93,7 @@ impl Default for InstallConfig {
             is_hibernation: Arc::new(AtomicBoolWrapper {
                 v: AtomicBool::new(false),
             }),
+            root_password: None,
         }
     }
 }
@@ -526,7 +528,12 @@ fn begin_install(
     install::set_hostname(&hostname)?;
 
     info!("Setting username and password ...");
+
     install::add_new_user(&config.user.clone().unwrap(), &config.password.unwrap())?;
+
+    if !cfg!(feature = "is_retro") {
+        install::chpasswd("root", &config.root_password.unwrap())?;
+    }
 
     info!("Setting fullname ...");
     if config.full_name.is_some() && config.full_name != Some("".to_string().into()) {
