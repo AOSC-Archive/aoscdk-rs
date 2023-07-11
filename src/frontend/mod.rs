@@ -531,7 +531,7 @@ fn begin_install(
 
     install::add_new_user(&config.user.clone().unwrap(), &config.password.unwrap())?;
 
-    if !cfg!(feature = "is_retro") {
+    if cfg!(feature = "is_retro") {
         install::chpasswd("root", &config.root_password.unwrap())?;
     }
 
