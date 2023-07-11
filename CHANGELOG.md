@@ -5,7 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.0 (2023-07-11)
+
+### Chore
+
+ - <csr-id-8114c89799d35f26f089bbf676ca05a8da6ab0d8/> Update all deps
+
+### New Features
+
+ - <csr-id-10e16cab1e4a6b8326bca858939e16f47c84c9db/> Add set root password option only retro machine
+
+### Bug Fixes
+
+ - <csr-id-71ebc253abedbb56cbe9cf8a39e9f7a06f8e017c/> Fix non is_retro install
+
+### Style
+
+ - <csr-id-8afc9bfc4a0702d017c0eba751993ae1515d3989/> Use cargo-fmt to format code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 1 day passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt to format code ([`8afc9bf`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8afc9bfc4a0702d017c0eba751993ae1515d3989))
+    - Update all deps ([`8114c89`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8114c89799d35f26f089bbf676ca05a8da6ab0d8))
+    - Fix non is_retro install ([`71ebc25`](https://github.com/AOSC-Dev/aoscdk-rs/commit/71ebc253abedbb56cbe9cf8a39e9f7a06f8e017c))
+    - Add set root password option only retro machine ([`10e16ca`](https://github.com/AOSC-Dev/aoscdk-rs/commit/10e16cab1e4a6b8326bca858939e16f47c84c9db))
+</details>
+
 ## v0.8.4 (2023-07-09)
+
+<csr-id-22c21790221f405ab57b19a868946d11be06c685/>
 
 ### Chore
 
@@ -19,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 5 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -31,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.8.4 ([`2335597`](https://github.com/AOSC-Dev/aoscdk-rs/commit/23355973af60e646407c356df8018933ab1e88a8))
     - Update all deps ([`22c2179`](https://github.com/AOSC-Dev/aoscdk-rs/commit/22c21790221f405ab57b19a868946d11be06c685))
     - Do not set client timeout ([`0a8fd6f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0a8fd6f71cd673601c6a0d64cbc51d9804822123))
 </details>
