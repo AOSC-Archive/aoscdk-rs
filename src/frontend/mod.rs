@@ -351,7 +351,7 @@ fn begin_install(
                             cc.set(tarball_size);
                             sha256_work_tx.send((chunk.to_vec(), chunk.len())).unwrap();
                         } else {
-                            let e = "chunk is none".to_string();
+                            let e = "The remote closed the connection prematurely.".to_string();
                             send_error!(error_channel_tx_copy, e);
                         }
                     }
