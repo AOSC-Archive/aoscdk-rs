@@ -359,6 +359,12 @@ fn begin_install(
                          send_error!(error_channel_tx_copy, e);
                     }
                 }
+                if cfg!(feature = "is_retro") {
+                    // 确保在 Retro 设备上不会因为网速过快，数据来不及写入硬盘导致的 OOM
+                    if let Err(e) = output.flush() {
+                        send_error!(error_channel_tx_copy, e);
+                    }
+                }
             }
         });
 
