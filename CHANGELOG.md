@@ -5,7 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.3 (2023-07-15)
+
+### Bug Fixes
+
+ - <csr-id-2629bd2425af2cd164957ce08d03347e62b073ba/> Download rootfs send network request handle error
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Download rootfs send network request handle error ([`2629bd2`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2629bd2425af2cd164957ce08d03347e62b073ba))
+</details>
+
 ## v0.9.2 (2023-07-15)
+
+<csr-id-475c62eb73c7e87eeec02a25e88851efb72d292a/>
 
 ### Bug Fixes
 
@@ -19,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -30,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.2 ([`8837a27`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8837a2733cde16b921f7f2fb17f832fa97e3593a))
     - Fix retro arch check tarball list is empty ([`d40e59a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d40e59a28b4be8ff437e4a0b06db4e7cc3cc045a))
     - Lint some code ([`475c62e`](https://github.com/AOSC-Dev/aoscdk-rs/commit/475c62eb73c7e87eeec02a25e88851efb72d292a))
 </details>
