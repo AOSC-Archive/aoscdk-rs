@@ -170,8 +170,7 @@ pub fn query_file_meta(url: &String) -> Result<reqwest::blocking::Response> {
     let head_response = client.head(url).send();
 
     let server_response = head_response?;
-    let server_success = server_response
-        .error_for_status()?;
+    let server_success = server_response.error_for_status()?;
 
     Ok(server_success)
 }
@@ -240,7 +239,11 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     let right_recipes = recipes
         .variants
         .into_iter()
-        .filter(|x| x.retro == IS_RETRO && !x.squashfs.is_empty() && x.name != "BuildKit")
+        .filter(|x| {
+            ((x.retro == IS_RETRO && !x.tarball.is_empty())
+                || (x.retro != IS_RETRO && !x.squashfs.is_empty()))
+                && x.name != "BuildKit"
+        })
         .collect::<Vec<Variant>>();
 
     let right_recipes_len = right_recipes.len();
