@@ -169,10 +169,9 @@ pub fn query_file_meta(url: &String) -> Result<reqwest::blocking::Response> {
         .build()?;
     let head_response = client.head(url).send();
 
-    let server_response = head_response.map_err(|e| anyhow!("{}", e))?;
+    let server_response = head_response?;
     let server_success = server_response
-        .error_for_status()
-        .map_err(|e| anyhow!("{}", e))?;
+        .error_for_status()?;
 
     Ok(server_success)
 }
