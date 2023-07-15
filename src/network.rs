@@ -57,13 +57,26 @@ pub struct Squashfs {
 }
 
 #[derive(Deserialize, Debug)]
+
+struct SystemRootFs {
+    arch: String,
+    date: String,
+    download_size: i64,
+    inst_size: i64,
+    path: String,
+    sha256sum: String,
+    // inodes: Option<u32>,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Variant {
     name: String,
     retro: bool,
     pub description: String,
     #[serde(rename = "description-tr")]
     pub description_tr: String,
-    squashfs: Vec<Squashfs>,
+    tarball: Vec<SystemRootFs>,
+    squashfs: Vec<SystemRootFs>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -234,15 +247,17 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
 
     let right_recipes_len = right_recipes.len();
     for (index, recipe) in right_recipes.into_iter().enumerate() {
-        let mut sorted_squashfs: Vec<Squashfs> = recipe
-            .squashfs
-            .into_iter()
-            .filter(|x| x.arch == arch_name)
-            .collect();
+        let rootfs = match IS_RETRO {
+            true => recipe.tarball,
+            false => recipe.squashfs,
+        };
 
-        sorted_squashfs.sort_by(|a, b| b.date.cmp(&a.date));
+        let mut sorted_rootfs: Vec<SystemRootFs> =
+            rootfs.into_iter().filter(|x| x.arch == arch_name).collect();
 
-        if sorted_squashfs.is_empty() {
+        sorted_rootfs.sort_by(|a, b| b.date.cmp(&a.date));
+
+        if sorted_rootfs.is_empty() {
             if all_empty && index == right_recipes_len - 1 {
                 return Err(anyhow!(
                     "Installer could not find any available system release for your device."
@@ -252,14 +267,14 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
         }
         all_empty = false;
 
-        let candidate_sq = sorted_squashfs.first().unwrap();
+        let candidate_rootfs = sorted_rootfs.first().unwrap();
         results.push(VariantEntry {
             name: recipe.name,
-            size: candidate_sq.download_size as u64,
-            install_size: candidate_sq.inst_size as u64,
-            date: candidate_sq.date.clone(),
-            url: candidate_sq.path.clone(),
-            sha256sum: candidate_sq.sha256sum.clone(),
+            size: candidate_rootfs.download_size as u64,
+            install_size: candidate_rootfs.inst_size as u64,
+            date: candidate_rootfs.date.clone(),
+            url: candidate_rootfs.path.clone(),
+            sha256sum: candidate_rootfs.sha256sum.clone(),
         });
     }
     results.sort_by(|a, b| a.name.cmp(&b.name));
