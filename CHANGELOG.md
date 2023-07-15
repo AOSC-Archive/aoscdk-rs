@@ -5,7 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.1 (2023-07-15)
+
+### Chore
+
+ - <csr-id-844d76139ac3044cc300e6f6ddaea9e81a2d3a82/> Update all deps
+   - Also cargo clippy and fmt
+
+### New Features
+
+ - <csr-id-31e6e966ec1064959175925ded560adeb85c78ec/> Retro arch use tarball to extract system
+
+### Bug Fixes
+
+ - <csr-id-8f430d49a645f0520b22fa3fbf8bb7cd058e8c5b/> Ensure that there are no OOMs on Retro devices due to fast network speeds and data not being written to the hard disk in time
+ - <csr-id-75f3d7f120629f811b4d28a24e960c9b255bf9d5/> Fix remote prematurely closed ui string
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release over the course of 2 calendar days.
+ - 4 days passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update all deps ([`844d761`](https://github.com/AOSC-Dev/aoscdk-rs/commit/844d76139ac3044cc300e6f6ddaea9e81a2d3a82))
+    - Retro arch use tarball to extract system ([`31e6e96`](https://github.com/AOSC-Dev/aoscdk-rs/commit/31e6e966ec1064959175925ded560adeb85c78ec))
+    - Ensure that there are no OOMs on Retro devices due to fast network speeds and data not being written to the hard disk in time ([`8f430d4`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8f430d49a645f0520b22fa3fbf8bb7cd058e8c5b))
+    - Fix remote prematurely closed ui string ([`75f3d7f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/75f3d7f120629f811b4d28a24e960c9b255bf9d5))
+</details>
+
 ## v0.9.0 (2023-07-11)
+
+<csr-id-8114c89799d35f26f089bbf676ca05a8da6ab0d8/>
+<csr-id-8afc9bfc4a0702d017c0eba751993ae1515d3989/>
 
 ### Chore
 
@@ -27,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 1 day passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -39,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.0 ([`853f123`](https://github.com/AOSC-Dev/aoscdk-rs/commit/853f12313090272659915d68a5e8d60cb64b9dd4))
     - Use cargo-fmt to format code ([`8afc9bf`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8afc9bfc4a0702d017c0eba751993ae1515d3989))
     - Update all deps ([`8114c89`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8114c89799d35f26f089bbf676ca05a8da6ab0d8))
     - Fix non is_retro install ([`71ebc25`](https://github.com/AOSC-Dev/aoscdk-rs/commit/71ebc253abedbb56cbe9cf8a39e9f7a06f8e017c))
