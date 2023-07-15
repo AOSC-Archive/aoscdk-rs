@@ -5,7 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.2 (2023-07-15)
+
+### Bug Fixes
+
+ - <csr-id-d40e59a28b4be8ff437e4a0b06db4e7cc3cc045a/> Fix retro arch check tarball list is empty
+
+### Style
+
+ - <csr-id-475c62eb73c7e87eeec02a25e88851efb72d292a/> Lint some code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Fix retro arch check tarball list is empty ([`d40e59a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/d40e59a28b4be8ff437e4a0b06db4e7cc3cc045a))
+    - Lint some code ([`475c62e`](https://github.com/AOSC-Dev/aoscdk-rs/commit/475c62eb73c7e87eeec02a25e88851efb72d292a))
+</details>
+
 ## v0.9.1 (2023-07-15)
+
+<csr-id-844d76139ac3044cc300e6f6ddaea9e81a2d3a82/>
 
 ### Chore
 
@@ -25,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release over the course of 2 calendar days.
+ - 5 commits contributed to the release over the course of 2 calendar days.
  - 4 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -37,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.1 ([`537fb90`](https://github.com/AOSC-Dev/aoscdk-rs/commit/537fb9077169b944a5788d90da875a422cf19f95))
     - Update all deps ([`844d761`](https://github.com/AOSC-Dev/aoscdk-rs/commit/844d76139ac3044cc300e6f6ddaea9e81a2d3a82))
     - Retro arch use tarball to extract system ([`31e6e96`](https://github.com/AOSC-Dev/aoscdk-rs/commit/31e6e966ec1064959175925ded560adeb85c78ec))
     - Ensure that there are no OOMs on Retro devices due to fast network speeds and data not being written to the hard disk in time ([`8f430d4`](https://github.com/AOSC-Dev/aoscdk-rs/commit/8f430d49a645f0520b22fa3fbf8bb7cd058e8c5b))
