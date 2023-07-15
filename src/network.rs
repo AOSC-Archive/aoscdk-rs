@@ -57,7 +57,6 @@ pub struct Squashfs {
 }
 
 #[derive(Deserialize, Debug)]
-
 struct SystemRootFs {
     arch: String,
     date: String,
