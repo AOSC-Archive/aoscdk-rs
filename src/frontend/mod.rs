@@ -275,7 +275,7 @@ fn begin_install(
         let error_channel_tx_copy_copy = error_channel_tx_copy.clone();
 
         runtime.block_on(async move {
-            let mut resp = match client.get(urlc).send().await {
+            let mut resp = match client.get(urlc).send().await.and_then(|x| x.error_for_status()) {
                 Ok(resp) => resp,
                 Err(e) => {
                     send_error!(error_channel_tx_copy, e);
