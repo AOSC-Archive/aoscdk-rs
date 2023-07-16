@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.9.3 (2023-07-15)
+## v0.9.4 (2023-07-16)
 
 ### Bug Fixes
 
- - <csr-id-2629bd2425af2cd164957ce08d03347e62b073ba/> Download rootfs send network request handle error
+ - <csr-id-b243cb9a32ab27697c59bb26006d47bcd94e35dd/> Passoword -> password
 
 ### Commit Statistics
 
@@ -26,6 +26,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Passoword -> password ([`b243cb9`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b243cb9a32ab27697c59bb26006d47bcd94e35dd))
+</details>
+
+## v0.9.3 (2023-07-15)
+
+### Bug Fixes
+
+ - <csr-id-2629bd2425af2cd164957ce08d03347e62b073ba/> Download rootfs send network request handle error
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Bump aoscdk-rs v0.9.3 ([`0929ecc`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0929ecc963efad3d013437c44bde08484ce61a2e))
     - Download rootfs send network request handle error ([`2629bd2`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2629bd2425af2cd164957ce08d03347e62b073ba))
 </details>
 
