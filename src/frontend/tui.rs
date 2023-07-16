@@ -706,7 +706,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
                     .with_name("root_pwd"),
             )
             .child(
-                "Root Passoword Confirm",
+                "Root Password Confirm",
                 EditView::new()
                     .secret()
                     .on_edit_mut(move |_, c, _| {
