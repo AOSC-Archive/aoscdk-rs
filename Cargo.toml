@@ -41,7 +41,7 @@ log = "0.4"
 fern = "0.6"
 time = { version = "0.3", features = ["formatting"] }
 libc = "0.2"
-distinst-squashfs = { git = "https://github.com/AOSC-Dev/distinst-squashfs", rev = "a5c59fe2f429ee9b57327b7423c5c70e14a63fe8" }
+unsquashfs-wrapper = "0.1"
 
 [features]
 is_retro = []

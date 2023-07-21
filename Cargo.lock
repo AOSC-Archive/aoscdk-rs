@@ -120,7 +120,6 @@ dependencies = [
  "cursive-async-view",
  "cursive_table_view",
  "disk-types",
- "distinst-squashfs",
  "fern",
  "fstab-generate",
  "futures",
@@ -146,6 +145,7 @@ dependencies = [
  "tempfile",
  "time 0.3.23",
  "tokio",
+ "unsquashfs-wrapper",
  "xz2",
 ]
 
@@ -634,15 +634,6 @@ dependencies = [
  "sys-mount",
  "sysfs-class",
  "tempdir",
-]
-
-[[package]]
-name = "distinst-squashfs"
-version = "0.1.0"
-source = "git+https://github.com/AOSC-Dev/distinst-squashfs?rev=a5c59fe2f429ee9b57327b7423c5c70e14a63fe8#a5c59fe2f429ee9b57327b7423c5c70e14a63fe8"
-dependencies = [
- "libc",
- "log",
 ]
 
 [[package]]
@@ -2612,6 +2603,17 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
+
+[[package]]
+name = "unsquashfs-wrapper"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53a68574c5c8a2cda2e93780d5d4f5642b0ec5f17aacfa1c0cd0fc782c66cd93"
+dependencies = [
+ "libc",
+ "log",
+ "which",
+]
 
 [[package]]
 name = "url"
