@@ -558,16 +558,16 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
         );
     } else {
         let (target, is_efi) = match network::get_arch_name() {
-            Some("amd64") => ("--target=x86_64-efi", true),
-            Some("arm64") => ("--target=arm64-efi", true),
-            Some("riscv64") => ("--target=riscv64-efi", true),
+            Some("amd64") => (vec!["--target=x86_64-efi"], true),
+            Some("arm64") => (vec!["--target=arm64-efi", "--removable"], true),
+            Some("riscv64") => (vec!["--target=riscv64-efi"], true),
             _ => {
                 info!("This architecture does not support grub");
                 return Ok(());
             }
         };
         grub_install_args.push("--bootloader-id=AOSC OS");
-        grub_install_args.push(target);
+        grub_install_args.extend(target);
         if is_efi {
             grub_install_args.push("--efi-directory=/efi");
         }
