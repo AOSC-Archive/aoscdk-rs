@@ -43,6 +43,9 @@ time = { version = "0.3", features = ["formatting"] }
 libc = "0.2"
 unsquashfs-wrapper = "0.1"
 
+[patch.crates-io]
+loopdev = { git = "https://github.com/eatradish/loopdev", rev = "0dde43a15320cf84148e57fed8aec6683755c04f" }
+
 [features]
 is_retro = []
 
