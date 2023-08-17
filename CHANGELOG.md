@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.5 (2023-08-17)
+
+### Chore
+
+ - <csr-id-92a36c36d1cac1aeaead20e7bb615cfecadac542/> Distinst-squashfs rename to unsquashfs-wrapper
+
+### New Features
+
+ - <csr-id-7d90e2da9fff9b13899118639977cde0f5afe38a/> Add --removable argument for arm64 grub-install
+
+### Bug Fixes
+
+ - <csr-id-bdf1001d089a2c6a034ba5659ae07659f9fa8f6f/> Use new bindgen loopdev to fix build
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release over the course of 27 calendar days.
+ - 31 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use new bindgen loopdev to fix build ([`bdf1001`](https://github.com/AOSC-Dev/aoscdk-rs/commit/bdf1001d089a2c6a034ba5659ae07659f9fa8f6f))
+    - Add --removable argument for arm64 grub-install ([`7d90e2d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/7d90e2da9fff9b13899118639977cde0f5afe38a))
+    - Distinst-squashfs rename to unsquashfs-wrapper ([`92a36c3`](https://github.com/AOSC-Dev/aoscdk-rs/commit/92a36c36d1cac1aeaead20e7bb615cfecadac542))
+</details>
+
 ## v0.9.4 (2023-07-16)
 
 ### Bug Fixes
@@ -15,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.4 ([`f2e10ab`](https://github.com/AOSC-Dev/aoscdk-rs/commit/f2e10abadd84f55367c66377f58ab5ca72175a4a))
     - Passoword -> password ([`b243cb9`](https://github.com/AOSC-Dev/aoscdk-rs/commit/b243cb9a32ab27697c59bb26006d47bcd94e35dd))
 </details>
 
