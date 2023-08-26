@@ -111,7 +111,9 @@ pub struct VariantEntry {
 }
 
 pub fn fetch_recipe() -> Result<Recipe> {
-    Ok(reqwest::blocking::get(MANIFEST_URL)?.error_for_status()?.json()?)
+    Ok(reqwest::blocking::get(MANIFEST_URL)?
+        .error_for_status()?
+        .json()?)
 }
 
 pub fn fetch_mirrors(recipe: &Recipe) -> Vec<Mirror> {

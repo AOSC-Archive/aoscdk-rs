@@ -505,7 +505,7 @@ fn set_full_name(full_name: &str, username: &str, passwd: Vec<&str>) -> Result<S
     let mut s = String::new();
 
     for i in v {
-        let entry = vec![
+        let entry = [
             i.username,
             i.time,
             i.uid,
