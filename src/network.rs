@@ -240,8 +240,8 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
         .variants
         .into_iter()
         .filter(|x| {
-            ((x.retro == IS_RETRO && !x.tarball.is_empty())
-                || (x.retro != IS_RETRO && !x.squashfs.is_empty()))
+            ((x.retro && IS_RETRO && !x.tarball.is_empty())
+                || (!x.retro && !IS_RETRO && !x.squashfs.is_empty()))
                 && x.name != "BuildKit"
         })
         .collect::<Vec<Variant>>();
