@@ -60,7 +60,9 @@ pub struct Squashfs {
 struct SystemRootFs {
     arch: String,
     date: String,
+    #[serde(rename = "downloadSize")]
     download_size: i64,
+    #[serde(rename = "instSize")]
     inst_size: i64,
     path: String,
     sha256sum: String,
@@ -74,7 +76,7 @@ pub struct Variant {
     pub description: String,
     #[serde(rename = "description-tr")]
     pub description_tr: String,
-    tarball: Vec<SystemRootFs>,
+    tarballs: Vec<SystemRootFs>,
     squashfs: Vec<SystemRootFs>,
 }
 
@@ -109,7 +111,7 @@ pub struct VariantEntry {
 }
 
 pub fn fetch_recipe() -> Result<Recipe> {
-    Ok(reqwest::blocking::get(MANIFEST_URL)?.json()?)
+    Ok(reqwest::blocking::get(MANIFEST_URL)?.error_for_status()?.json()?)
 }
 
 pub fn fetch_mirrors(recipe: &Recipe) -> Vec<Mirror> {
@@ -240,7 +242,7 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
         .variants
         .into_iter()
         .filter(|x| {
-            ((x.retro && IS_RETRO && !x.tarball.is_empty())
+            ((x.retro && IS_RETRO && !x.tarballs.is_empty())
                 || (!x.retro && !IS_RETRO && !x.squashfs.is_empty()))
                 && x.name != "BuildKit"
         })
@@ -249,7 +251,7 @@ pub fn find_variant_candidates(recipes: Recipe) -> Result<Vec<VariantEntry>> {
     let right_recipes_len = right_recipes.len();
     for (index, recipe) in right_recipes.into_iter().enumerate() {
         let rootfs = match IS_RETRO {
-            true => recipe.tarball,
+            true => recipe.tarballs,
             false => recipe.squashfs,
         };
 
