@@ -5,7 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.6 (2023-08-26)
+
+### Chore
+
+ - <csr-id-24355c69cc69657fa8723c6fcf7e24ae18f3e980/> Update all deps
+
+### Bug Fixes
+
+ - <csr-id-932461a6ece3e5a621d4ec46c07b9be7e7650176/> Fix serde rename some entry
+   I forgot to add it during the refactoring, but how did it run then?
+ - <csr-id-e3641c67869ce220f7e712cb8c063d6c7d52798c/> Fix fetch metadate mistaka
+   x.retro == IS_RETRO does not necessarily indicate that the entry is retro
+
+### Style
+
+ - <csr-id-2bbbc61711a05895cae56ebda0279b592a6c6b7e/> Use cargo-fmt and cargo-clippy to lint code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 9 days passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use cargo-fmt and cargo-clippy to lint code ([`2bbbc61`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2bbbc61711a05895cae56ebda0279b592a6c6b7e))
+    - Update all deps ([`24355c6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/24355c69cc69657fa8723c6fcf7e24ae18f3e980))
+    - Fix serde rename some entry ([`932461a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/932461a6ece3e5a621d4ec46c07b9be7e7650176))
+    - Fix fetch metadate mistaka ([`e3641c6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/e3641c67869ce220f7e712cb8c063d6c7d52798c))
+</details>
+
 ## v0.9.5 (2023-08-17)
+
+<csr-id-92a36c36d1cac1aeaead20e7bb615cfecadac542/>
 
 ### Chore
 
@@ -23,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 27 calendar days.
+ - 4 commits contributed to the release over the course of 27 calendar days.
  - 31 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -35,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.5 ([`f49c1bf`](https://github.com/AOSC-Dev/aoscdk-rs/commit/f49c1bf675b20af8f402b4194aa7e93a1a9d272e))
     - Use new bindgen loopdev to fix build ([`bdf1001`](https://github.com/AOSC-Dev/aoscdk-rs/commit/bdf1001d089a2c6a034ba5659ae07659f9fa8f6f))
     - Add --removable argument for arm64 grub-install ([`7d90e2d`](https://github.com/AOSC-Dev/aoscdk-rs/commit/7d90e2da9fff9b13899118639977cde0f5afe38a))
     - Distinst-squashfs rename to unsquashfs-wrapper ([`92a36c3`](https://github.com/AOSC-Dev/aoscdk-rs/commit/92a36c36d1cac1aeaead20e7bb615cfecadac542))
