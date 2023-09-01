@@ -320,23 +320,7 @@ fn begin_install(
                             if now >= 1.0 {
                                 let speed = tarball_size_1s as f64 / 1024.0 / now;
                                 let eta = (file_size - tarball_size) as f64 / 1024.0 / speed;
-                                let s = if speed > 1000.0 * 1000.0 {
-                                    format!("{:.1}GiB/s", speed / 1024.0 / 1024.0)
-                                } else if speed > 1000.0 {
-                                    format!("{:.1}MiB/s", speed / 1024.0)
-                                } else {
-                                    format!("{:.1}KiB/s", speed)
-                                };
-
-                                let s2 = if eta >= 60.0 * 60.0 * 24.0 {
-                                    format!("{:.1}d", (eta / 60.0 / 60.0 / 24.0).round())
-                                } else if eta >= 60.0 * 60.0 {
-                                    format!("{:.1}h", (eta / 60.0 / 60.0).round())
-                                } else if eta >= 60.0 {
-                                    format!("{:.1}m", (eta / 60.0).round())
-                                } else {
-                                    format!("{:.0}s", eta.round())
-                                };
+                                let (s, s2) = calc_speed(speed, eta);
                                 speed_tx.send((s, s2)).unwrap();
                                 tarball_size_1s = 0;
                                 timer = tokio::time::Instant::now();
@@ -580,4 +564,21 @@ fn begin_install(
     sender.send(InstallProgress::Finished)?;
 
     Ok(())
+}
+
+fn calc_speed(speed: f64, eta: f64) -> (String, String) {
+    let s = match speed {
+        x if x > 1000.0 * 1000.0 => format!("{:.1}GiB/s", speed / 1024.0 / 1024.0),
+        x if x > 1000.0 => format!("{:.1}MiB/s", speed / 1024.0),
+        x => format!("{x:.1}KiB/s"),
+    };
+
+    let s2 = match eta {
+        x if x >= 60.0 * 60.0 * 24.0 => format!("{:.1}d", (x / 60.0 / 60.0 / 24.0).round()),
+        x if x >= 60.0 * 60.0 => format!("{:.1}h", (x / 60.0 / 60.0).round()),
+        x if x >= 60.0 => format!("{:.1}m", (eta / 60.0).round()),
+        x => format!("{:.0}s", x.round()),
+    };
+
+    (s, s2)
 }
