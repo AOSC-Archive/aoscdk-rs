@@ -5,7 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.7 (2023-09-10)
+
+### Chore
+
+ - <csr-id-0a132b7b58787c825ea89253e7a8f2ad20b70247/> Update all deps
+
+### Other
+
+ - <csr-id-515836ffa790a8c42515e0bc18a80c16b347eb28/> Bump nix to 0.27
+
+### Style
+
+ - <csr-id-25e9252b678e11609b2a59411511392f15ed03a0/> Improve calc_speed function code style
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release over the course of 8 calendar days.
+ - 14 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update all deps ([`0a132b7`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0a132b7b58787c825ea89253e7a8f2ad20b70247))
+    - Bump nix to 0.27 ([`515836f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/515836ffa790a8c42515e0bc18a80c16b347eb28))
+    - Improve calc_speed function code style ([`25e9252`](https://github.com/AOSC-Dev/aoscdk-rs/commit/25e9252b678e11609b2a59411511392f15ed03a0))
+</details>
+
 ## v0.9.6 (2023-08-26)
+
+<csr-id-24355c69cc69657fa8723c6fcf7e24ae18f3e980/>
+<csr-id-2bbbc61711a05895cae56ebda0279b592a6c6b7e/>
 
 ### Chore
 
@@ -26,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 9 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -38,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.6 ([`200c253`](https://github.com/AOSC-Dev/aoscdk-rs/commit/200c2531b2bd442721e4c8c0c6bb120fe5de1843))
     - Use cargo-fmt and cargo-clippy to lint code ([`2bbbc61`](https://github.com/AOSC-Dev/aoscdk-rs/commit/2bbbc61711a05895cae56ebda0279b592a6c6b7e))
     - Update all deps ([`24355c6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/24355c69cc69657fa8723c6fcf7e24ae18f3e980))
     - Fix serde rename some entry ([`932461a`](https://github.com/AOSC-Dev/aoscdk-rs/commit/932461a6ece3e5a621d4ec46c07b9be7e7650176))
