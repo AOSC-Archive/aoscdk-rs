@@ -561,6 +561,7 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             Some("amd64") => (vec!["--target=x86_64-efi"], true),
             Some("arm64") => (vec!["--target=arm64-efi", "--removable"], true),
             Some("riscv64") => (vec!["--target=riscv64-efi"], true),
+            Some("loongarch64") => (vec!["--target=loongarch64-efi"], true),
             _ => {
                 info!("This architecture does not support grub");
                 return Ok(());
