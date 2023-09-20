@@ -5,7 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.9.8 (2023-09-20)
+
+### Chore
+
+ - <csr-id-6fb298fb5f1c89b9d9f79484c98b84c3089aabc5/> use upstream `tar` crate; update all deps
+
+### New Features
+
+ - <csr-id-52791ffb093c0ba788fbbd070216dbe770663324/> riscv64 install grub add --removable argument
+ - <csr-id-22752e0f45de09b972dd421fe08816e08e400cdd/> improve grub log info
+ - <csr-id-18655d67d4a83b9df4145578564c947c524a9748/> support loongarch64 install grub
+
+### Refactor
+
+ - <csr-id-9aa3de40148488126abff59e5e5f0b3a3280a6c7/> use slice to save grub install argument
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 5 commits contributed to the release.
+ - 9 days passed between releases.
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Use upstream `tar` crate; update all deps ([`6fb298f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/6fb298fb5f1c89b9d9f79484c98b84c3089aabc5))
+    - Use slice to save grub install argument ([`9aa3de4`](https://github.com/AOSC-Dev/aoscdk-rs/commit/9aa3de40148488126abff59e5e5f0b3a3280a6c7))
+    - Riscv64 install grub add --removable argument ([`52791ff`](https://github.com/AOSC-Dev/aoscdk-rs/commit/52791ffb093c0ba788fbbd070216dbe770663324))
+    - Improve grub log info ([`22752e0`](https://github.com/AOSC-Dev/aoscdk-rs/commit/22752e0f45de09b972dd421fe08816e08e400cdd))
+    - Support loongarch64 install grub ([`18655d6`](https://github.com/AOSC-Dev/aoscdk-rs/commit/18655d67d4a83b9df4145578564c947c524a9748))
+</details>
+
 ## v0.9.7 (2023-09-10)
+
+<csr-id-0a132b7b58787c825ea89253e7a8f2ad20b70247/>
+<csr-id-515836ffa790a8c42515e0bc18a80c16b347eb28/>
+<csr-id-25e9252b678e11609b2a59411511392f15ed03a0/>
 
 ### Chore
 
@@ -23,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 8 calendar days.
+ - 4 commits contributed to the release over the course of 8 calendar days.
  - 14 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -35,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Bump aoscdk-rs v0.9.7 ([`36202fa`](https://github.com/AOSC-Dev/aoscdk-rs/commit/36202fa051d747703407403ac7fe69c8a210f6ad))
     - Update all deps ([`0a132b7`](https://github.com/AOSC-Dev/aoscdk-rs/commit/0a132b7b58787c825ea89253e7a8f2ad20b70247))
     - Bump nix to 0.27 ([`515836f`](https://github.com/AOSC-Dev/aoscdk-rs/commit/515836ffa790a8c42515e0bc18a80c16b347eb28))
     - Improve calc_speed function code style ([`25e9252`](https://github.com/AOSC-Dev/aoscdk-rs/commit/25e9252b678e11609b2a59411511392f15ed03a0))
