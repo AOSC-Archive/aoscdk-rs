@@ -547,6 +547,8 @@ pub fn passwd_set_fullname(full_name: &str, username: &str) -> Result<()> {
 /// Must be used in a chroot context
 #[cfg(not(target_arch = "powerpc64"))]
 pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
+    use log::warn;
+
     let mut grub_install_args = vec![];
 
     if let Some(mbr_dev) = mbr_dev {
@@ -562,8 +564,12 @@ pub fn execute_grub_install(mbr_dev: Option<&PathBuf>) -> Result<()> {
             Some("arm64") => (vec!["--target=arm64-efi", "--removable"], true),
             Some("riscv64") => (vec!["--target=riscv64-efi"], true),
             Some("loongarch64") => (vec!["--target=loongarch64-efi"], true),
-            _ => {
-                info!("This architecture does not support grub");
+            Some(arch) => {
+                info!("This architecture {arch} does not support grub");
+                return Ok(());
+            }
+            None => {
+                warn!("Install GRUB: What is this architecture???");
                 return Ok(());
             }
         };
