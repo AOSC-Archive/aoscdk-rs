@@ -1,12 +1,10 @@
 use anyhow::{anyhow, bail, Context, Result};
 use cursive::utils::ProgressReader;
 use log::info;
-use nix::dir::Dir;
-use nix::errno::Errno;
-use nix::fcntl::{FallocateFlags, OFlag};
-use nix::mount;
-use nix::sys::stat::Mode;
-use nix::unistd::{chroot, fchdir, sync};
+use rustix::fd::{AsFd, OwnedFd};
+use rustix::fs::{self, FallocateFlags, Mode, OFlags};
+use rustix::io::Errno;
+use rustix::{mount, process};
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::{prelude::*, SeekFrom, Write};
@@ -179,7 +177,7 @@ pub fn auto_mount_root_path(tmp_path: &Path, partition: &Partition) -> Result<Pa
 
 /// Sync the filesystem and then reboot IMMEDIATELY (ignores init)
 pub fn sync_and_reboot() -> Result<()> {
-    sync();
+    fs::sync();
     run_command("systemctl", ["reboot"])?;
 
     Ok(())
@@ -199,11 +197,11 @@ pub fn mount_root_path(partition: &Partition, target: &Path) -> Result<()> {
     }
     // FIXME: due to an issue in `nix` and `libc`, `MS_LAZYTIME` is not supported atm
     mount::mount(
-        source,
+        source.unwrap_or(&PathBuf::from("")),
         target,
-        Some(fs_type),
-        mount::MsFlags::empty(),
-        None::<&str>,
+        fs_type,
+        mount::MountFlags::empty(),
+        "",
     )?;
 
     Ok(())
@@ -229,17 +227,17 @@ pub fn genfstab_to_file(partition: &Partition, root_path: &Path, mount_path: &Pa
 
 /// Unmount the filesystem given at `root` and then do a sync
 pub fn umount_root_path(root: &Path) -> Result<()> {
-    mount::umount2(root, mount::MntFlags::MNT_DETACH)?;
-    sync();
+    mount::unmount(root, mount::UnmountFlags::DETACH)?;
+    fs::sync();
 
     Ok(())
 }
 
 /// Get the open file descriptor to the specified path
-pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir> {
-    let fd = Dir::open(
-        &path,
-        OFlag::O_RDONLY | OFlag::O_DIRECTORY | OFlag::O_NONBLOCK,
+pub fn get_dir_fd(path: &Path) -> Result<OwnedFd> {
+    let fd = fs::open(
+        path,
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NONBLOCK,
         Mode::empty(),
     )?;
 
@@ -247,9 +245,9 @@ pub fn get_dir_fd<P: nix::NixPath>(path: P) -> Result<Dir> {
 }
 
 /// Escape the chroot context using the previously obtained `root_fd` as a trampoline
-pub fn escape_chroot(root_fd: i32) -> Result<()> {
-    fchdir(root_fd)?;
-    chroot(".")?;
+pub fn escape_chroot<F: AsFd>(root_fd: F) -> Result<()> {
+    process::fchdir(root_fd)?;
+    process::chroot(".")?;
     std::env::set_current_dir("/")?; // reset cwd (on host)
 
     info!("Escaped chroot environment");
@@ -263,25 +261,13 @@ pub fn setup_bind_mounts(root: &Path) -> Result<()> {
         let mut root = root.to_owned();
         root.push(&mount[1..]);
         std::fs::create_dir_all(root.clone())?;
-        mount::mount(
-            Some(*mount),
-            &root,
-            None::<&str>,
-            mount::MsFlags::MS_BIND,
-            None::<&str>,
-        )?;
+        mount::mount(*mount, &root, "", mount::MountFlags::BIND, "")?;
     }
 
     if is_efi_booted() {
         let root = root.join(&EFIVARS_PATH[1..]);
         std::fs::create_dir_all(&root)?;
-        mount::mount(
-            Some(EFIVARS_PATH),
-            &root,
-            None::<&str>,
-            mount::MsFlags::MS_BIND,
-            None::<&str>,
-        )?;
+        mount::mount(EFIVARS_PATH, &root, "", mount::MountFlags::BIND, "")?;
     }
 
     Ok(())
@@ -293,7 +279,7 @@ pub fn remove_bind_mounts(root: &Path) -> Result<()> {
     for mount in BIND_MOUNTS {
         let mut root = root.to_owned();
         root.push(&mount[1..]);
-        mount::umount2(&root, mount::MntFlags::MNT_DETACH)?;
+        mount::unmount(&root, mount::UnmountFlags::DETACH)?;
     }
 
     Ok(())
@@ -303,7 +289,7 @@ pub fn remove_bind_mounts(root: &Path) -> Result<()> {
 /// Warning: This will make the program trapped in the new root directory
 pub fn dive_into_guest(root: &Path) -> Result<()> {
     setup_bind_mounts(root)?;
-    chroot(root)?;
+    process::chroot(root)?;
     std::env::set_current_dir("/")?; // jump to the root directory after chroot
 
     Ok(())
@@ -674,13 +660,16 @@ pub fn create_swapfile(size: f64, use_swap: bool, tempdir: &Path) -> Result<()> 
     let res = unsafe {
         libc::fallocate64(
             swapfile.as_raw_fd(),
-            FallocateFlags::empty().bits(),
+            FallocateFlags::empty().bits() as i32,
             0,
             size as i64,
         )
     };
 
-    Errno::result(res).map(drop)?;
+    if res != 0 {
+        let res = Errno::from_raw_os_error(res).kind();
+        return Err(anyhow!("{res}"));
+    }
 
     swapfile.flush()?;
 
@@ -709,7 +698,7 @@ pub fn write_swap_entry_to_fstab() -> Result<()> {
 }
 
 /// Run umount -R
-pub fn umount_all(mount_path: &Path, root_fd: i32) {
+pub fn umount_all<F: AsFd>(mount_path: &Path, root_fd: F) {
     info!("Cleaning up mount path ...");
 
     escape_chroot(root_fd).ok();

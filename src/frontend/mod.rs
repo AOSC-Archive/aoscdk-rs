@@ -1,7 +1,6 @@
 use std::{
     convert::TryInto,
     io::Write,
-    os::unix::prelude::AsRawFd,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -19,8 +18,9 @@ use crate::{
 use anyhow::{anyhow, Result};
 use cursive::utils::Counter;
 use log::info;
-use nix::fcntl::FallocateFlags;
+// use nix::fcntl::FallocateFlags;
 use rand::{thread_rng, Rng};
+use rustix::{fd::AsFd, fs::FallocateFlags};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::sync::atomic;
 
@@ -283,8 +283,8 @@ fn begin_install(
             };
 
             info!("Allocating tarball file: {:?}", &tbl_file_c);
-            if let Err(e) = nix::fcntl::fallocate(
-                output.as_raw_fd(),
+            if let Err(e) = rustix::fs::fallocate(
+                output.as_fd(),
                 FallocateFlags::empty(),
                 0,
                 file_size.try_into().unwrap(),
@@ -467,7 +467,7 @@ fn begin_install(
     info!("{}", STEP5);
 
     info!("Chroot to installed system ...");
-    let escape_vector = install::get_dir_fd(PathBuf::from("/"))?;
+    let escape_vector = install::get_dir_fd(Path::new("/"))?;
     install::dive_into_guest(&mount_path_copy)?;
 
     info!("Running dracut ...");
@@ -535,7 +535,7 @@ fn begin_install(
     install::set_locale(locale)?;
 
     info!("Escaping chroot ...");
-    install::escape_chroot(escape_vector.as_raw_fd())?;
+    install::escape_chroot(escape_vector)?;
 
     if disks::is_efi_booted() {
         info!("Unmounting EFI partition ...");

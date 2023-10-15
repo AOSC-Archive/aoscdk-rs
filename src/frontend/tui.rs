@@ -19,9 +19,9 @@ use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
 use log::{error, info};
 use number_prefix::NumberPrefix;
-use std::{cell::RefCell, sync::Arc, thread};
+use std::rc::Rc;
+use std::{cell::RefCell, path::Path, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
-use std::{os::unix::prelude::AsRawFd, rc::Rc};
 use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
@@ -1371,8 +1371,9 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let tempdir_copy = tempdir.clone();
     let tempdir_copy_2 = tempdir.clone();
 
-    let root_fd = install::get_dir_fd(PathBuf::from("/")).map(|x| x.as_raw_fd())
+    let root_fd = install::get_dir_fd(Path::new("/"))
         .expect("Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
+    let rfc = root_fd.try_clone().unwrap();
     let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, logfile));
     thread::spawn(move || {
         let user_exit = user_interrup_rx.recv();
@@ -1401,7 +1402,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             let err = install_thread.join().unwrap().unwrap_err();
             error!("{}", err);
 
-            umount_all(&tempdir, root_fd);
+            umount_all(&tempdir, rfc);
             cb_sink
                 .send(Box::new(move |s| {
                     show_error(

@@ -12,7 +12,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
-nix = { version = "0.27", features = ["user", "fs", "mount", "dir"] }
+# nix = { version = "0.27", features = ["user", "fs", "mount", "dir"] }
 libparted = "0.1"
 cursive = "0.20"
 cursive_table_view = "0.14"
@@ -40,8 +40,9 @@ sudoku = "0.7"
 log = "0.4"
 fern = "0.6"
 time = { version = "0.3", features = ["formatting"] }
-libc = "0.2"
+rustix =  { version = "0.38", features = ["process", "fs", "mount"] }
 unsquashfs-wrapper = "0.1"
+libc = "0.2"
 
 [patch.crates-io]
 loopdev = { git = "https://github.com/eatradish/loopdev", rev = "0dde43a15320cf84148e57fed8aec6683755c04f" }

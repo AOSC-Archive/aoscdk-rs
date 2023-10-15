@@ -1,5 +1,4 @@
 use std::{
-    os::unix::prelude::AsRawFd,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -9,17 +8,16 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
-use clap::{Parser, Subcommand};
-use indicatif::ProgressBar;
-use log::{error, info};
-
 use crate::{
     disks::{self, Partition},
     install::{self, is_acceptable_username, is_valid_hostname, umount_all},
     log::setup_logger,
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
+use anyhow::{anyhow, Result};
+use clap::{Parser, Subcommand};
+use indicatif::ProgressBar;
+use log::{error, info};
 
 use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
 
@@ -285,7 +283,9 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         root_password: None,
     };
 
-    let root_fd = install::get_dir_fd(PathBuf::from("/"))?.as_raw_fd();
+    let root_fd = install::get_dir_fd(Path::new("/"))?;
+    let rfc = root_fd.try_clone().unwrap();
+
     let (tx, rx) = std::sync::mpsc::channel();
 
     let tempdir = tempfile::Builder::new()
@@ -298,7 +298,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     let tempdir_clone_2 = tempdir.clone();
     ctrlc::set_handler(move || {
         info!("User request to exit the installer");
-        umount_all(&tempdir, root_fd);
+        umount_all(&tempdir, root_fd.try_clone().unwrap());
         r.store(false, Ordering::SeqCst);
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
 
@@ -325,7 +325,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
             let err = install_thread.join().map_err(|_| anyhow!("Installer has encountered an unexpected error. Please restart your installation environment."))?.unwrap_err();
 
             error!("{}", err);
-            umount_all(&tempdir_clone_2, root_fd);
+            umount_all(&tempdir_clone_2, rfc);
             return Err(err);
         }
     }
