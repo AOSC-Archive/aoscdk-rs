@@ -273,6 +273,7 @@ pub fn fstab_entries(
 pub fn get_recommand_swap_size() -> Result<f64> {
     let mem = sysinfo::System::new_all().total_memory();
 
+    // 1073741824 is 1 * 1024 * 1024 * 1024 (1GiB => 1iB)
     let swap_size = match mem {
         x @ ..=1073741824 => (x * 2) as f64,
         x @ 1073741825.. => {
