@@ -271,17 +271,15 @@ pub fn fstab_entries(
 }
 
 pub fn get_recommand_swap_size() -> Result<f64> {
-    // Get men (GiB)
-    let men = (sysinfo::System::new_all().total_memory() / 1024 / 1024 / 1024) as f64;
+    let mem = sysinfo::System::new_all().total_memory();
 
-    let swap_size = if men < 1.0 {
-        men * 2.0
-    } else {
-        men + men.sqrt().round()
+    let swap_size = match mem {
+        x @ ..=1073741824 => (x * 2) as f64,
+        x @ 1073741825.. => {
+            let x = x as f64;
+            x + x.sqrt().round()
+        }
     };
-
-    // Swap size GiB to iB
-    let swap_size = swap_size.round() * 1024.0 * 1024.0 * 1024.0;
 
     Ok(swap_size)
 }
