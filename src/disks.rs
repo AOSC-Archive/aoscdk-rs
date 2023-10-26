@@ -270,9 +270,7 @@ pub fn fstab_entries(
     Ok(fstab.to_owned())
 }
 
-pub fn get_recommand_swap_size() -> Result<f64> {
-    let mem = sysinfo::System::new_all().total_memory();
-
+pub fn get_recommand_swap_size(mem: u64) -> Result<f64> {
     // 1073741824 is 1 * 1024 * 1024 * 1024 (1GiB => 1iB)
     let swap_size = match mem {
         x @ ..=1073741824 => (x * 2) as f64,
@@ -287,9 +285,9 @@ pub fn get_recommand_swap_size() -> Result<f64> {
 
 pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     // Get men (iB)
-    let men = sysinfo::System::new_all().total_memory() as f64;
-    let recommand_size = get_recommand_swap_size()?;
-    let no_hibernation_size = recommand_size - men;
+    let mem = sysinfo::System::new_all().total_memory();
+    let recommand_size = get_recommand_swap_size(mem)?;
+    let no_hibernation_size = recommand_size - mem as f64;
     if custom_size >= no_hibernation_size && custom_size < recommand_size {
         return Ok(false);
     } else if custom_size >= recommand_size {
@@ -304,4 +302,13 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
 fn test_fs_recommendation() {
     assert_eq!(get_recommended_fs_type("btrfs"), "btrfs");
     assert_eq!(get_recommended_fs_type("ext2"), "ext4");
+}
+
+#[test]
+fn test_recommand_swap_size() {
+    let recommand_size = get_recommand_swap_size(16 * 1024 * 1024 * 1024).unwrap();
+    assert_eq!(recommand_size, 17180000256.0);
+
+    let recommand_size = get_recommand_swap_size((0.5 * 1024.0 * 1024.0 * 1024.0) as u64).unwrap();
+    assert_eq!(recommand_size, 1073741824.0);
 }

@@ -26,6 +26,7 @@ use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
+use sysinfo::SystemExt;
 
 use super::{
     begin_install, games::add_main_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
@@ -1091,7 +1092,8 @@ fn auto_swap(
     config: InstallConfig,
 ) {
     let mut config = config;
-    let auto_size = disks::get_recommand_swap_size();
+    let mem = sysinfo::System::new_all().total_memory();
+    let auto_size = disks::get_recommand_swap_size(mem);
 
     match auto_size {
         Ok(auto_size) => {
@@ -1255,7 +1257,8 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
         0.0
     };
     let swap_str;
-    match disks::get_recommand_swap_size() {
+    let mem = sysinfo::System::new_all().total_memory();
+    match disks::get_recommand_swap_size(mem) {
         Ok(rs) => {
             if swap_size == rs {
                 swap_str = "installer default"

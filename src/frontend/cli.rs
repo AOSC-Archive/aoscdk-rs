@@ -18,6 +18,7 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 use log::{error, info};
+use sysinfo::SystemExt;
 
 use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
 
@@ -229,7 +230,8 @@ fn get_swap(
 
         (true, size, is_hibernation)
     } else {
-        let size = disks::get_recommand_swap_size()?;
+        let mem = sysinfo::System::new_all().total_memory();
+        let size = disks::get_recommand_swap_size(mem)?;
 
         if partition.size as f64
             > size + variant.install_size as f64 + variant.size as f64 - DEFAULT_EMPTY_SIZE as f64
