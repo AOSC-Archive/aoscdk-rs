@@ -1093,7 +1093,7 @@ fn auto_swap(
 ) {
     let mut config = config;
     let mem = sysinfo::System::new_all().total_memory();
-    let auto_size = disks::get_recommand_swap_size(mem);
+    let auto_size = disks::get_recommend_swap_size(mem);
 
     match auto_size {
         Ok(auto_size) => {
@@ -1258,7 +1258,7 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
     };
     let swap_str;
     let mem = sysinfo::System::new_all().total_memory();
-    match disks::get_recommand_swap_size(mem) {
+    match disks::get_recommend_swap_size(mem) {
         Ok(rs) => {
             if swap_size == rs {
                 swap_str = "installer default"

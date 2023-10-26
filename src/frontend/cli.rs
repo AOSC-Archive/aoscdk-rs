@@ -231,7 +231,7 @@ fn get_swap(
         (true, size, is_hibernation)
     } else {
         let mem = sysinfo::System::new_all().total_memory();
-        let size = disks::get_recommand_swap_size(mem)?;
+        let size = disks::get_recommend_swap_size(mem)?;
 
         if partition.size as f64
             > size + variant.install_size as f64 + variant.size as f64 - DEFAULT_EMPTY_SIZE as f64
