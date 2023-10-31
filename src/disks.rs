@@ -220,17 +220,29 @@ pub fn mbr_is_primary_partition(
 
 #[cfg(not(target_arch = "powerpc64"))]
 pub fn right_combine(device_path: Option<&Path>) -> Result<()> {
+    use anyhow::bail;
+
     let partition_table_t = get_partition_table_type(device_path)?;
     let is_efi_booted = is_efi_booted();
-    let bios_efi_s = if is_efi_booted { "EFI" } else { "BIOS" };
-    let right = if is_efi_booted { "GPT" } else { "BIOS" };
     if (partition_table_t == "gpt" && is_efi_booted)
         || (partition_table_t == "msdos" && !is_efi_booted)
     {
         return Ok(());
     }
 
-    Err(anyhow!("Installer detected an unsupported partition map for your device ({} partition map on a {}-based device). Please use a {} partition map for your {}-based device.", partition_table_t, bios_efi_s, right, bios_efi_s))
+    let s = if std::env::var("DISPLAY").is_ok() {
+        "Open GParted"
+    } else {
+        "Open Shell"
+    };
+
+    if partition_table_t == "gpt" && !is_efi_booted {
+        bail!("Error: Installer has detected that you are using an unsupported partition map. Please select \"{s}\" to reset your partition table - for PC BIOS systems, please use the DOS/MBR partition map.")
+    } else if partition_table_t == "msdos" && is_efi_booted {
+        bail!("Error: Installer has detected that you are using an unsupported partition map. Please select \"{s}\" to reset your partition table - for UEFI systems, please use the GPT partition map.")
+    } else {
+        bail!("Error: Unsupported combination of firmware/partition map detected. Installer cannot install AOSC OS on this system.")
+    }
 }
 
 #[cfg(target_arch = "powerpc64")]

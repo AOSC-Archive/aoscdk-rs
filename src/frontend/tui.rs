@@ -1,5 +1,5 @@
 use crate::{
-    disks::{self, mbr_is_primary_partition, ALLOWED_FS_TYPE},
+    disks::{self, is_efi_booted, mbr_is_primary_partition, ALLOWED_FS_TYPE},
     install::{self, umount_all},
     log::setup_logger,
     network::{self, Mirror, VariantEntry},
@@ -34,6 +34,9 @@ use super::{
 
 const LAST_USER_CONFIG_FILE: &str = "/tmp/deploykit-config.json";
 const SAVE_USER_CONFIG_FILE: &str = "/root/deploykit-config.json";
+const NO_ESP_ERROR: &str = r"Error: Installer has detected that you are installing AOSC OS on an EFI/UEFI system, but could not detect a supported EFI System Partition (ESP) on your storage devices.
+
+In order to continue installing AOSC OS, you would need to create an EFI System Partition (ESP) on a GPT partition map, formatted as a FAT32 filesystem.";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum VariantColumn {
@@ -465,12 +468,17 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
     let partitions = show_fetch_progress!(siv, "Probing disks ...", { disks::list_partitions() });
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
+
+    let s = if env::var("DISPLAY").is_ok() {
+        "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open GParted.\""
+    } else {
+        "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open Shell.\""
+    };
+
     let dest_view = LinearLayout::vertical()
-    .child(TextView::new(
-        "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open GParted.\"",
-    ))
-    .child(DummyView {})
-    .child(disk_view);
+        .child(TextView::new(s))
+        .child(DummyView {})
+        .child(disk_view);
     let config_view = LinearLayout::vertical()
         .child(Panel::new(dest_view).title("Select System Partition"))
         .child(DummyView {});
@@ -521,6 +529,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     show_msg(s, &e.to_string());
                     return;
                 }
+
                 if let Err(e) = disks::right_combine(current_partition.parent_path.as_deref()) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
                     .child(TextView::new(e.to_string())), "AOSC OS Installer", None)
@@ -531,6 +540,15 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
                     s.add_layer(view);
                     return;
                 }
+
+                if is_efi_booted() {
+                    let has_efi = disks::find_esp_partition(current_partition.parent_path.as_ref().unwrap()).is_ok();
+                    if !has_efi {
+                        show_msg(s, NO_ESP_ERROR);
+                        return;
+                    }
+                }
+
                 if let Some(fs_type) = fs_type {
                     if fs_type != "ext4" && ALLOWED_FS_TYPE.contains(&fs_type.as_str()) {
                         let view = wrap_in_dialog(LinearLayout::vertical()
