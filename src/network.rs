@@ -131,7 +131,6 @@ pub fn get_variants() -> Result<Vec<VariantEntry>> {
 #[cfg(target_arch = "powerpc64")]
 #[inline]
 pub(crate) fn get_arch_name() -> Option<&'static str> {
-    use nix::libc;
     let mut endian: libc::c_int = -1;
     let result;
     unsafe {
