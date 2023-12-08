@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 
 use disk_types::FileSystem;
 use fstab_generate::BlockInfo;
+use libparted::Device;
 use libparted::IsZero;
 use serde::{Deserialize, Serialize};
 use std::ffi::CStr;
@@ -123,38 +124,66 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
     ))
 }
 
-pub fn list_partitions() -> Vec<Partition> {
+pub fn list_devices() -> Vec<Device<'static>> {
+    libparted::Device::devices(true).collect()
+}
+
+pub fn list_partitions(device_path: Option<PathBuf>) -> Vec<Partition> {
     let mut partitions: Vec<Partition> = Vec::new();
-    for mut device in libparted::Device::devices(true) {
-        let device_path = device.path().to_owned();
-        let sector_size: u64 = device.sector_size();
-        if let Ok(disk) = libparted::Disk::new(&mut device) {
-            for mut part in disk.parts() {
-                if part.num() < 0 {
-                    continue;
-                }
-                let geom_length: i64 = part.geom_length();
-                let part_length = if geom_length < 0 {
-                    0
-                } else {
-                    geom_length as u64
-                };
-                let fs_type = if let Ok(type_) = part.get_geom().probe_fs() {
-                    Some(type_.name().to_owned())
-                } else {
-                    None
-                };
-                partitions.push(Partition {
-                    path: part.get_path().map(|path| path.to_owned()),
-                    parent_path: Some(device_path.clone()),
-                    size: sector_size * part_length,
-                    fs_type,
-                });
-            }
+    if let Some(device_path) = device_path {
+        if let Ok(dev) = Device::new(&device_path) {
+            let sector_size = dev.sector_size();
+            loop_device_get_parts(
+                dev,
+                &mut partitions,
+                device_path,
+                sector_size,
+            );
+        }
+    } else {
+        for device in libparted::Device::devices(true) {
+            let device_path = device.path().to_owned();
+            let sector_size = device.sector_size();
+            loop_device_get_parts(device, &mut partitions, device_path, sector_size);
         }
     }
 
     partitions
+}
+
+fn loop_device_get_parts(
+    mut device: Device<'_>,
+    partitions: &mut Vec<Partition>,
+    device_path: PathBuf,
+    sector_size: u64,
+) {
+    if let Ok(disk) = libparted::Disk::new(&mut device) {
+        for mut part in disk.parts() {
+            if part.num() < 0 {
+                continue;
+            }
+
+            let geom_length: i64 = part.geom_length();
+            let part_length = if geom_length < 0 {
+                0
+            } else {
+                geom_length as u64
+            };
+
+            let fs_type = if let Ok(type_) = part.get_geom().probe_fs() {
+                Some(type_.name().to_owned())
+            } else {
+                None
+            };
+
+            partitions.push(Partition {
+                path: part.get_path().map(|path| path.to_owned()),
+                parent_path: Some(device_path.clone()),
+                size: sector_size * part_length,
+                fs_type,
+            });
+        }
+    }
 }
 
 fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
@@ -309,6 +338,13 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     // Round back to GiB for display message.
     Err(anyhow!("The specified swapfile size is too small, AOSC OS recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
 }
+
+// pub fn auto_create_partitions() -> Result<Option<Partition>> {
+//     #[cfg(not(any(target_arch = "x86_64", target_arch = "loongarch64")))]
+//     return Ok(None);
+
+//     libparted::Disk::
+// }
 
 #[test]
 fn test_fs_recommendation() {

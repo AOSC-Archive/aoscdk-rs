@@ -176,7 +176,7 @@ fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
         });
     }
     let path = Path::new(path);
-    let list_part = disks::list_partitions();
+    let list_part = disks::list_partitions(None);
     let index = list_part
         .iter()
         .position(|x| x.path == Some(path.to_path_buf()));

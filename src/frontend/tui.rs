@@ -17,6 +17,7 @@ use cursive::{view::SizeConstraint, views::Button};
 use cursive::{Cursive, View};
 use cursive_async_view::AsyncView;
 use cursive_table_view::{TableView, TableViewItem};
+use libparted::Device;
 use log::{error, info};
 use number_prefix::NumberPrefix;
 use std::rc::Rc;
@@ -179,10 +180,10 @@ fn partition_button() -> PartitionButton {
                 Command::new("gparted").output().ok();
                 cb_sink
                     .send(Box::new(|s| {
-                        let new_parts = disks::list_partitions();
-                        let (disk_list, disk_view) = make_partition_list(new_parts);
+                        let devices = disks::list_devices();
+                        let (disk_list, disk_view) = make_device_list(devices);
                         s.set_user_data(disk_list);
-                        s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
+                        s.call_on_name("device_list", |view: &mut NamedView<LinearLayout>| {
                             *view = disk_view;
                         });
                         s.pop_layer();
@@ -206,6 +207,21 @@ fn human_size(size: u64) -> String {
         NumberPrefix::Standalone(bytes) => format!("{bytes} B"),
         NumberPrefix::Prefixed(prefix, n) => format!("{n:.1} {prefix}B"),
     }
+}
+
+fn make_device_list(devices: Vec<Device>) -> (RadioGroup<PathBuf>, NamedView<LinearLayout>) {
+    let mut disk_view = LinearLayout::vertical();
+    let mut disk_list = RadioGroup::new();
+
+    for i in devices {
+        let path = i.path();
+        let pd = path.display();
+        let p = path.to_path_buf();
+        let radio = disk_list.button(p, format!("{pd} ({})", human_size(i.sector_size() * i.length())));
+        disk_view.add_child(radio);
+    }
+
+    (disk_list, disk_view.with_name("device_list"))
 }
 
 fn make_partition_list(
@@ -350,7 +366,7 @@ fn select_mirrors_view(
             if config.partition.is_some() {
                 select_user_password(s, config);
             } else {
-                select_partition(s, config);
+                select_disk(s, config);
             }
         })
         .button("Benchmark Mirrors", move |s| {
@@ -445,10 +461,11 @@ fn select_mirrors_view(
                         loc_tr: String::from("user-loc"),
                         url,
                     }));
+
                     if config_clone.partition.is_some() {
                         select_user_password(s, config_clone);
                     } else {
-                        select_partition(s, config_clone);
+                        select_disk(s, config_clone);
                     }
                 })
                 .button("Cancel", |s| {
@@ -464,8 +481,11 @@ fn select_mirrors_view(
         .button("Exit", |s| s.quit())
 }
 
-fn select_partition(siv: &mut Cursive, config: InstallConfig) {
-    let partitions = show_fetch_progress!(siv, "Probing disks ...", { disks::list_partitions() });
+fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<PathBuf>) {
+    let partitions = show_fetch_progress!(siv, "Probing disks ...", {
+        disks::list_partitions(Some(dev.to_path_buf()))
+    });
+
     let (disk_list, disk_view) = make_partition_list(partitions);
     siv.set_user_data(disk_list);
 
@@ -610,9 +630,50 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig) {
         })
         .button("Back", move |s| {
             s.pop_layer();
-            select_variant(s, config_copy_2.clone());
+            select_disk(s, config_copy_2.clone());
         })
         .button("Exit", |s| s.quit())
+    );
+}
+
+fn select_disk(siv: &mut Cursive, config: InstallConfig) {
+    let config_clone = config.clone();
+    let disks = show_fetch_progress!(siv, "Probing disks ...", { disks::list_devices() });
+    let (disk_list, disk_view) = make_device_list(disks);
+    siv.set_user_data(disk_list);
+
+    let dest_view = LinearLayout::vertical()
+        .child(TextView::new(
+            "Please select a partition as AOSC OS system disk.",
+        ))
+        .child(DummyView {})
+        .child(disk_view);
+
+    let config_view = LinearLayout::vertical()
+        .child(Panel::new(dest_view).title("Select System Disk"))
+        .child(DummyView {});
+
+    siv.add_layer(
+        wrap_in_dialog(config_view, "AOSC OS Installation", None)
+            .button("Continue", move |siv| {
+                if let Some(d) = siv.user_data::<RadioGroup<PathBuf>>() {
+                    let device_path = if cfg!(debug_assertions) {
+                        Rc::new(PathBuf::from("/dev/loop20"))
+                    } else {
+                        d.selection()
+                    };
+
+                    siv.pop_layer();
+                    select_partition(siv, config_clone.clone(), device_path);
+                }
+            })
+            .button("Back", move |s| {
+                s.pop_layer();
+                select_variant(s, config.clone());
+            })
+            .button("Exit", move |s| {
+                s.quit();
+            }),
     );
 }
 
@@ -790,7 +851,7 @@ fn select_user_password(siv: &mut Cursive, config: InstallConfig) {
     })
     .button("Back", move |s| {
         s.pop_layer();
-        select_partition(s, config_clone.clone());
+        select_disk(s, config_clone.clone());
     })
     .button("Exit", |s| s.quit());
 
@@ -1481,7 +1542,7 @@ pub fn tui_main() {
             .title("Welcome")
             .button("Let's Go", |s| {
                 if let Ok(config) = read_user_config_on_file() {
-                    select_partition(s, config);
+                    select_disk(s, config);
                 } else {
                     let config = InstallConfig::default();
                     select_variant(s, config);
@@ -1507,7 +1568,7 @@ pub fn tui_main() {
             siv.restore(dump);
             let config = siv.take_user_data::<InstallConfig>();
             if let Some(config) = config {
-                select_partition(&mut siv, config);
+                select_disk(&mut siv, config);
                 siv.run();
             }
         } else {
