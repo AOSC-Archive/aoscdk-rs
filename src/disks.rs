@@ -1,9 +1,21 @@
 use anyhow::{anyhow, Result};
 
+use disk_types::BlockDeviceExt;
 use disk_types::FileSystem;
+use disk_types::PartitionExt;
+use disk_types::PartitionType;
 use fstab_generate::BlockInfo;
 use libparted::Device;
+use libparted::Disk;
+use libparted::DiskType;
+use libparted::FileSystemType;
+use libparted::Geometry;
 use libparted::IsZero;
+use libparted::Partition as PedPartition;
+use libparted_sys::PedPartitionFlag;
+use libparted_sys::PedPartitionType;
+use log::error;
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::ffi::CStr;
 use std::ffi::OsString;
@@ -133,12 +145,7 @@ pub fn list_partitions(device_path: Option<PathBuf>) -> Vec<Partition> {
     if let Some(device_path) = device_path {
         if let Ok(dev) = Device::new(&device_path) {
             let sector_size = dev.sector_size();
-            loop_device_get_parts(
-                dev,
-                &mut partitions,
-                device_path,
-                sector_size,
-            );
+            loop_device_get_parts(dev, &mut partitions, device_path, sector_size);
         }
     } else {
         for device in libparted::Device::devices(true) {
@@ -186,15 +193,15 @@ fn loop_device_get_parts(
     }
 }
 
-fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
-    fn cvt<T: IsZero>(t: T) -> io::Result<T> {
-        if t.is_zero() {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(t)
-        }
+fn cvt<T: IsZero>(t: T) -> io::Result<T> {
+    if t.is_zero() {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(t)
     }
+}
 
+fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
     let target = device_path.ok_or_else(|| {
         anyhow!(
             "Installer could not detect the corresponding block device node for the specified partition!"
@@ -339,12 +346,255 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     Err(anyhow!("The specified swapfile size is too small, AOSC OS recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
 }
 
-// pub fn auto_create_partitions() -> Result<Option<Partition>> {
-//     #[cfg(not(any(target_arch = "x86_64", target_arch = "loongarch64")))]
-//     return Ok(None);
+pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
+    let mut device = libparted::Device::new(dev)?;
+    let lba_len = device.length();
+    if is_efi_booted() {
+        let efi = &PartitionCreate {
+            path: dev.to_path_buf(),
+            start_sector: 0,
+            end_sector: 512 * 1024 * 1024 / lba_len,
+            format: true,
+            file_system: Some(FileSystem::Fat32),
+            kind: PartitionType::Primary,
+            flags: vec![
+                PedPartitionFlag::PED_PARTITION_BOOT,
+                PedPartitionFlag::PED_PARTITION_ESP,
+            ],
+            label: None,
+        };
 
-//     libparted::Disk::
-// }
+        create_partition(&mut device, efi)?;
+    }
+
+    let sector_size = device.sector_size();
+
+    let start_sector = if is_efi_booted() {
+        512 * 1024 * 1024 / lba_len
+    } else {
+        0
+    };
+
+    let system = &PartitionCreate {
+        path: dev.to_path_buf(),
+        start_sector,
+        end_sector: sector_size,
+        format: true,
+        file_system: Some(FileSystem::Ext4),
+        kind: PartitionType::Primary,
+        flags: vec![],
+        label: Some("AOSC OS".to_string()),
+    };
+
+    create_partition(&mut device, system)?;
+
+    let disk = libparted::Disk::new(&mut device)?;
+    let p = disk
+        .parts()
+        .last()
+        .ok_or_else(|| anyhow!("Cannot create partition"))?;
+
+    let p = Partition {
+        path: p.get_path().map(|x| x.to_path_buf()),
+        parent_path: Some(dev.to_path_buf()),
+        fs_type: Some("ext4".to_owned()),
+        size: (sector_size - sector_size) * lba_len,
+    };
+
+    Ok(p)
+}
+
+/// Defines a new partition to be created on the file system.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartitionCreate {
+    /// The location of the disk in the system.
+    pub path: PathBuf,
+    /// The start sector that the partition will have.
+    pub start_sector: u64,
+    /// The end sector that the partition will have.
+    pub end_sector: u64,
+    /// Whether the filesystem should be formatted.
+    pub format: bool,
+    /// The format that the file system should be formatted to.
+    pub file_system: Option<FileSystem>,
+    /// Whether the partition should be primary or logical.
+    pub kind: PartitionType,
+    /// Flags which should be set on the partition.
+    pub flags: Vec<PedPartitionFlag>,
+    /// Defines the label to apply
+    pub label: Option<String>,
+}
+
+impl BlockDeviceExt for PartitionCreate {
+    fn get_device_path(&self) -> &Path {
+        &self.path
+    }
+
+    fn get_mount_point(&self) -> Option<&Path> {
+        None
+    }
+}
+
+impl PartitionExt for PartitionCreate {
+    fn get_file_system(&self) -> Option<FileSystem> {
+        self.file_system
+    }
+
+    fn get_sector_end(&self) -> u64 {
+        self.end_sector
+    }
+
+    fn get_sector_start(&self) -> u64 {
+        self.start_sector
+    }
+
+    fn get_partition_flags(&self) -> &[PedPartitionFlag] {
+        &self.flags
+    }
+
+    fn get_partition_label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
+    fn get_partition_type(&self) -> PartitionType {
+        self.kind
+    }
+}
+
+impl PartitionCreate {
+    fn get_sectors(&self) -> u64 {
+        self.get_sector_end() - self.get_sector_start()
+    }
+}
+
+/// Creates a new partition on the device using the info in the `partition` parameter.
+/// The partition table should reflect the changes before this function exits.
+pub fn create_partition<P>(device: &mut Device, partition: &P) -> io::Result<()>
+where
+    P: PartitionExt,
+{
+    // Create a new geometry from the start sector and length of the new partition.
+    let length = partition.get_sector_end() - partition.get_sector_start();
+    let geometry = Geometry::new(&device, partition.get_sector_start() as i64, length as i64)
+        .map_err(|why| io::Error::new(why.kind(), format!("failed to create geometry: {}", why)))?;
+
+    // Convert our internal partition type enum into libparted's variant.
+    let part_type = match partition.get_partition_type() {
+        PartitionType::Primary => PedPartitionType::PED_PARTITION_NORMAL,
+        PartitionType::Logical => PedPartitionType::PED_PARTITION_LOGICAL,
+        PartitionType::Extended => PedPartitionType::PED_PARTITION_EXTENDED,
+    };
+
+    // Open the disk, create the new partition, and add it to the disk.
+    let (start, end) = (geometry.start(), geometry.start() + geometry.length());
+
+    info!(
+        "creating new partition with {} sectors: {} - {}",
+        length, start, end
+    );
+
+    let fs_type = partition
+        .get_file_system()
+        .and_then(|fs| FileSystemType::get(fs.into()));
+
+    let mut disk = open_disk(device)?;
+    let mut part =
+        PedPartition::new(&disk, part_type, fs_type.as_ref(), start, end).map_err(|why| {
+            io::Error::new(
+                why.kind(),
+                format!(
+                    "failed to create new partition: {}: {}",
+                    partition.get_device_path().display(),
+                    why
+                ),
+            )
+        })?;
+
+    for &flag in partition.get_partition_flags() {
+        if part.is_flag_available(flag) && part.set_flag(flag, true).is_err() {
+            error!("unable to set {:?}", flag);
+        }
+    }
+
+    if let Some(label) = partition.get_partition_label() {
+        if part.set_name(label).is_err() {
+            error!("unable to set partition name: {}", label);
+        }
+    }
+
+    // Add the partition, and commit the changes to the disk.
+    let constraint = geometry.exact().expect("exact constraint not found");
+    disk.add_partition(&mut part, &constraint).map_err(|why| {
+        io::Error::new(
+            why.kind(),
+            format!(
+                "failed to create new partition: {}: {}",
+                partition.get_device_path().display(),
+                why
+            ),
+        )
+    })?;
+
+    // Attempt to write the new partition to the disk.
+    info!(
+        "committing new partition ({}:{}) on {}",
+        start,
+        end,
+        partition.get_device_path().display()
+    );
+
+    commit(&mut disk)
+}
+
+/// Opens a `libparted::Disk` from a `libparted::Device`.
+pub fn open_disk<'a>(device: &'a mut Device) -> io::Result<Disk<'a>> {
+    info!("opening disk at {}", device.path().display());
+    let device = device as *mut Device;
+    unsafe {
+        match Disk::new(&mut *device) {
+            Ok(disk) => Ok(disk),
+            Err(_) => {
+                info!("unable to open disk; creating new table on it");
+                Disk::new_fresh(
+                    &mut *device,
+                    if !is_efi_booted() {
+                        DiskType::get("msdos").unwrap()
+                    } else {
+                        DiskType::get("gpt").unwrap()
+                    },
+                )
+            }
+            .map_err(|why| {
+                io::Error::new(
+                    why.kind(),
+                    format!(
+                        "failed to create new partition table on {:?}: {}",
+                        (&*device).path(),
+                        why
+                    ),
+                )
+            }),
+        }
+    }
+}
+
+/// Attempts to commit changes to the disk, return a `DiskError` on failure.
+pub fn commit(disk: &mut Disk) -> io::Result<()> {
+    info!("committing changes to {}", unsafe {
+        disk.get_device().path().display()
+    });
+
+    disk.commit().map_err(|why| {
+        io::Error::new(
+            why.kind(),
+            format!(
+                "failed to commit libparted changes to {:?}: {}",
+                unsafe { disk.get_device() }.path(),
+                why
+            ),
+        )
+    })
+}
 
 #[test]
 fn test_fs_recommendation() {
