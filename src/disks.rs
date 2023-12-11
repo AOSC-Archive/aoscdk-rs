@@ -158,6 +158,15 @@ pub fn list_partitions(device_path: Option<PathBuf>) -> Vec<Partition> {
     partitions
 }
 
+pub fn device_is_empty(dev: &Path) -> Result<bool> {
+    let mut dev = libparted::Device::new(dev)?;
+    let disk = libparted::Disk::new(&mut dev)?;
+    let mut parts = disk.parts();
+    let next_part = parts.next();
+
+    Ok(next_part.is_some())
+}
+
 fn loop_device_get_parts(
     mut device: Device<'_>,
     partitions: &mut Vec<Partition>,
@@ -348,12 +357,13 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
 
 pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
-    let lba_len = device.length();
+    let device = &mut device as *mut Device;
+    let mut device = unsafe { &mut (*device) };
     if is_efi_booted() {
         let efi = &PartitionCreate {
             path: dev.to_path_buf(),
-            start_sector: 0,
-            end_sector: 512 * 1024 * 1024 / lba_len,
+            start_sector: 2048,
+            end_sector: 2048 + (512 * 1024 * 1024 / device.sector_size()),
             format: true,
             file_system: Some(FileSystem::Fat32),
             kind: PartitionType::Primary,
@@ -367,38 +377,51 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
         create_partition(&mut device, efi)?;
     }
 
+    let start_sector = if is_efi_booted() {
+        2048 + (512 * 1024 * 1024 / device.sector_size()) + 1
+    } else {
+        2048 + 1
+    };
+
     let sector_size = device.sector_size();
 
-    let start_sector = if is_efi_booted() {
-        512 * 1024 * 1024 / lba_len
-    } else {
-        0
-    };
+    let mut flags = vec![];
+
+    if !is_efi_booted() {
+        flags.push(PedPartitionFlag::PED_PARTITION_BOOT);
+    }
+
+    let length = device.length();
 
     let system = &PartitionCreate {
         path: dev.to_path_buf(),
         start_sector,
-        end_sector: sector_size,
+        end_sector: device.length() - 1 * 1024 * 1024 / device.sector_size(),
         format: true,
         file_system: Some(FileSystem::Ext4),
         kind: PartitionType::Primary,
-        flags: vec![],
-        label: Some("AOSC OS".to_string()),
+        flags,
+        label: None,
     };
 
     create_partition(&mut device, system)?;
 
     let disk = libparted::Disk::new(&mut device)?;
-    let p = disk
-        .parts()
-        .last()
+    let mut last = None;
+    for p in disk.parts() {
+        if let Some(path) = p.get_path() {
+            last = Some(path.to_path_buf());
+        }
+    }
+    
+    let p = last
         .ok_or_else(|| anyhow!("Cannot create partition"))?;
 
     let p = Partition {
-        path: p.get_path().map(|x| x.to_path_buf()),
+        path: Some(p),
         parent_path: Some(dev.to_path_buf()),
         fs_type: Some("ext4".to_owned()),
-        size: (sector_size - sector_size) * lba_len,
+        size: (length - start_sector) * sector_size,
     };
 
     Ok(p)
@@ -458,12 +481,6 @@ impl PartitionExt for PartitionCreate {
 
     fn get_partition_type(&self) -> PartitionType {
         self.kind
-    }
-}
-
-impl PartitionCreate {
-    fn get_sectors(&self) -> u64 {
-        self.get_sector_end() - self.get_sector_start()
     }
 }
 

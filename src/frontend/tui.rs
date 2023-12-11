@@ -1,5 +1,8 @@
 use crate::{
-    disks::{self, is_efi_booted, mbr_is_primary_partition, ALLOWED_FS_TYPE},
+    disks::{
+        self, auto_create_partitions, device_is_empty, is_efi_booted, mbr_is_primary_partition,
+        ALLOWED_FS_TYPE,
+    },
     install::{self, umount_all},
     log::setup_logger,
     network::{self, Mirror, VariantEntry},
@@ -217,7 +220,10 @@ fn make_device_list(devices: Vec<Device>) -> (RadioGroup<PathBuf>, NamedView<Lin
         let path = i.path();
         let pd = path.display();
         let p = path.to_path_buf();
-        let radio = disk_list.button(p, format!("{pd} ({})", human_size(i.sector_size() * i.length())));
+        let radio = disk_list.button(
+            p,
+            format!("{pd} ({})", human_size(i.sector_size() * i.length())),
+        );
         disk_view.add_child(radio);
     }
 
@@ -664,7 +670,11 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
                     };
 
                     siv.pop_layer();
-                    select_partition(siv, config_clone.clone(), device_path);
+                    select_auto_make_partitions(
+                        siv,
+                        config_clone.clone(),
+                        device_path.to_path_buf(),
+                    );
                 }
             })
             .button("Back", move |s| {
@@ -675,6 +685,49 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
                 s.quit();
             }),
     );
+}
+
+fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device_path: PathBuf) {
+    let is_empty = device_is_empty(&device_path).unwrap_or(false);
+
+    let tips = r#"AOSC OS Installer detects that your selected hard disk seems to have no contents, AOSC OS Installer can automatically partition it for you to install AOSC OS, do you want to do that?
+
+If you continue, the contents of your hard disk will be completely lost, please make sure that your selected hard disk has no data on it!"#;
+
+    let config_clone = config.clone();
+    let config_clone_2 = config.clone();
+
+    if is_empty {
+        s.add_layer(
+            wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
+                .button("Continue", move |s| {
+                    let part = auto_create_partitions(&device_path);
+                    match part {
+                        Ok(p) => {
+                            let mut config = config_clone.clone();
+                            config.partition = Some(Arc::new(p));
+                            s.pop_layer();
+                            select_user_password(s, config);
+                        }
+                        Err(e) => {
+                            show_msg(
+                                s,
+                                &e
+                                    .to_string(),
+                            );
+                            return;
+                        }
+                    }
+                })
+                .button("Back", move |s| {
+                    s.pop_layer();
+                    select_disk(s, config_clone_2.clone());
+                })
+                .button("Quit", |s| s.quit()),
+        )
+    } else {
+        select_partition(s, config, device_path.into());
+    }
 }
 
 fn continue_to_format_hdd(s: &mut Cursive, config_clone: InstallConfig, fs_type: String) {
