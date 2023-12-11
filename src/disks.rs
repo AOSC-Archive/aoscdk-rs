@@ -162,9 +162,8 @@ pub fn device_is_empty(dev: &Path) -> Result<bool> {
     let mut dev = libparted::Device::new(dev)?;
     let disk = libparted::Disk::new(&mut dev)?;
     let mut parts = disk.parts();
-    let next_part = parts.next();
 
-    Ok(next_part.is_some())
+    Ok(parts.all(|x| x.get_path().is_none()))
 }
 
 fn loop_device_get_parts(
@@ -413,9 +412,8 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
             last = Some(path.to_path_buf());
         }
     }
-    
-    let p = last
-        .ok_or_else(|| anyhow!("Cannot create partition"))?;
+
+    let p = last.ok_or_else(|| anyhow!("Cannot create partition"))?;
 
     let p = Partition {
         path: Some(p),
