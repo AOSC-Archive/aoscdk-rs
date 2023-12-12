@@ -144,7 +144,7 @@ macro_rules! show_fetch_progress {
     }};
 }
 
-type PartitionButton = (&'static str, &'static dyn Fn(&mut Cursive, InstallConfig));
+// type PartitionButton = (&'static str, Fn(&mut Cursive, InstallConfig));
 
 fn show_error(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
@@ -174,34 +174,45 @@ fn show_blocking_message(siv: &mut Cursive, msg: &str) {
     );
 }
 
-fn partition_button() -> PartitionButton {
+fn partition_button(
+    device_path: PathBuf,
+) -> (&'static str, Box<dyn Fn(&mut Cursive, InstallConfig)>) {
     if env::var("DISPLAY").is_ok() {
-        return ("Open GParted", &|s, _| {
-            show_blocking_message(s, "Waiting for GParted Partitioning Program to exit ...");
-            let cb_sink = s.cb_sink().clone();
-            thread::spawn(move || {
-                Command::new("gparted").output().ok();
-                cb_sink
-                    .send(Box::new(|s| {
-                        let devices = disks::list_devices();
-                        let (disk_list, disk_view) = make_device_list(devices);
-                        s.set_user_data(disk_list);
-                        s.call_on_name("device_list", |view: &mut NamedView<LinearLayout>| {
-                            *view = disk_view;
-                        });
-                        s.pop_layer();
-                    }))
-                    .unwrap();
-            });
-        });
+        return (
+            "Open GParted",
+            Box::new(move |s, _| {
+                show_blocking_message(s, "Waiting for GParted Partitioning Program to exit ...");
+                let cb_sink = s.cb_sink().clone();
+                let device_path = device_path.clone();
+                thread::spawn(move || {
+                    Command::new("gparted").output().ok();
+                    cb_sink
+                        .send(Box::new(move |s| {
+                            let device_path = device_path.clone();
+                            let partitions =
+                                disks::list_partitions(Some(device_path.to_path_buf()));
+                            let (disk_list, disk_view) = make_partition_list(partitions);
+                            s.set_user_data(disk_list);
+                            s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
+                                *view = disk_view;
+                            });
+                            s.pop_layer();
+                        }))
+                        .unwrap();
+                });
+            }),
+        );
     }
 
-    ("Open Shell", &|s, config| {
-        s.set_user_data(config);
-        let dump = s.dump();
-        s.quit();
-        s.set_user_data(dump);
-    })
+    (
+        "Open Shell",
+        Box::new(|s, config| {
+            s.set_user_data(config);
+            let dump = s.dump();
+            s.quit();
+            s.set_user_data(dump);
+        }),
+    )
 }
 
 #[inline]
@@ -508,7 +519,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<PathBuf>) 
     let config_view = LinearLayout::vertical()
         .child(Panel::new(dest_view).title("Select System Partition"))
         .child(DummyView {});
-    let (btn_label, btn_cb) = partition_button();
+    let (btn_label, btn_cb) = partition_button(dev.to_path_buf());
     let config_copy = config.clone();
     let config_copy_2 = config.clone();
     let config_clone_3 = config.clone();
@@ -695,12 +706,17 @@ fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device_pa
 If you continue, the contents of your hard disk will be completely lost, please make sure that your selected hard disk has no data on it!"#;
 
     let config_clone_2 = config.clone();
+    let config_clone_3 = config.clone();
+
+    let (btn_label, btn_cb) = partition_button(device_path.to_path_buf());
+
+    let device_path_1 = device_path.clone();
 
     if is_empty {
         s.add_layer(
             wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
                 .button("Continue", move |s| {
-                    let device_path = device_path.clone();
+                    let device_path = device_path_1.clone();
                     let config_clone = config.clone();
                     let tips = "Again, a warning, this will DESTROY ALL DATA ON YOUR CHOSEN HARD DISK, are you sure you want to do this?";
                     s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes Do as I say!", move |s| {
@@ -724,6 +740,11 @@ If you continue, the contents of your hard disk will be completely lost, please 
                     }).button("No", move |s| {
                         s.pop_layer();
                     }));
+                })
+                .button(btn_label, move |s| {
+                    let device_path = device_path.clone();
+                    select_partition(s, config_clone_3.clone(), device_path.into());
+                    btn_cb(s, config_clone_3.clone());
                 })
                 .button("Back", move |s| {
                     s.pop_layer();
