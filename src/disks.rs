@@ -354,6 +354,72 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     Err(anyhow!("The specified swapfile size is too small, AOSC OS recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
 }
 
+#[cfg(debug_assertions)]
+pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let mut device = unsafe { &mut (*device) };
+    let efi_size = 512 * 1024 * 1024;
+    let partition_table_end_size = 1 * 1024 * 1024;
+    let is_efi = is_efi_booted();
+
+    let length = device.length();
+    let sector_size = device.sector_size();
+
+    let system_end_sector = if is_efi {
+        length - (efi_size + partition_table_end_size) / sector_size
+    } else {
+        length - partition_table_end_size / sector_size
+    };
+
+    let mut flags = vec![];
+
+    if !is_efi {
+        flags.push(PedPartitionFlag::PED_PARTITION_BOOT);
+    }
+
+    let system = &PartitionCreate {
+        path: dev.to_path_buf(),
+        start_sector: 2048,
+        end_sector: system_end_sector,
+        format: true,
+        file_system: Some(FileSystem::Ext4),
+        kind: PartitionType::Primary,
+        flags,
+        label: None,
+    };
+
+    create_partition(&mut device, system)?;
+
+    if is_efi {
+        let efi = &PartitionCreate {
+            path: dev.to_path_buf(),
+            start_sector: length - (partition_table_end_size + efi_size) / sector_size + 1,
+            end_sector: length - partition_table_end_size / sector_size,
+            format: true,
+            file_system: Some(FileSystem::Fat32),
+            kind: PartitionType::Primary,
+            flags: vec![
+                PedPartitionFlag::PED_PARTITION_BOOT,
+                PedPartitionFlag::PED_PARTITION_ESP,
+            ],
+            label: None,
+        };
+
+        create_partition(&mut device, efi)?;
+    }
+
+    let p = Partition {
+        path: Some(Path::new("/dev/loop20p1").to_path_buf()),
+        parent_path: Some(dev.to_path_buf()),
+        fs_type: Some("ext4".to_owned()),
+        size: system_end_sector * sector_size,
+    };
+
+    Ok(p)
+}
+
+#[cfg(not(debug_assertions))]
 pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
