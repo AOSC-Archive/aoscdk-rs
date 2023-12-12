@@ -688,7 +688,7 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device_path: PathBuf) {
-    let is_empty = device_is_empty(&device_path).unwrap_or(false);
+    let is_empty = device_is_empty(&device_path).unwrap_or(true);
 
     let tips = r#"AOSC OS Installer detects that your selected hard disk seems to have no contents, AOSC OS Installer can automatically partition it for you to install AOSC OS, do you want to do that?
 

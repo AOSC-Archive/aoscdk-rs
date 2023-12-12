@@ -358,10 +358,25 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
 pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
-    let mut device = unsafe { &mut (*device) };
+    let device = unsafe { &mut (*device) };
     let efi_size = 512 * 1024 * 1024;
     let partition_table_end_size = 1 * 1024 * 1024;
     let is_efi = is_efi_booted();
+
+    let mut disk = Disk::new_fresh(
+        &mut *device,
+        if !is_efi {
+            DiskType::get("msdos").unwrap()
+        } else {
+            DiskType::get("gpt").unwrap()
+        },
+    )?;
+
+    disk.commit_to_dev()?;
+
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let mut device = unsafe { &mut (*device) };
 
     let length = device.length();
     let sector_size = device.sector_size();
@@ -423,8 +438,26 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
 pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
+    let device = unsafe { &mut (*device) };
+    let is_efi = is_efi_booted();
+    let sector_size = device.sector_size();
+
+    let mut disk = Disk::new_fresh(
+        &mut *device,
+        if !is_efi {
+            DiskType::get("msdos").unwrap()
+        } else {
+            DiskType::get("gpt").unwrap()
+        },
+    )?;
+
+    disk.commit_to_dev()?;
+
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
     let mut device = unsafe { &mut (*device) };
-    if is_efi_booted() {
+
+    if is_efi {
         let efi = &PartitionCreate {
             path: dev.to_path_buf(),
             start_sector: 2048,
@@ -442,13 +475,11 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
         create_partition(&mut device, efi)?;
     }
 
-    let start_sector = if is_efi_booted() {
-        2048 + (512 * 1024 * 1024 / device.sector_size()) + 1
+    let start_sector = if is_efi {
+        2048 + (512 * 1024 * 1024 /sector_size) + 1
     } else {
         2048 + 1
     };
-
-    let sector_size = device.sector_size();
 
     let mut flags = vec![];
 
@@ -461,7 +492,7 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let system = &PartitionCreate {
         path: dev.to_path_buf(),
         start_sector,
-        end_sector: device.length() - 1 * 1024 * 1024 / device.sector_size(),
+        end_sector: device.length() - 1 * 1024 * 1024 / sector_size,
         format: true,
         file_system: Some(FileSystem::Ext4),
         kind: PartitionType::Primary,
