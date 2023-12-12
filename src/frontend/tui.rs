@@ -694,30 +694,36 @@ fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device_pa
 
 If you continue, the contents of your hard disk will be completely lost, please make sure that your selected hard disk has no data on it!"#;
 
-    let config_clone = config.clone();
     let config_clone_2 = config.clone();
 
     if is_empty {
         s.add_layer(
             wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
                 .button("Continue", move |s| {
-                    let part = auto_create_partitions(&device_path);
-                    match part {
-                        Ok(p) => {
-                            let mut config = config_clone.clone();
-                            config.partition = Some(Arc::new(p));
-                            s.pop_layer();
-                            select_user_password(s, config);
+                    let device_path = device_path.clone();
+                    let config_clone = config.clone();
+                    let tips = "Again, a warning, this will DESTROY ALL DATA ON YOUR CHOSEN HARD DISK, are you sure you want to do this?";
+                    s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes Do as I say!", move |s| {
+                        let part = auto_create_partitions(&device_path);
+                        match part {
+                            Ok(p) => {
+                                let mut config = config_clone.clone();
+                                config.partition = Some(Arc::new(p));
+                                s.pop_layer();
+                                select_user_password(s, config);
+                            }
+                            Err(e) => {
+                                show_msg(
+                                    s,
+                                    &e
+                                        .to_string(),
+                                );
+                                return;
+                            }
                         }
-                        Err(e) => {
-                            show_msg(
-                                s,
-                                &e
-                                    .to_string(),
-                            );
-                            return;
-                        }
-                    }
+                    }).button("No", move |s| {
+                        s.pop_layer();
+                    }));
                 })
                 .button("Back", move |s| {
                     s.pop_layer();
