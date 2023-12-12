@@ -144,7 +144,7 @@ macro_rules! show_fetch_progress {
     }};
 }
 
-// type PartitionButton = (&'static str, Fn(&mut Cursive, InstallConfig));
+type PartitionButton = (&'static str, Box<dyn Fn(&mut Cursive, InstallConfig)>);
 
 fn show_error(siv: &mut Cursive, msg: &str) {
     siv.add_layer(
@@ -174,9 +174,7 @@ fn show_blocking_message(siv: &mut Cursive, msg: &str) {
     );
 }
 
-fn partition_button(
-    device_path: PathBuf,
-) -> (&'static str, Box<dyn Fn(&mut Cursive, InstallConfig)>) {
+fn partition_button(device_path: PathBuf) -> PartitionButton {
     if env::var("DISPLAY").is_ok() {
         return (
             "Open GParted",
@@ -734,7 +732,6 @@ If you continue, the contents of your hard disk will be completely lost, please 
                                     &e
                                         .to_string(),
                                 );
-                                return;
                             }
                         }
                     }).button("No", move |s| {

@@ -65,8 +65,7 @@ pub enum ExtractFileType {
 
 fn read_system_locale_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
-    let mut data: Vec<u8> = Vec::new();
-    data.reserve(8800);
+    let mut data = Vec::with_capacity(8800);
     f.read_to_end(&mut data)?;
 
     Ok(data)
@@ -84,8 +83,7 @@ pub fn get_locale_list() -> Result<Vec<String>> {
 
 fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_ZONEINFO1970_PATH)?;
-    let mut data: Vec<u8> = Vec::new();
-    data.reserve(8800);
+    let mut data = Vec::with_capacity(8800);
     f.read_to_end(&mut data)?;
 
     Ok(data)

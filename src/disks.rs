@@ -359,7 +359,7 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let device = &mut device as *mut Device;
     let device = unsafe { &mut (*device) };
     let efi_size = 512 * 1024 * 1024;
-    let partition_table_end_size = 1 * 1024 * 1024;
+    let partition_table_end_size = 1024 * 1024;
     let is_efi = is_efi_booted();
 
     let length = device.length();
@@ -391,7 +391,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
-    let mut device = unsafe { &mut (*device) };
+    let device = unsafe { &mut (*device) };
 
     let system_end_sector = if is_efi {
         length - (efi_size + partition_table_end_size) / sector_size
@@ -416,7 +416,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         label: None,
     };
 
-    create_partition(&mut device, system)?;
+    create_partition(device, system)?;
 
     if is_efi {
         let efi = &PartitionCreate {
@@ -433,7 +433,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
             label: None,
         };
 
-        create_partition(&mut device, efi)?;
+        create_partition(device, efi)?;
     }
 
     let p = Partition {
@@ -612,7 +612,7 @@ where
 {
     // Create a new geometry from the start sector and length of the new partition.
     let length = partition.get_sector_end() - partition.get_sector_start();
-    let geometry = Geometry::new(&device, partition.get_sector_start() as i64, length as i64)
+    let geometry = Geometry::new(device, partition.get_sector_start() as i64, length as i64)
         .map_err(|why| io::Error::new(why.kind(), format!("failed to create geometry: {}", why)))?;
 
     // Convert our internal partition type enum into libparted's variant.
@@ -706,7 +706,7 @@ pub fn open_disk<'a>(device: &'a mut Device) -> io::Result<Disk<'a>> {
                     why.kind(),
                     format!(
                         "failed to create new partition table on {:?}: {}",
-                        (&*device).path(),
+                        (*device).path(),
                         why
                     ),
                 )
