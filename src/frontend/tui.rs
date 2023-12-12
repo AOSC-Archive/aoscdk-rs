@@ -718,7 +718,7 @@ If you continue, the contents of your hard disk will be completely lost, please 
                     let config_clone = config.clone();
                     let tips = "Again, a warning, this will DESTROY ALL DATA ON YOUR CHOSEN HARD DISK, are you sure you want to do this?";
                     s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes Do as I say!", move |s| {
-                        let part = auto_create_partitions(&device_path);
+                        let part = show_fetch_progress!(s, "Creating partitions ...", { auto_create_partitions(&device_path) });
                         match part {
                             Ok(p) => {
                                 let mut config = config_clone.clone();
