@@ -1,3 +1,4 @@
+use anyhow::bail;
 use anyhow::{anyhow, Result};
 
 use disk_types::BlockDeviceExt;
@@ -264,8 +265,6 @@ pub fn mbr_is_primary_partition(
 
 #[cfg(not(target_arch = "powerpc64"))]
 pub fn right_combine(device_path: Option<&Path>) -> Result<()> {
-    use anyhow::bail;
-
     let partition_table_t = get_partition_table_type(device_path)?;
     let is_efi_booted = is_efi_booted();
     if (partition_table_t == "gpt" && is_efi_booted)
@@ -363,6 +362,22 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let partition_table_end_size = 1 * 1024 * 1024;
     let is_efi = is_efi_booted();
 
+    let length = device.length();
+    let sector_size = device.sector_size();
+
+    let size = length * sector_size;
+
+    if get_partition_table_type(Some(dev))
+        .map(|x| x == "msdos")
+        .unwrap_or(false)
+        && size > 512 * (2_u64.pow(31) - 1)
+    {
+        bail!(
+            r#"AOSC OS Installer has detected that you are trying to create a disk partition larger than 2TiB in the MBR partition table.
+If you want to do this, change your computer's boot mode to UEFI mode."#
+        );
+    }
+
     let mut disk = Disk::new_fresh(
         &mut *device,
         if !is_efi {
@@ -377,9 +392,6 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
     let mut device = unsafe { &mut (*device) };
-
-    let length = device.length();
-    let sector_size = device.sector_size();
 
     let system_end_sector = if is_efi {
         length - (efi_size + partition_table_end_size) / sector_size
@@ -442,6 +454,19 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let is_efi = is_efi_booted();
     let sector_size = device.sector_size();
 
+    let size = device.length() * sector_size;
+
+    if get_partition_table_type(Some(dev))
+        .map(|x| x == "msdos")
+        .unwrap_or(false)
+        && size > 512 * (2_u64.pow(31) - 1)
+    {
+        bail!(
+            r#"AOSC OS Installer has detected that you are trying to create a disk partition larger than 2TiB in the MBR partition table.
+If you want to do this, change your computer's boot mode to UEFI mode."#
+        );
+    }
+
     let mut disk = Disk::new_fresh(
         &mut *device,
         if !is_efi {
@@ -476,7 +501,7 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     }
 
     let start_sector = if is_efi {
-        2048 + (512 * 1024 * 1024 /sector_size) + 1
+        2048 + (512 * 1024 * 1024 / sector_size) + 1
     } else {
         2048 + 1
     };
