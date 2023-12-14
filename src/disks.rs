@@ -42,6 +42,13 @@ pub struct Partition {
     pub size: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DkDerive {
+    pub path: PathBuf,
+    pub model: String,
+    pub size: u64,
+}
+
 #[inline]
 pub fn is_efi_booted() -> bool {
     Path::new(EFI_DETECT_PATH).is_dir()

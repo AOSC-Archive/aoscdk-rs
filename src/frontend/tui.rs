@@ -1,7 +1,7 @@
 use crate::{
     disks::{
         self, auto_create_partitions, device_is_empty, is_efi_booted, mbr_is_primary_partition,
-        ALLOWED_FS_TYPE,
+        DkDerive, ALLOWED_FS_TYPE,
     },
     install::{self, umount_all},
     log::setup_logger,
@@ -221,7 +221,7 @@ fn human_size(size: u64) -> String {
     }
 }
 
-fn make_device_list(devices: Vec<Device>) -> (RadioGroup<PathBuf>, NamedView<LinearLayout>) {
+fn make_device_list(devices: Vec<Device>) -> (RadioGroup<DkDerive>, NamedView<LinearLayout>) {
     let mut disk_view = LinearLayout::vertical();
     let mut disk_list = RadioGroup::new();
 
@@ -230,12 +230,14 @@ fn make_device_list(devices: Vec<Device>) -> (RadioGroup<PathBuf>, NamedView<Lin
         let pd = path.display();
         let p = path.to_path_buf();
         let model = i.model();
+        let size = i.sector_size() * i.length();
         let radio = disk_list.button(
-            p,
-            format!(
-                "{pd} ({model}, {})",
-                human_size(i.sector_size() * i.length())
-            ),
+            DkDerive {
+                path: p,
+                model: model.to_string(),
+                size,
+            },
+            format!("{pd} ({model}, {})", human_size(size)),
         );
         disk_view.add_child(radio);
     }
@@ -675,19 +677,19 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
             .button("Continue", move |siv| {
-                if let Some(d) = siv.user_data::<RadioGroup<PathBuf>>() {
-                    let device_path = if cfg!(debug_assertions) {
-                        Rc::new(PathBuf::from("/dev/loop20"))
+                if let Some(d) = siv.user_data::<RadioGroup<DkDerive>>() {
+                    let device = if cfg!(debug_assertions) {
+                        Rc::new(DkDerive {
+                            path: PathBuf::from("/dev/loop20"),
+                            model: "Test".to_string(),
+                            size: 50 * 1024_u64.pow(3),
+                        })
                     } else {
                         d.selection()
                     };
 
                     siv.pop_layer();
-                    select_auto_make_partitions(
-                        siv,
-                        config_clone.clone(),
-                        device_path.to_path_buf(),
-                    );
+                    select_auto_make_partitions(siv, config_clone.clone(), device.to_owned());
                 }
             })
             .button("Back", move |s| {
@@ -700,27 +702,36 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
     );
 }
 
-fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device_path: PathBuf) {
-    let is_empty = device_is_empty(&device_path).unwrap_or(true);
+fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device: Rc<DkDerive>) {
+    let is_empty = device_is_empty(&device.path).unwrap_or(true);
 
     let tips = r#"AOSC OS Installer has detected that the specified drive is empty or has no valid partition. AOSC OS Installer can automatically partition the drive for you, would you like to do that?
 
 If you continue, the contents of your hard disk will be erased. Please make sure that the specified drive has no data on it!"#;
 
+    let select_device = format!(
+        "{} ({}/{})",
+        device.path.display(),
+        device.model,
+        human_size(device.size)
+    );
+
     let config_clone_2 = config.clone();
     let config_clone_3 = config.clone();
 
-    let (btn_label, btn_cb) = partition_button(device_path.to_path_buf());
+    let (btn_label, btn_cb) = partition_button(device.path.to_path_buf());
 
-    let device_path_1 = device_path.clone();
+    let device_path_1 = device.path.clone();
+
+    let desc = format!("- A 512MiB EFI System Partition (ESP) will be created.\n- A {} system root partition will be created.", human_size(device.size - 512 * 1024_u64.pow(2)));
 
     if is_empty {
         s.add_layer(
-            wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
+            wrap_in_dialog(TextView::new(format!("{tips}\n\nSelect device: {select_device}\n\n{desc}")), "AOSC OS Installer", None)
                 .button("Continue", move |s| {
                     let device_path = device_path_1.clone();
                     let config_clone = config.clone();
-                    let tips = "WARNING: This will DESTROY ALL DATA ON THE SPECIFIED DRIVE, are you sure that you would want to proceed?";
+                    let tips = format!("WARNING: This will DESTROY ALL DATA ON THE SPECIFIED DRIVE, are you sure that you would want to proceed?\n\nSelect device: {select_device}\n\n{desc}");
                     s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes, Please Partition My Drive!", move |s| {
                         let part = show_fetch_progress!(s, "Creating partitions ...", { auto_create_partitions(&device_path) });
                         match part {
@@ -743,7 +754,7 @@ If you continue, the contents of your hard disk will be erased. Please make sure
                     }));
                 })
                 .button(btn_label, move |s| {
-                    let device_path = device_path.clone();
+                    let device_path = device.path.clone();
                     select_partition(s, config_clone_3.clone(), device_path.into());
                     btn_cb(s, config_clone_3.clone());
                 })
@@ -754,7 +765,7 @@ If you continue, the contents of your hard disk will be erased. Please make sure
                 .button("Quit", |s| s.quit()),
         )
     } else {
-        select_partition(s, config, device_path.into());
+        select_partition(s, config, device.path.clone().into());
     }
 }
 
