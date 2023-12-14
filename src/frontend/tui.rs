@@ -229,9 +229,13 @@ fn make_device_list(devices: Vec<Device>) -> (RadioGroup<PathBuf>, NamedView<Lin
         let path = i.path();
         let pd = path.display();
         let p = path.to_path_buf();
+        let model = i.model();
         let radio = disk_list.button(
             p,
-            format!("{pd} ({})", human_size(i.sector_size() * i.length())),
+            format!(
+                "{pd} ({model}, {})",
+                human_size(i.sector_size() * i.length())
+            ),
         );
         disk_view.add_child(radio);
     }
@@ -659,7 +663,7 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
 
     let dest_view = LinearLayout::vertical()
         .child(TextView::new(
-            "Please select a partition as AOSC OS system disk.",
+            "Please select a device as AOSC OS system drive.",
         ))
         .child(DummyView {})
         .child(disk_view);
