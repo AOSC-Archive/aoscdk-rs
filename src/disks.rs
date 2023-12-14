@@ -425,10 +425,31 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     create_partition(device, system)?;
 
+    let part = disk
+        .get_partition_by_sector(2048)
+        .ok_or_else(|| anyhow!("Could not find partition by sector: 2048"))?;
+
+    let geom_length = part.geom_length();
+    let part_length = if geom_length < 0 {
+        0
+    } else {
+        geom_length as u64
+    };
+
+    let p = Partition {
+        path: part.get_path().map(|x| x.to_path_buf()),
+        parent_path: Some(dev.to_path_buf()),
+        fs_type: Some("ext4".to_string()),
+        size: part_length * device.sector_size(),
+    };
+
+    format_partition(&p)?;
+
     if is_efi {
+        let start_sector = length - (partition_table_end_size + efi_size) / sector_size + 1;
         let efi = &PartitionCreate {
             path: dev.to_path_buf(),
-            start_sector: length - (partition_table_end_size + efi_size) / sector_size + 1,
+            start_sector,
             end_sector: length - partition_table_end_size / sector_size,
             format: true,
             file_system: Some(FileSystem::Fat32),
@@ -450,6 +471,8 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         size: system_end_sector * sector_size,
     };
 
+    format_partition(&p)?;
+
     Ok(p)
 }
 
@@ -458,6 +481,7 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
     let device = unsafe { &mut (*device) };
+
     let is_efi = is_efi_booted();
     let sector_size = device.sector_size();
 
@@ -474,6 +498,31 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         );
     }
 
+    let disk = libparted::Disk::new(&mut *device)?;
+    let mut nums = vec![];
+
+    for i in disk.parts() {
+        let num = i.num();
+        if num > 0 {
+            nums.push(num as u32);
+        }
+    }
+
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let device = unsafe { &mut (*device) };
+    let mut disk = libparted::Disk::new(&mut *device)?;
+
+    for i in nums {
+        disk.remove_partition_by_number(i)?;
+    }
+
+    commit(&mut disk)?;
+
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let device = unsafe { &mut (*device) };
+
     let mut disk = Disk::new_fresh(
         &mut *device,
         if !is_efi {
@@ -483,7 +532,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         },
     )?;
 
-    disk.commit_to_dev()?;
+    commit(&mut disk)?;
 
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
@@ -515,7 +564,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     let mut flags = vec![];
 
-    if !is_efi_booted() {
+    if !is_efi {
         flags.push(PedPartitionFlag::PED_PARTITION_BOOT);
     }
 
@@ -542,6 +591,28 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         }
     }
 
+    if is_efi {
+        let part_efi = disk
+            .get_partition_by_sector(2048)
+            .ok_or_else(|| anyhow!("Could not find partition by sector: 2048"))?;
+
+        let geom_length = part_efi.geom_length();
+        let part_length = if geom_length < 0 {
+            0
+        } else {
+            geom_length as u64
+        };
+
+        let p = Partition {
+            path: part_efi.get_path().map(|x| x.to_path_buf()),
+            parent_path: Some(dev.to_path_buf()),
+            fs_type: Some("vfat".to_string()),
+            size: part_length * sector_size,
+        };
+
+        format_partition(&p)?;
+    }
+
     let p = last.ok_or_else(|| anyhow!("Cannot create partition"))?;
 
     let p = Partition {
@@ -550,6 +621,8 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         fs_type: Some("ext4".to_owned()),
         size: (length - start_sector) * sector_size,
     };
+
+    format_partition(&p)?;
 
     Ok(p)
 }
@@ -641,9 +714,35 @@ where
         .get_file_system()
         .and_then(|fs| FileSystemType::get(fs.into()));
 
-    let mut disk = open_disk(device)?;
-    let mut part =
-        PedPartition::new(&disk, part_type, fs_type.as_ref(), start, end).map_err(|why| {
+    {
+        let mut disk = open_disk(device)?;
+        let mut part =
+            PedPartition::new(&disk, part_type, fs_type.as_ref(), start, end).map_err(|why| {
+                io::Error::new(
+                    why.kind(),
+                    format!(
+                        "failed to create new partition: {}: {}",
+                        partition.get_device_path().display(),
+                        why
+                    ),
+                )
+            })?;
+
+        for &flag in partition.get_partition_flags() {
+            if part.is_flag_available(flag) && part.set_flag(flag, true).is_err() {
+                error!("unable to set {:?}", flag);
+            }
+        }
+
+        if let Some(label) = partition.get_partition_label() {
+            if part.set_name(label).is_err() {
+                error!("unable to set partition name: {}", label);
+            }
+        }
+
+        // Add the partition, and commit the changes to the disk.
+        let constraint = geometry.exact().expect("exact constraint not found");
+        disk.add_partition(&mut part, &constraint).map_err(|why| {
             io::Error::new(
                 why.kind(),
                 format!(
@@ -654,40 +753,20 @@ where
             )
         })?;
 
-    for &flag in partition.get_partition_flags() {
-        if part.is_flag_available(flag) && part.set_flag(flag, true).is_err() {
-            error!("unable to set {:?}", flag);
-        }
+        // Attempt to write the new partition to the disk.
+        info!(
+            "committing new partition ({}:{}) on {}",
+            start,
+            end,
+            partition.get_device_path().display()
+        );
+
+        commit(&mut disk)?;
     }
 
-    if let Some(label) = partition.get_partition_label() {
-        if part.set_name(label).is_err() {
-            error!("unable to set partition name: {}", label);
-        }
-    }
+    device.sync()?;
 
-    // Add the partition, and commit the changes to the disk.
-    let constraint = geometry.exact().expect("exact constraint not found");
-    disk.add_partition(&mut part, &constraint).map_err(|why| {
-        io::Error::new(
-            why.kind(),
-            format!(
-                "failed to create new partition: {}: {}",
-                partition.get_device_path().display(),
-                why
-            ),
-        )
-    })?;
-
-    // Attempt to write the new partition to the disk.
-    info!(
-        "committing new partition ({}:{}) on {}",
-        start,
-        end,
-        partition.get_device_path().display()
-    );
-
-    commit(&mut disk)
+    Ok(())
 }
 
 /// Opens a `libparted::Disk` from a `libparted::Device`.

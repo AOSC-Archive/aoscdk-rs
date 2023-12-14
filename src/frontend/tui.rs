@@ -502,9 +502,10 @@ fn select_mirrors_view(
         .button("Exit", |s| s.quit())
 }
 
-fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<PathBuf>) {
+fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>) {
+    let dev_clone = dev.clone();
     let partitions = show_fetch_progress!(siv, "Probing disks ...", {
-        disks::list_partitions(Some(dev.to_path_buf()))
+        disks::list_partitions(Some(dev.path.clone()))
     });
 
     let (disk_list, disk_view) = make_partition_list(partitions);
@@ -523,10 +524,11 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<PathBuf>) 
     let config_view = LinearLayout::vertical()
         .child(Panel::new(dest_view).title("Select System Partition"))
         .child(DummyView {});
-    let (btn_label, btn_cb) = partition_button(dev.to_path_buf());
+    let (btn_label, btn_cb) = partition_button(dev.path.to_path_buf());
     let config_copy = config.clone();
     let config_copy_2 = config.clone();
     let config_clone_3 = config.clone();
+    let config_clone_4 = config.clone();
     siv.add_layer(
         wrap_in_dialog(config_view, "AOSC OS Installation", None)
         .button("Continue", move |s| {
@@ -649,6 +651,21 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<PathBuf>) 
         .button(btn_label, move |s| {
             btn_cb(s, config_copy.clone());
         })
+        .button("Partition for Me", move |s| {
+            let dev_clone = dev_clone.clone();
+            let path = dev.path.clone();
+            let select_device = format!(
+                "{} ({}/{})",
+                dev_clone.path.display(),
+                dev_clone.model,
+                human_size(dev.size)
+            );
+
+            let desc = format!("- A 512MiB EFI System Partition (ESP) will be created.\n- A {} system root partition will be created.", human_size(dev.size - 512 * 1024_u64.pow(2)));
+
+        
+            auto_partition_view(s, config_clone_4.clone(), &select_device, &desc, path)
+        })
         .button("Back", move |s| {
             s.pop_layer();
             select_disk(s, config_copy_2.clone());
@@ -727,46 +744,63 @@ If you continue, the contents of your hard disk will be erased. Please make sure
 
     if is_empty {
         s.add_layer(
-            wrap_in_dialog(TextView::new(format!("{tips}\n\nSelect device: {select_device}\n\n{desc}")), "AOSC OS Installer", None)
-                .button("Continue", move |s| {
-                    let device_path = device_path_1.clone();
-                    let config_clone = config.clone();
-                    let tips = format!("WARNING: This will DESTROY ALL DATA ON THE SPECIFIED DRIVE, are you sure that you would want to proceed?\n\nSelect device: {select_device}\n\n{desc}");
-                    s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes, Please Partition My Drive!", move |s| {
-                        let part = show_fetch_progress!(s, "Creating partitions ...", { auto_create_partitions(&device_path) });
-                        match part {
-                            Ok(p) => {
-                                let mut config = config_clone.clone();
-                                config.partition = Some(Arc::new(p));
-                                s.pop_layer();
-                                select_user_password(s, config);
-                            }
-                            Err(e) => {
-                                show_msg(
-                                    s,
-                                    &e
-                                        .to_string(),
-                                );
-                            }
-                        }
-                    }).button("No", move |s| {
-                        s.pop_layer();
-                    }));
-                })
-                .button(btn_label, move |s| {
-                    let device_path = device.path.clone();
-                    select_partition(s, config_clone_3.clone(), device_path.into());
-                    btn_cb(s, config_clone_3.clone());
-                })
-                .button("Back", move |s| {
-                    s.pop_layer();
-                    select_disk(s, config_clone_2.clone());
-                })
-                .button("Quit", |s| s.quit()),
+            wrap_in_dialog(
+                TextView::new(format!(
+                    "{tips}\n\nSelect device: {select_device}\n\n{desc}"
+                )),
+                "AOSC OS Installer",
+                None,
+            )
+            .button("Continue", move |s| {
+                let device_path = device_path_1.clone();
+                let config_clone = config.clone();
+                auto_partition_view(s, config_clone, &select_device, &desc, device_path);
+            })
+            .button(btn_label, move |s| {
+                select_partition(s, config_clone_3.clone(), device.clone());
+                btn_cb(s, config_clone_3.clone());
+            })
+            .button("Back", move |s| {
+                s.pop_layer();
+                select_disk(s, config_clone_2.clone());
+            })
+            .button("Quit", |s| s.quit()),
         )
     } else {
-        select_partition(s, config, device.path.clone().into());
+        select_partition(s, config, device);
     }
+}
+
+fn auto_partition_view(
+    s: &mut Cursive,
+    config_clone: InstallConfig,
+    select_device: &str,
+    desc: &str,
+    device_path: PathBuf,
+) {
+    let tips = format!("WARNING: This will DESTROY ALL DATA ON THE SPECIFIED DRIVE, are you sure that you would want to proceed?\n\nSelect device: {select_device}\n\n{desc}");
+    s.add_layer(
+        wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
+            .button("Yes, Please Partition My Drive!", move |s| {
+                let part = show_fetch_progress!(s, "Creating partitions ...", {
+                    auto_create_partitions(&device_path)
+                });
+                match part {
+                    Ok(p) => {
+                        let mut config = config_clone.clone();
+                        config.partition = Some(Arc::new(p));
+                        s.pop_layer();
+                        select_user_password(s, config);
+                    }
+                    Err(e) => {
+                        show_msg(s, &e.to_string());
+                    }
+                }
+            })
+            .button("No", move |s| {
+                s.pop_layer();
+            }),
+    );
 }
 
 fn continue_to_format_hdd(s: &mut Cursive, config_clone: InstallConfig, fs_type: String) {
