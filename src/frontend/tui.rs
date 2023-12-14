@@ -77,7 +77,7 @@ macro_rules! SUMMARY_TEXT {
 
 macro_rules! SURE_FS_TYPE_INFO {
     () => {
-        "AOSC OS Installation has detected that the specified partition is currently formatted {}, would you like to format this partition using the original filesystem? For its proven reliability, we recommend formatting your system partition as ext4."
+        "AOSC OS Installation has detected that the specified partition is currently formatted as {}, would you like to format this partition using the original filesystem? For its proven reliability, we recommend formatting your system partition as ext4."
     };
 }
 
@@ -699,9 +699,9 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
 fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device_path: PathBuf) {
     let is_empty = device_is_empty(&device_path).unwrap_or(true);
 
-    let tips = r#"AOSC OS Installer detects that your selected hard disk seems to have no contents, AOSC OS Installer can automatically partition it for you to install AOSC OS, do you want to do that?
+    let tips = r#"AOSC OS Installer has detected that the specified drive is empty or has no valid partition. AOSC OS Installer can automatically partition the drive for you, would you like to do that?
 
-If you continue, the contents of your hard disk will be completely lost, please make sure that your selected hard disk has no data on it!"#;
+If you continue, the contents of your hard disk will be erased. Please make sure that the specified drive has no data on it!"#;
 
     let config_clone_2 = config.clone();
     let config_clone_3 = config.clone();
@@ -716,8 +716,8 @@ If you continue, the contents of your hard disk will be completely lost, please 
                 .button("Continue", move |s| {
                     let device_path = device_path_1.clone();
                     let config_clone = config.clone();
-                    let tips = "Again, a warning, this will DESTROY ALL DATA ON YOUR CHOSEN HARD DISK, are you sure you want to do this?";
-                    s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes Do as I say!", move |s| {
+                    let tips = "WARNING: This will DESTROY ALL DATA ON THE SPECIFIED DRIVE, are you sure that you would want to proceed?";
+                    s.add_layer(wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None).button("Yes, Please Partition My Drive!", move |s| {
                         let part = show_fetch_progress!(s, "Creating partitions ...", { auto_create_partitions(&device_path) });
                         match part {
                             Ok(p) => {
