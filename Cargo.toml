@@ -1,6 +1,6 @@
 [package]
 name = "aoscdk-rs"
-version = "0.10.0"
+version = "0.19.0"
 authors = ["liushuyu <liushuyu011@gmail.com>", "eatradish <sakiiily@aosc.io>"]
 
 edition = "2021"
@@ -36,7 +36,7 @@ indicatif = "0.17"
 libparted-sys = "0.3"
 clock-core = "0.0.7"
 hhmmss = "0.1.0"
-sudoku = "0.7"
+sudoku = "0.8"
 log = "0.4"
 fern = "0.6"
 time = { version = "0.3", features = ["formatting"] }

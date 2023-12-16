@@ -41,10 +41,9 @@ pub struct SudokuBoard {
 
 impl SudokuBoard {
     pub fn new() -> Self {
-        let ans_ = sudoku::Sudoku::generate_filled().to_bytes();
+        let ans_ = sudoku::Sudoku::generate().to_bytes();
         let sudoku_ =
-            sudoku::Sudoku::generate_unique_from(sudoku::Sudoku::from_bytes(ans_).unwrap())
-                .to_bytes();
+            sudoku::Sudoku::generate_from(sudoku::Sudoku::from_bytes(ans_).unwrap()).to_bytes();
         let mut ans = [[0u8; 9]; 9];
         for i in 0..9 {
             for j in 0..9 {
