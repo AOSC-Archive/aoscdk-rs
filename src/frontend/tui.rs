@@ -655,7 +655,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>)
             let dev_clone = dev_clone.clone();
             let path = dev.path.clone();
             let select_device = format!(
-                "{} ({}/{})",
+                "{} ({}, {})",
                 dev_clone.path.display(),
                 dev_clone.model,
                 human_size(dev.size)
@@ -727,7 +727,7 @@ fn select_auto_make_partitions(s: &mut Cursive, config: InstallConfig, device: R
 If you continue, the contents of your hard disk will be erased. Please make sure that the specified drive has no data on it!"#;
 
     let select_device = format!(
-        "{} ({}/{})",
+        "{} ({}, {})",
         device.path.display(),
         device.model,
         human_size(device.size)
