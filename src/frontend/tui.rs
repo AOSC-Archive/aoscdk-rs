@@ -667,7 +667,7 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>)
             } else {
                 format!("- A {} system root partition will be created.", human_size(dev_size))
             };
-        
+
             auto_partition_view(s, config_clone_4.clone(), &select_device, &desc, path)
         })
         .button("Back", move |s| {
@@ -747,7 +747,10 @@ If you continue, the contents of your hard disk will be erased. Please make sure
     let desc = if is_efi_booted() {
         format!("- A 512MiB EFI System Partition (ESP) will be created.\n- A {} system root partition will be created.", human_size(device.size - 512 * 1024_u64.pow(2)))
     } else {
-        format!("- A {} system root partition will be created.", human_size(device.size))
+        format!(
+            "- A {} system root partition will be created.",
+            human_size(device.size)
+        )
     };
 
     if is_empty {
