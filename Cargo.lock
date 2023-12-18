@@ -133,6 +133,7 @@ dependencies = [
  "log",
  "nom",
  "number_prefix",
+ "once_cell",
  "rand 0.8.5",
  "reqwest",
  "rustix",

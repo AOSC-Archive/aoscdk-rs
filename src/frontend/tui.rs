@@ -1593,7 +1593,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let root_fd = install::get_dir_fd(Path::new("/"))
         .expect("Installer failed to get root file descriptor.\n\nPlease restart your installation environment.");
     let rfc = root_fd.try_clone().unwrap();
-    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy, logfile));
+    let install_thread = thread::spawn(move || begin_install(tx, config, tempdir_copy));
     thread::spawn(move || {
         let user_exit = user_interrup_rx.recv();
         if let Ok(user_exit) = user_exit {

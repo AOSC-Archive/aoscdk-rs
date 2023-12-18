@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Result};
+use log::setup_logger;
+use once_cell::sync::OnceCell;
 use std::{
     io::{Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 use sysinfo::{Pid, System, SystemExt};
@@ -17,6 +19,8 @@ mod network;
 mod parser;
 
 const LOCK: &str = "/run/lock/aoscdk.lock";
+
+pub static LOG_FILE: OnceCell<PathBuf> = OnceCell::new();
 
 fn main() {
     if let Err(e) = create_lock() {
@@ -36,9 +40,11 @@ fn main() {
 fn execute() -> Result<()> {
     let args = std::env::args();
     if args.len() < 2 {
+        LOG_FILE.get_or_try_init(|| setup_logger(false))?;
         frontend::tui_main();
     } else {
         let args = Args::parse();
+        LOG_FILE.get_or_try_init(|| setup_logger(true))?;
         frontend::execute(args)?;
     }
 

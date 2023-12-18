@@ -13,7 +13,7 @@ use std::{
 use crate::{
     disks,
     install::{self, log_system_info},
-    network, DEPLOYKIT_USER_AGENT,
+    network, DEPLOYKIT_USER_AGENT, LOG_FILE,
 };
 use anyhow::{anyhow, Result};
 use cursive::utils::Counter;
@@ -150,7 +150,6 @@ fn begin_install(
     sender: Sender<InstallProgress>,
     config: InstallConfig,
     tempdir: PathBuf,
-    logfile: PathBuf,
 ) -> Result<()> {
     log_system_info();
 
@@ -543,8 +542,9 @@ fn begin_install(
     }
 
     info!("Copy log file to main partition");
+    let logfile = &*LOG_FILE.get().unwrap();
     std::fs::copy(
-        &logfile,
+        logfile,
         tempdir.join("var").join("log").join(
             logfile
                 .file_name()

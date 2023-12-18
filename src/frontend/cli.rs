@@ -11,7 +11,6 @@ use std::{
 use crate::{
     disks::{self, Partition},
     install::{self, is_acceptable_username, is_valid_hostname, umount_all},
-    log::setup_logger,
     network::{self, fetch_mirrors, Mirror, VariantEntry},
 };
 use anyhow::{anyhow, Result};
@@ -246,8 +245,6 @@ fn get_swap(
 }
 
 fn start_install(ic: InstallCommand) -> Result<()> {
-    let logfile = setup_logger(true)?;
-
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     let variant = get_variant(&ic.tarball)?;
@@ -305,7 +302,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
 
     let install_thread =
-        thread::spawn(move || begin_install(tx, install_config, tempdir_clone, logfile));
+        thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(Duration::from_millis(50));
 
