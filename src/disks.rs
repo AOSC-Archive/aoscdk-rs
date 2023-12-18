@@ -77,6 +77,8 @@ pub fn format_partition(partition: &Partition) -> Result<()> {
     } else {
         cmd = command.arg("-f");
     }
+
+    info!("{cmd:?}");
     let output = cmd
         .arg(
             partition
@@ -385,6 +387,31 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         );
     }
 
+    let disk = libparted::Disk::new(&mut *device)?;
+    let mut nums = vec![];
+
+    for i in disk.parts() {
+        let num = i.num();
+        if num > 0 {
+            nums.push(num as u32);
+        }
+    }
+
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let device = unsafe { &mut (*device) };
+    let mut disk = libparted::Disk::new(&mut *device)?;
+
+    for i in nums {
+        disk.remove_partition_by_number(i)?;
+    }
+
+    commit(&mut disk)?;
+
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let device = unsafe { &mut (*device) };
+
     let mut disk = Disk::new_fresh(
         &mut *device,
         if !is_efi {
@@ -425,22 +452,11 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     create_partition(device, system)?;
 
-    let part = disk
-        .get_partition_by_sector(2048)
-        .ok_or_else(|| anyhow!("Could not find partition by sector: 2048"))?;
-
-    let geom_length = part.geom_length();
-    let part_length = if geom_length < 0 {
-        0
-    } else {
-        geom_length as u64
-    };
-
     let p = Partition {
-        path: part.get_path().map(|x| x.to_path_buf()),
+        path: Some(PathBuf::from("/dev/loop20p1")),
         parent_path: Some(dev.to_path_buf()),
         fs_type: Some("ext4".to_string()),
-        size: part_length * device.sector_size(),
+        size: system_end_sector * device.sector_size(),
     };
 
     format_partition(&p)?;
@@ -462,16 +478,18 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         };
 
         create_partition(device, efi)?;
+
+        let p = Partition {
+            path: Some(PathBuf::from("/dev/loop20p2")),
+            parent_path: Some(dev.to_path_buf()),
+            fs_type: Some("vfat".to_string()),
+            size: 512 * 1024_u64.pow(2),
+        };
+
+        format_partition(&p)?;
     }
 
-    let p = Partition {
-        path: Some(Path::new("/dev/loop20p1").to_path_buf()),
-        parent_path: Some(dev.to_path_buf()),
-        fs_type: Some("ext4".to_owned()),
-        size: system_end_sector * sector_size,
-    };
-
-    format_partition(&p)?;
+    device.sync()?;
 
     Ok(p)
 }

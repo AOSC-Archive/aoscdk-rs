@@ -4,8 +4,7 @@ use crate::{
         DkDerive, ALLOWED_FS_TYPE,
     },
     install::{self, umount_all},
-    log::setup_logger,
-    network::{self, Mirror, VariantEntry},
+    network::{self, Mirror, VariantEntry}, LOG_FILE,
 };
 use anyhow::Result;
 use cursive::{
@@ -1538,9 +1537,6 @@ fn show_summary(siv: &mut Cursive, config: InstallConfig) {
 }
 
 fn start_install(siv: &mut Cursive, config: InstallConfig) {
-    let logfile = setup_logger(false).expect("Installer could not set logger");
-    let logfile_clone = logfile.clone();
-
     siv.clear_global_callbacks(Event::Exit);
     siv.clear_global_callbacks(Event::CtrlChar('c'));
     add_main_callback(siv);
@@ -1629,7 +1625,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
                         &format!(
                             "{}\n\nPress <~> to see installer log.\n\nLog file is save to {}",
                             err,
-                            logfile_clone.display()
+                            LOG_FILE.get().unwrap().display()
                         ),
                     );
                 }))
