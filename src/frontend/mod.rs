@@ -542,7 +542,7 @@ fn begin_install(
     }
 
     info!("Copy log file to main partition");
-    let logfile = &*LOG_FILE.get().unwrap();
+    let logfile = LOG_FILE.get().unwrap();
     std::fs::copy(
         logfile,
         tempdir.join("var").join("log").join(

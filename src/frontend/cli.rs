@@ -301,8 +301,7 @@ fn start_install(ic: InstallCommand) -> Result<()> {
         r.store(false, Ordering::SeqCst);
     }).expect("Installer could not initialize SIGINT handler.\n\nPlease restart your installation environment.");
 
-    let install_thread =
-        thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
+    let install_thread = thread::spawn(move || begin_install(tx, install_config, tempdir_clone));
     let bar = ProgressBar::new_spinner();
     bar.enable_steady_tick(Duration::from_millis(50));
 

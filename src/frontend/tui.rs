@@ -4,7 +4,8 @@ use crate::{
         DkDerive, ALLOWED_FS_TYPE,
     },
     install::{self, umount_all},
-    network::{self, Mirror, VariantEntry}, LOG_FILE,
+    network::{self, Mirror, VariantEntry},
+    LOG_FILE,
 };
 use anyhow::Result;
 use cursive::{
