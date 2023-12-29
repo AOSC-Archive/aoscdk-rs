@@ -362,139 +362,139 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     Err(anyhow!("The specified swapfile size is too small, AOSC OS recommends at least {} GiB for your device.", (recommand_size / 1024.0 / 1024.0 / 1024.0).round()))
 }
 
-#[cfg(debug_assertions)]
-pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
-    let mut device = libparted::Device::new(dev)?;
-    let device = &mut device as *mut Device;
-    let device = unsafe { &mut (*device) };
-    let efi_size = 512 * 1024 * 1024;
-    let partition_table_end_size = 1024 * 1024;
-    let is_efi = is_efi_booted();
+// #[cfg(debug_assertions)]
+// pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
+//     let mut device = libparted::Device::new(dev)?;
+//     let device = &mut device as *mut Device;
+//     let device = unsafe { &mut (*device) };
+//     let efi_size = 512 * 1024 * 1024;
+//     let partition_table_end_size = 1024 * 1024;
+//     let is_efi = is_efi_booted();
 
-    let length = device.length();
-    let sector_size = device.sector_size();
+//     let length = device.length();
+//     let sector_size = device.sector_size();
 
-    let size = length * sector_size;
+//     let size = length * sector_size;
 
-    if get_partition_table_type(Some(dev))
-        .map(|x| x == "msdos")
-        .unwrap_or(false)
-        && size > 512 * (2_u64.pow(31) - 1)
-    {
-        bail!(
-            r#"AOSC OS Installer has detected that you are trying to create a disk partition larger than 2TiB in the MBR partition table.
-If you want to do this, change your computer's boot mode to UEFI mode."#
-        );
-    }
+//     if get_partition_table_type(Some(dev))
+//         .map(|x| x == "msdos")
+//         .unwrap_or(false)
+//         && size > 512 * (2_u64.pow(31) - 1)
+//     {
+//         bail!(
+//             r#"AOSC OS Installer has detected that you are trying to create a disk partition larger than 2TiB in the MBR partition table.
+// If you want to do this, change your computer's boot mode to UEFI mode."#
+//         );
+//     }
 
-    let disk = libparted::Disk::new(&mut *device)?;
-    let mut nums = vec![];
+//     let disk = libparted::Disk::new(&mut *device)?;
+//     let mut nums = vec![];
 
-    for i in disk.parts() {
-        let num = i.num();
-        if num > 0 {
-            nums.push(num as u32);
-        }
-    }
+//     for i in disk.parts() {
+//         let num = i.num();
+//         if num > 0 {
+//             nums.push(num as u32);
+//         }
+//     }
 
-    let mut device = libparted::Device::new(dev)?;
-    let device = &mut device as *mut Device;
-    let device = unsafe { &mut (*device) };
-    let mut disk = libparted::Disk::new(&mut *device)?;
+//     let mut device = libparted::Device::new(dev)?;
+//     let device = &mut device as *mut Device;
+//     let device = unsafe { &mut (*device) };
+//     let mut disk = libparted::Disk::new(&mut *device)?;
 
-    for i in nums {
-        disk.remove_partition_by_number(i)?;
-    }
+//     for i in nums {
+//         disk.remove_partition_by_number(i)?;
+//     }
 
-    commit(&mut disk)?;
+//     commit(&mut disk)?;
 
-    let mut device = libparted::Device::new(dev)?;
-    let device = &mut device as *mut Device;
-    let device = unsafe { &mut (*device) };
+//     let mut device = libparted::Device::new(dev)?;
+//     let device = &mut device as *mut Device;
+//     let device = unsafe { &mut (*device) };
 
-    let mut disk = Disk::new_fresh(
-        &mut *device,
-        if !is_efi {
-            DiskType::get("msdos").unwrap()
-        } else {
-            DiskType::get("gpt").unwrap()
-        },
-    )?;
+//     let mut disk = Disk::new_fresh(
+//         &mut *device,
+//         if !is_efi {
+//             DiskType::get("msdos").unwrap()
+//         } else {
+//             DiskType::get("gpt").unwrap()
+//         },
+//     )?;
 
-    disk.commit_to_dev()?;
+//     disk.commit_to_dev()?;
 
-    let mut device = libparted::Device::new(dev)?;
-    let device = &mut device as *mut Device;
-    let device = unsafe { &mut (*device) };
+//     let mut device = libparted::Device::new(dev)?;
+//     let device = &mut device as *mut Device;
+//     let device = unsafe { &mut (*device) };
 
-    let system_end_sector = if is_efi {
-        length - (efi_size + partition_table_end_size) / sector_size
-    } else {
-        length - partition_table_end_size / sector_size
-    };
+//     let system_end_sector = if is_efi {
+//         length - (efi_size + partition_table_end_size) / sector_size
+//     } else {
+//         length - partition_table_end_size / sector_size
+//     };
 
-    let mut flags = vec![];
+//     let mut flags = vec![];
 
-    if !is_efi {
-        flags.push(PedPartitionFlag::PED_PARTITION_BOOT);
-    }
+//     if !is_efi {
+//         flags.push(PedPartitionFlag::PED_PARTITION_BOOT);
+//     }
 
-    let system = &PartitionCreate {
-        path: dev.to_path_buf(),
-        start_sector: 2048,
-        end_sector: system_end_sector,
-        format: true,
-        file_system: Some(FileSystem::Ext4),
-        kind: PartitionType::Primary,
-        flags,
-        label: None,
-    };
+//     let system = &PartitionCreate {
+//         path: dev.to_path_buf(),
+//         start_sector: 2048,
+//         end_sector: system_end_sector,
+//         format: true,
+//         file_system: Some(FileSystem::Ext4),
+//         kind: PartitionType::Primary,
+//         flags,
+//         label: None,
+//     };
 
-    create_partition(device, system)?;
+//     create_partition(device, system)?;
 
-    let p = Partition {
-        path: Some(PathBuf::from("/dev/loop20p1")),
-        parent_path: Some(dev.to_path_buf()),
-        fs_type: Some("ext4".to_string()),
-        size: system_end_sector * device.sector_size(),
-    };
+//     let p = Partition {
+//         path: Some(PathBuf::from("/dev/loop20p1")),
+//         parent_path: Some(dev.to_path_buf()),
+//         fs_type: Some("ext4".to_string()),
+//         size: system_end_sector * device.sector_size(),
+//     };
 
-    format_partition(&p)?;
+//     format_partition(&p)?;
 
-    if is_efi {
-        let start_sector = length - (partition_table_end_size + efi_size) / sector_size + 1;
-        let efi = &PartitionCreate {
-            path: dev.to_path_buf(),
-            start_sector,
-            end_sector: length - partition_table_end_size / sector_size,
-            format: true,
-            file_system: Some(FileSystem::Fat32),
-            kind: PartitionType::Primary,
-            flags: vec![
-                PedPartitionFlag::PED_PARTITION_BOOT,
-                PedPartitionFlag::PED_PARTITION_ESP,
-            ],
-            label: None,
-        };
+//     if is_efi {
+//         let start_sector = length - (partition_table_end_size + efi_size) / sector_size + 1;
+//         let efi = &PartitionCreate {
+//             path: dev.to_path_buf(),
+//             start_sector,
+//             end_sector: length - partition_table_end_size / sector_size,
+//             format: true,
+//             file_system: Some(FileSystem::Fat32),
+//             kind: PartitionType::Primary,
+//             flags: vec![
+//                 PedPartitionFlag::PED_PARTITION_BOOT,
+//                 PedPartitionFlag::PED_PARTITION_ESP,
+//             ],
+//             label: None,
+//         };
 
-        create_partition(device, efi)?;
+//         create_partition(device, efi)?;
 
-        let p = Partition {
-            path: Some(PathBuf::from("/dev/loop20p2")),
-            parent_path: Some(dev.to_path_buf()),
-            fs_type: Some("vfat".to_string()),
-            size: 512 * 1024_u64.pow(2),
-        };
+//         let p = Partition {
+//             path: Some(PathBuf::from("/dev/loop20p2")),
+//             parent_path: Some(dev.to_path_buf()),
+//             fs_type: Some("vfat".to_string()),
+//             size: 512 * 1024_u64.pow(2),
+//         };
 
-        format_partition(&p)?;
-    }
+//         format_partition(&p)?;
+//     }
 
-    device.sync()?;
+//     device.sync()?;
 
-    Ok(p)
-}
+//     Ok(p)
+// }
 
-#[cfg(not(debug_assertions))]
+// #[cfg(not(debug_assertions))]
 pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
@@ -516,26 +516,30 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         );
     }
 
-    let disk = libparted::Disk::new(&mut *device)?;
-    let mut nums = vec![];
+    if let Ok(disk) = libparted::Disk::new(&mut *device) {
+        info!("Disk already exists, open disk and reemove existing partitions");
+        let mut nums = vec![];
 
-    for i in disk.parts() {
-        let num = i.num();
-        if num > 0 {
-            nums.push(num as u32);
+        for i in disk.parts() {
+            let num = i.num();
+            if num > 0 {
+                nums.push(num as u32);
+            }
         }
+
+        let mut device = libparted::Device::new(dev)?;
+        let device = &mut device as *mut Device;
+        let device = unsafe { &mut (*device) };
+        let mut disk = libparted::Disk::new(&mut *device)?;
+
+        for i in nums {
+            disk.remove_partition_by_number(i)?;
+        }
+
+        commit(&mut disk)?;
+    } else {
+        info!("Disk does not exists, creating new ...");
     }
-
-    let mut device = libparted::Device::new(dev)?;
-    let device = &mut device as *mut Device;
-    let device = unsafe { &mut (*device) };
-    let mut disk = libparted::Disk::new(&mut *device)?;
-
-    for i in nums {
-        disk.remove_partition_by_number(i)?;
-    }
-
-    commit(&mut disk)?;
 
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
@@ -571,6 +575,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
             label: None,
         };
 
+        info!("10");
         create_partition(&mut device, efi)?;
     }
 
@@ -598,9 +603,9 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         flags,
         label: None,
     };
-
+    info!("11");
     create_partition(&mut device, system)?;
-
+    info!("12");
     let disk = libparted::Disk::new(&mut device)?;
     let mut last = None;
     for p in disk.parts() {
