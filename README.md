@@ -16,27 +16,27 @@ LiveKit to install AOSC OS.**
 If you would like to compile your own DeployKit (or trying it out on a
 different distribution, please install the following dependencies:
 
-- OpenSSL 1.1
+- OpenSSL >= 1.1
 - Glibc
-- C Compile (like gcc)
+- C/C++ Compiler (GCC or Clang)
 - ncurses
 - pkg-config
 - libparted
 - Rust + Cargo
-- unsquashfs (from squash-tools)
+- unsquashfs (from `squashfs-tools`)
 
 If you are using AOSC OS, please install the dependencies with the following
 command:
 
 ```
-# apt install llvm pkg-config gcc parted ncurses openssl squashfs-tools
+sudo oma install llvm pkg-config gcc parted ncurses openssl squashfs-tools
 
 ```
 
 And run the following command to build DeployKit:
 
 ```
-$ cargo build --release
+cargo build --release
 ```
 
 ## Retro
@@ -117,6 +117,7 @@ $ cargo test --nocapture
 # target/debug/deps/aoscdk_rs-3b358921c017024b --nocapture
 ```
 
-## Resource
-- languagelist from [ubiquity](https://git.launchpad.net/ubiquity/tree/d-i/source/localechooser/languagelist)
-- zone1970tab from `tzdata`
+## Resources
+
+- languagelist from [ubiquity](https://git.launchpad.net/ubiquity/tree/d-i/source/localechooser/languagelist).
+- zone1970tab from `tzdata`.
