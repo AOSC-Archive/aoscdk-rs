@@ -92,6 +92,8 @@ pub fn get_zoneinfo_list() -> Result<Vec<String>> {
         ));
     }
 
+    zoneinfo_list.push("Asia/Beijing".to_owned());
+
     zoneinfo_list.sort();
     zoneinfo_list.insert(0, "UTC".to_string());
 

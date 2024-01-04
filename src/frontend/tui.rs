@@ -1110,6 +1110,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         None,
     )
     .button("Continue", move |s| {
+        // language to locale
         let locale = locale.as_ref().to_owned().into_inner();
         let locale = locales_clone
             .iter()
@@ -1117,7 +1118,13 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
             .map(|x| x.1)
             .unwrap();
 
-        let timezone = timezone.as_ref().to_owned().into_inner();
+        let mut timezone = timezone.as_ref().to_owned().into_inner();
+
+        // tzdata 的北京时间是 Asia/Shanghai
+        if timezone == "Asia/Beijing" {
+            timezone = "Asia/Shanghai".to_string();
+        }
+
         let tc = tc.as_ref().to_owned().into_inner();
         if locale.is_empty() || timezone.is_empty() || tc.is_empty() {
             fill_in_all_the_fields!(s);
