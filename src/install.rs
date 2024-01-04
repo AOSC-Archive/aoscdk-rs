@@ -17,14 +17,13 @@ use sysinfo::{System, SystemExt};
 
 use crate::disks::{fstab_entries, is_efi_booted, Partition};
 use crate::network;
-use crate::parser::{list_mounts, list_zoneinfo, locale_names};
+use crate::parser::{list_mounts, list_zoneinfo, parse_languagelist};
 
 const BIND_MOUNTS: &[&str] = &["/dev", "/proc", "/sys", "/run/udev"];
 const EFIVARS_PATH: &str = "/sys/firmware/efi/efivars";
-const BUNDLED_LOCALE_GEN: &[u8] = include_bytes!("../res/locale.gen");
-const SYSTEM_LOCALE_GEN_PATH: &str = "/etc/locale.gen";
 const SYSTEM_ZONEINFO1970_PATH: &str = "/usr/share/zoneinfo/zone1970.tab";
 const BUNDLED_ZONEINFO_LIST: &[u8] = include_bytes!("../res/zone1970.tab");
+pub const LANGUAGE_LIST: &[u8] = include_bytes!("../res/languagelist");
 
 fn run_command<I, S>(command: &str, args: I) -> Result<()>
 where
@@ -63,22 +62,13 @@ pub enum ExtractFileType {
     Squashfs,
 }
 
-fn read_system_locale_list() -> Result<Vec<u8>> {
-    let mut f = std::fs::File::open(SYSTEM_LOCALE_GEN_PATH)?;
-    let mut data = Vec::with_capacity(8800);
-    f.read_to_end(&mut data)?;
-
-    Ok(data)
-}
-
 /// Get the list of available locales
-pub fn get_locale_list() -> Result<Vec<String>> {
-    let data = read_system_locale_list().unwrap_or_else(|_| BUNDLED_LOCALE_GEN.to_vec());
-    let names = locale_names(&data)
-        .map_err(|_| anyhow!("Installer failed to gather available locales."))?;
-    let names = names.1.into_iter().map(|x| x.to_string()).collect();
+pub fn get_locale_list() -> Result<Vec<(&'static str, &'static str, &'static str)>> {
+    let res = parse_languagelist(LANGUAGE_LIST).map_err(|e| anyhow!("{e}"))?;
+    let mut res = res.1;
+    res.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-    Ok(names)
+    Ok(res)
 }
 
 fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
@@ -344,7 +334,7 @@ pub fn set_locale(locale: &str) -> Result<()> {
     let mut f = File::create("/etc/locale.conf")?;
     f.write_all(b"LANG=")?;
 
-    Ok(f.write_all(locale.as_bytes())?)
+    Ok(f.write_all(format!("{locale}\n").as_bytes())?)
 }
 
 /// Sets zoneinfo in the guest environment

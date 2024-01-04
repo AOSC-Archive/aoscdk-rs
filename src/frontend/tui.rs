@@ -1052,7 +1052,8 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     // RTC/UTC default is UTC
     let tc = Rc::new(RefCell::new(String::from("UTC")));
     let tc_copy = Rc::clone(&tc);
-    let locales = install::get_locale_list().unwrap();
+    let locales = Arc::new(install::get_locale_list().unwrap());
+    let locales_clone = locales.clone();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
     let mut timezone_selected_status = TextView::new("UTC");
     let timezone_status_text = Arc::new(timezone_selected_status.get_shared_content());
@@ -1076,7 +1077,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
             "Locale",
             Button::new("Select locale", move |s| {
                 s.add_layer(set_locales(
-                    locales.clone(),
+                    locales.to_vec(),
                     locale_copy.clone(),
                     locale_status_text.clone(),
                 ))
@@ -1110,16 +1111,21 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     )
     .button("Continue", move |s| {
         let locale = locale.as_ref().to_owned().into_inner();
+        let locale = locales_clone
+            .iter()
+            .find(|x| x.0 == locale)
+            .map(|x| x.1)
+            .unwrap();
+
         let timezone = timezone.as_ref().to_owned().into_inner();
         let tc = tc.as_ref().to_owned().into_inner();
         if locale.is_empty() || timezone.is_empty() || tc.is_empty() {
             fill_in_all_the_fields!(s);
         }
         let mut config = config.clone();
-        config.locale = Some(Arc::new(locale));
+        config.locale = Some(Arc::new(locale.to_string()));
         config.timezone = Some(Arc::new(timezone));
         config.tc = Some(Arc::new(tc));
-        // show_summary(s, config);
         select_swap(s, config);
     })
     .button("Back", move |s| {
@@ -1140,6 +1146,22 @@ fn search_fn<T: std::iter::IntoIterator<Item = String>>(items: T, query: &str) -
             let query = query.to_lowercase();
             item.contains(&query)
         })
+        .collect()
+}
+
+fn search_fn_locales(items: Vec<(String, String, String)>, query: &str) -> Vec<String> {
+    items
+        .into_iter()
+        .filter(|item| {
+            let (lang, locale, lang_english) = item;
+            let lang = lang.to_lowercase();
+            let locale = locale.to_lowercase();
+            let lang_english = lang_english.to_lowercase();
+            let query = query.to_lowercase();
+
+            lang.contains(&query) || locale.contains(&query) || lang_english.contains(&query)
+        })
+        .map(|x| x.0.to_string())
         .collect()
 }
 
@@ -1171,7 +1193,7 @@ fn on_submit(
     };
 }
 
-fn seatch_select_view(
+fn seatch_select_view_by_timezone(
     list: Vec<String>,
     status_text: Arc<TextContent>,
     result: Rc<RefCell<String>>,
@@ -1181,7 +1203,7 @@ fn seatch_select_view(
     let locale_clone = result.clone();
     let status_text_clone = status_text.clone();
     let on_edit = move |siv: &mut Cursive, query: &str, _cursor: usize| {
-        let matches = search_fn(list.clone(), query);
+        let matches = search_fn(list_clone.clone(), query);
         // Update the `matches` view with the filtered array of cities
         siv.call_on_name("matches", |v: &mut SelectView| {
             v.clear();
@@ -1205,7 +1227,54 @@ fn seatch_select_view(
             .child(DummyView {})
             .child(
                 SelectView::new()
-                    .with_all_str(list_clone)
+                    .with_all_str(list)
+                    .on_submit(move |s: &mut Cursive, item| {
+                        replace_item(s, item, result.clone(), status_text_clone.clone())
+                    })
+                    .with_name("matches")
+                    .scrollable(),
+            )
+            .fixed_height(10),
+        format!("Select Your {name}"),
+        None,
+    )
+}
+
+fn seatch_select_view_by_locales(
+    list: Vec<(String, String, String)>,
+    status_text: Arc<TextContent>,
+    result: Rc<RefCell<String>>,
+    name: &str,
+) -> Dialog {
+    let list_clone = list.clone();
+    let locale_clone = result.clone();
+    let status_text_clone = status_text.clone();
+    let on_edit = move |siv: &mut Cursive, query: &str, _cursor: usize| {
+        let matches = search_fn_locales(list_clone.clone(), query);
+        // Update the `matches` view with the filtered array of cities
+        siv.call_on_name("matches", |v: &mut SelectView| {
+            v.clear();
+            v.add_all_str(matches);
+        });
+    };
+
+    wrap_in_dialog(
+        LinearLayout::vertical()
+            .child(TextView::new(format!("Search {name}")))
+            .child(
+                EditView::new()
+                    // update results every time the query changes
+                    .on_edit(on_edit)
+                    // submit the focused (first) item of the matches
+                    .on_submit(move |s: &mut Cursive, c| {
+                        on_submit(s, c, locale_clone.clone(), status_text.clone())
+                    })
+                    .with_name("query"),
+            )
+            .child(DummyView {})
+            .child(
+                SelectView::new()
+                    .with_all_str(list.iter().map(|x| x.0.to_string()).collect::<Vec<_>>())
                     .on_submit(move |s: &mut Cursive, item| {
                         replace_item(s, item, result.clone(), status_text_clone.clone())
                     })
@@ -1223,15 +1292,23 @@ fn set_timezone(
     timezone_result: Rc<RefCell<String>>,
     status_text: Arc<TextContent>,
 ) -> Dialog {
-    seatch_select_view(zoneinfo, status_text, timezone_result, "timezone")
+    seatch_select_view_by_timezone(zoneinfo, status_text, timezone_result, "timezone")
 }
 
 fn set_locales(
-    locales: Vec<String>,
+    locales: Vec<(&str, &str, &str)>,
     locale_result: Rc<RefCell<String>>,
     status_text: Arc<TextContent>,
 ) -> Dialog {
-    seatch_select_view(locales, status_text, locale_result, "locale")
+    seatch_select_view_by_locales(
+        locales
+            .iter()
+            .map(|x| (x.0.to_string(), x.1.to_string(), x.2.to_string()))
+            .collect(),
+        status_text,
+        locale_result,
+        "locale",
+    )
 }
 
 fn select_swap(siv: &mut Cursive, config: InstallConfig) {

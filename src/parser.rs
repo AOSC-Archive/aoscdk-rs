@@ -1,3 +1,5 @@
+use std::str::Utf8Error;
+
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while1},
@@ -11,18 +13,8 @@ use nom::{
 use anyhow::Result;
 
 #[inline]
-fn locale_name(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    take_until(" ")(input)
-}
-
-#[inline]
 fn line_rest(input: &[u8]) -> IResult<&[u8], ()> {
     map(take_until("\n"), |_| ())(input)
-}
-
-#[inline]
-fn single_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    terminated(locale_name, line_rest)(input)
 }
 
 #[inline]
@@ -41,11 +33,6 @@ fn hr(input: &[u8]) -> IResult<&[u8], ()> {
 }
 
 #[inline]
-pub fn locale_names(input: &[u8]) -> IResult<&[u8], Vec<&str>> {
-    many0(preceded(hr, map_res(single_line, std::str::from_utf8)))(input)
-}
-
-#[inline]
 fn zone1970_single_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
     let (input, (_, _, _, _, tz, _, _)) = tuple((
         take_until("\t"),
@@ -58,6 +45,41 @@ fn zone1970_single_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
     ))(input)?;
 
     Ok((input, tz))
+}
+
+#[inline]
+fn languagelist_single_line(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8], &[u8])> {
+    let (input, (_, _, language_english, _, language, _, _, _, _, _, locale, _, _, _)) = tuple((
+        take_until(";"),
+        tag(";"),
+        take_until(";"),
+        tag(";"),
+        take_until(";"),
+        tag(";"),
+        take_until(";"),
+        tag(";"),
+        take_until(";"),
+        tag(";"),
+        take_until(";"),
+        tag(";"),
+        take_until(";"),
+        tag(";"),
+    ))(input)?;
+
+    Ok((input, (language, locale, language_english)))
+}
+
+pub fn parse_languagelist(input: &[u8]) -> IResult<&[u8], Vec<(&str, &str, &str)>> {
+    let (input, result) = many0(preceded(
+        hr,
+        map_res(languagelist_single_line, |v| {
+            Ok::<(&str, &str, &str), Utf8Error>({
+                (std::str::from_utf8(v.0)?, std::str::from_utf8(v.1)?, std::str::from_utf8(v.2)?)
+            })
+        }),
+    ))(input)?;
+
+    Ok((input, result))
 }
 
 #[inline]
@@ -96,6 +118,35 @@ pub fn list_mounts(input: &[u8]) -> IResult<&[u8], Vec<(&str, &str)>> {
         many0(preceded(hr, map_res(mounts_single_line, mounts_to_turple)))(input)?;
 
     Ok((input, result))
+}
+
+#[test]
+fn test_languagelist_single_line() {
+    let s = "zh_CN;Chinese (Simplified);中文(简体);3;CN;zh_CN.UTF-8;zh_CN:zh;";
+    let res = languagelist_single_line(s.as_bytes());
+    let res = res.unwrap();
+    let input = res.0;
+    let (lang, locale, language_english) = res.1;
+    let lang = std::str::from_utf8(lang).unwrap();
+    let locale = std::str::from_utf8(locale).unwrap();
+    let lang_english = std::str::from_utf8(language_english).unwrap();
+
+    assert_eq!(input, &[] as &[u8]);
+    assert_eq!(lang, "中文(简体)");
+    assert_eq!(locale, "zh_CN.UTF-8");
+    assert_eq!(lang_english, "Chinese (Simplified)");
+}
+
+#[test]
+fn test_parse_languagelist() {
+    let output = parse_languagelist("zh_CN;Chinese (Simplified);中文(简体);3;CN;zh_CN.UTF-8;zh_CN:zh;\nzh_TW;Chinese (Traditional);中文(繁體);3;TW;zh_TW.UTF-8;zh_TW:zh;\n".as_bytes());
+    assert_eq!(
+        output,
+        Ok((
+            &[10 as u8][..],
+            vec![("中文(简体)", "zh_CN.UTF-8", "Chinese (Simplified)"), ("中文(繁體)", "zh_TW.UTF-8", "Chinese (Traditional)")],
+        ))
+    )
 }
 
 #[test]
@@ -185,33 +236,4 @@ fn test_zone1970_single_line() {
 fn test_list_zoneinfo() {
     let buf = &b"#commit1\tcommit2\t\na\tb\tc/c\nd\te\tf/f\tg\n#commit3\nh\ti\tj/j\n"[..];
     assert_eq!(list_zoneinfo(buf).unwrap().1, vec!["c/c", "f/f", "j/j"]);
-}
-
-#[test]
-fn test_locale_name() {
-    assert_eq!(
-        locale_name(&b"zh_CN.UTF-8 "[..]),
-        Ok((&b" "[..], &b"zh_CN.UTF-8"[..]))
-    );
-}
-
-#[test]
-fn test_line_rest() {
-    assert_eq!(line_rest(&b" UTF-8\n"[..]), Ok((&b"\n"[..], ())));
-}
-
-#[test]
-fn test_single_line() {
-    assert_eq!(
-        single_line(&b"zh_CN.UTF-8 UTF-8\n"[..]),
-        Ok((&b"\n"[..], &b"zh_CN.UTF-8"[..]))
-    );
-}
-
-#[test]
-fn test_locale_names() {
-    assert_eq!(
-        locale_names(&b"#comment\n#comment2\nzh_CN.UTF-8 UTF-8\n#comment\nen_US.UTF-8 UTF-8\n"[..]),
-        Ok((&b"\n"[..], vec!["zh_CN.UTF-8", "en_US.UTF-8"]))
-    );
 }

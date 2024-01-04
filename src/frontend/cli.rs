@@ -121,8 +121,8 @@ fn list_mirror() -> Result<()> {
 
 fn list_locale() -> Result<()> {
     let locale_list = install::get_locale_list()?;
-    for i in locale_list {
-        println!("{i}");
+    for (lang, locale, _) in locale_list {
+        println!("{lang}: {locale}");
     }
 
     Ok(())
