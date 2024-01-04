@@ -24,7 +24,6 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
-use sysinfo::SystemExt;
 
 const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 pub const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs"];

@@ -13,7 +13,7 @@ use std::os::unix::prelude::{OsStrExt, PermissionsExt};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, path::Path};
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 
 use crate::disks::{fstab_entries, is_efi_booted, Partition};
 use crate::network;
@@ -66,7 +66,7 @@ pub enum ExtractFileType {
 pub fn get_locale_list() -> Result<Vec<(&'static str, &'static str, &'static str)>> {
     let res = parse_languagelist(LANGUAGE_LIST).map_err(|e| anyhow!("{e}"))?;
     let mut res = res.1;
-    res.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+    res.sort_unstable_by(|a, b| a.0.cmp(b.0));
 
     Ok(res)
 }
@@ -624,10 +624,9 @@ pub fn log_system_info() {
     info!("Deploykit version: {}", env!("CARGO_PKG_VERSION"));
     info!(
         "OS: {:?}",
-        sys.name()
-            .and_then(|x| sys.os_version().map(|y| format!("{x} {y}")))
+        System::name().and_then(|x| System::os_version().map(|y| format!("{x} {y}")))
     );
-    info!("Kernel: {:?}", sys.kernel_version());
+    info!("Kernel: {:?}", System::kernel_version());
     info!("CPU: {:?}", sys.cpus().first());
     info!(
         "Memory: {:?}, Usage: {:?}",

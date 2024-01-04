@@ -17,7 +17,6 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use indicatif::ProgressBar;
 use log::{error, info};
-use sysinfo::SystemExt;
 
 use super::{begin_install, tui_main, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE};
 

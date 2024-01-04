@@ -30,7 +30,6 @@ use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
-use sysinfo::SystemExt;
 
 use super::{
     begin_install, games::add_main_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,

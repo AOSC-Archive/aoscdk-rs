@@ -47,24 +47,27 @@ fn zone1970_single_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
     Ok((input, tz))
 }
 
+type Language<'a> = (&'a [u8], &'a [u8], &'a [u8]);
+
 #[inline]
-fn languagelist_single_line(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8], &[u8])> {
-    let (input, (_, _, language_english, _, language, _, _, _, _, _, locale, _, _, _)) = tuple((
-        take_until(";"),
-        tag(";"),
-        take_until(";"),
-        tag(";"),
-        take_until(";"),
-        tag(";"),
-        take_until(";"),
-        tag(";"),
-        take_until(";"),
-        tag(";"),
-        take_until(";"),
-        tag(";"),
-        take_until(";"),
-        tag(";"),
-    ))(input)?;
+fn languagelist_single_line(input: &[u8]) -> IResult<&[u8], Language> {
+    let (input, (_, _, language_english, _, language, _, _, _, _, _, locale, _, _, _)) =
+        tuple((
+            take_until(";"),
+            tag(";"),
+            take_until(";"),
+            tag(";"),
+            take_until(";"),
+            tag(";"),
+            take_until(";"),
+            tag(";"),
+            take_until(";"),
+            tag(";"),
+            take_until(";"),
+            tag(";"),
+            take_until(";"),
+            tag(";"),
+        ))(input)?;
 
     Ok((input, (language, locale, language_english)))
 }
@@ -74,7 +77,11 @@ pub fn parse_languagelist(input: &[u8]) -> IResult<&[u8], Vec<(&str, &str, &str)
         hr,
         map_res(languagelist_single_line, |v| {
             Ok::<(&str, &str, &str), Utf8Error>({
-                (std::str::from_utf8(v.0)?, std::str::from_utf8(v.1)?, std::str::from_utf8(v.2)?)
+                (
+                    std::str::from_utf8(v.0)?,
+                    std::str::from_utf8(v.1)?,
+                    std::str::from_utf8(v.2)?,
+                )
             })
         }),
     ))(input)?;
@@ -143,8 +150,11 @@ fn test_parse_languagelist() {
     assert_eq!(
         output,
         Ok((
-            &[10 as u8][..],
-            vec![("中文(简体)", "zh_CN.UTF-8", "Chinese (Simplified)"), ("中文(繁體)", "zh_TW.UTF-8", "Chinese (Traditional)")],
+            &[10_u8][..],
+            vec![
+                ("中文(简体)", "zh_CN.UTF-8", "Chinese (Simplified)"),
+                ("中文(繁體)", "zh_TW.UTF-8", "Chinese (Traditional)")
+            ],
         ))
     )
 }

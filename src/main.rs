@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-use sysinfo::{Pid, System, SystemExt};
+use sysinfo::{Pid, System};
 
 use clap::Parser;
 use frontend::Args;
