@@ -116,3 +116,7 @@ $ cargo test --nocapture
 // Run the following command to begin debugging with logging.
 # target/debug/deps/aoscdk_rs-3b358921c017024b --nocapture
 ```
+
+## Resource
+- languagelist from [ubiquity](https://git.launchpad.net/ubiquity/tree/d-i/source/localechooser/languagelist)
+- zone1970tab from `tzdata`
