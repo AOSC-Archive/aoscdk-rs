@@ -23,13 +23,13 @@ use cursive_table_view::{TableView, TableViewItem};
 use libparted::Device;
 use log::{error, info};
 use number_prefix::NumberPrefix;
+use std::rc::Rc;
 use std::{cell::RefCell, path::Path, sync::Arc, thread};
 use std::{env, fs, io::Read, path::PathBuf};
 use std::{
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
 };
-use std::{rc::Rc, sync::mpsc};
 
 use super::{
     begin_install, games::add_main_callback, AtomicBoolWrapper, InstallConfig, DEFAULT_EMPTY_SIZE,
@@ -106,6 +106,41 @@ macro_rules! fill_in_all_the_fields {
         show_msg($s, "Please fill in all the fields.");
         return;
     };
+}
+
+macro_rules! show_fetch_progress {
+    ($siv:ident, $m:tt, $e:tt, $f:block) => {{
+        $siv.pop_layer();
+        $siv.add_layer(
+            Dialog::around(TextView::new(format!(
+                "{}\nThis may take a few minutes ...",
+                $m
+            )))
+            .title("Installation Progress"),
+        );
+        $siv.refresh();
+        let ret = { $f };
+        if ret.is_err() {
+            show_error($siv, $e);
+            return;
+        }
+        $siv.pop_layer();
+        ret.unwrap()
+    }};
+    ($siv:ident, $m:tt, $f:block) => {{
+        $siv.pop_layer();
+        $siv.add_layer(
+            Dialog::around(TextView::new(format!(
+                "{}\nThis may take a few minutes ...",
+                $m
+            )))
+            .title("Installation Progress"),
+        );
+        // $siv.refresh();
+        let ret = { $f };
+        $siv.pop_layer();
+        ret
+    }};
 }
 
 type PartitionButton = (&'static str, Box<dyn Fn(&mut Cursive, InstallConfig)>);
@@ -185,23 +220,28 @@ fn human_size(size: u64) -> String {
     }
 }
 
-fn make_device_list(devices: Vec<Device>) -> Vec<DkDerive> {
-    let mut res = vec![];
+fn make_device_list(devices: Vec<Device>) -> (RadioGroup<DkDerive>, NamedView<LinearLayout>) {
+    let mut disk_view = LinearLayout::vertical();
+    let mut disk_list = RadioGroup::new();
 
     for i in devices {
         let path = i.path();
+        let pd = path.display();
         let p = path.to_path_buf();
         let model = i.model();
         let size = i.sector_size() * i.length();
-
-        res.push(DkDerive {
-            path: p,
-            model: model.to_string(),
-            size,
-        });
+        let radio = disk_list.button(
+            DkDerive {
+                path: p,
+                model: model.to_string(),
+                size,
+            },
+            format!("{pd} ({model}, {})", human_size(size)),
+        );
+        disk_view.add_child(radio);
     }
 
-    res
+    (disk_list, disk_view.with_name("device_list"))
 }
 
 fn make_partition_list(
@@ -463,38 +503,23 @@ fn select_mirrors_view(
 
 fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>) {
     let dev_clone = dev.clone();
+    let partitions = show_fetch_progress!(siv, "Probing disks ...", {
+        disks::list_partitions(Some(dev.path.clone()))
+    });
+
+    let (disk_list, disk_view) = make_partition_list(partitions);
+    siv.set_user_data(disk_list);
+
     let s = if env::var("DISPLAY").is_ok() {
         "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open GParted.\""
     } else {
         "Please select a partition as AOSC OS system partition. If you would like to make changes to your partitions, please select \"Open Shell.\""
     };
 
-    let cb_sink = siv.cb_sink().clone();
-    let (tx, rx) = mpsc::channel();
-    let path = dev.path.clone();
-
-    thread::spawn(move || {
-        cb_sink
-            .send(Box::new(|s| {
-                show_blocking_message(s, "Fetching partition list ...");
-            }))
-            .unwrap();
-        let disk = disks::list_partitions(Some(path));
-        tx.send(disk).unwrap();
-        cb_sink.send(Box::new(|s| {
-            s.pop_layer();
-        }))
-    });
-
-    let disk = rx.recv().unwrap();
-
-    let (disk_list, disk_view) = make_partition_list(disk);
-    siv.set_user_data(disk_list);
     let dest_view = LinearLayout::vertical()
         .child(TextView::new(s))
         .child(DummyView {})
         .child(disk_view);
-
     let config_view = LinearLayout::vertical()
         .child(Panel::new(dest_view).title("Select System Partition"))
         .child(DummyView {});
@@ -653,36 +678,9 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>)
 }
 
 fn select_disk(siv: &mut Cursive, config: InstallConfig) {
-    siv.pop_layer();
     let config_clone = config.clone();
-    let cb_sink = siv.cb_sink().clone();
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        cb_sink
-            .send(Box::new(|s| {
-                show_blocking_message(s, "Probing Disks ...");
-            }))
-            .unwrap();
-        let dev = disks::list_devices();
-        let dev = make_device_list(dev);
-        tx.send(dev).unwrap();
-        cb_sink.send(Box::new(|s| {
-            s.pop_layer();
-        }))
-    });
-
-    let res = rx.recv().unwrap();
-    let mut disk_view = LinearLayout::vertical();
-    let mut disk_list = RadioGroup::new();
-
-    for i in res {
-        let radio = disk_list.button(
-            i.clone(),
-            format!("{} ({}, {})", i.path.display(), i.model, human_size(i.size)),
-        );
-        disk_view.add_child(radio);
-    }
-
+    let disks = show_fetch_progress!(siv, "Probing disks ...", { disks::list_devices() });
+    let (disk_list, disk_view) = make_device_list(disks);
     siv.set_user_data(disk_list);
 
     let dest_view = LinearLayout::vertical()
@@ -794,23 +792,9 @@ fn auto_partition_view(
     s.add_layer(
         wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
             .button("Yes, Please Partition My Drive!", move |s| {
-                let cb_sink = s.cb_sink().clone();
-                let (tx, rx) = mpsc::channel();
-                let device_path = device_path.clone();
-                thread::spawn(move || {
-                    cb_sink
-                        .send(Box::new(|s| {
-                            show_blocking_message(s, "Creating Partitions ...");
-                        }))
-                        .unwrap();
-                    let part = auto_create_partitions(&device_path);
-                    tx.send(part).unwrap();
-                    cb_sink.send(Box::new(|s| {
-                        s.pop_layer();
-                    }))
+                let part = show_fetch_progress!(s, "Creating partitions ...", {
+                    auto_create_partitions(&device_path)
                 });
-
-                let part = rx.recv().unwrap();
                 match part {
                     Ok(p) => {
                         let mut config = config_clone.clone();
@@ -1648,7 +1632,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
     let mut status_message = TextView::new("");
     let status_text = Arc::new(status_message.get_shared_content());
 
-    let (user_interrup_tx, user_interrup_rx) = mpsc::channel();
+    let (user_interrup_tx, user_interrup_rx) = std::sync::mpsc::channel();
     siv.add_layer(wrap_in_dialog(
         LinearLayout::vertical()
             .child(TextView::new(
@@ -1672,7 +1656,7 @@ fn start_install(siv: &mut Cursive, config: InstallConfig) {
             }))
             .unwrap()));
     }));
-    let (tx, rx) = mpsc::channel();
+    let (tx, rx) = std::sync::mpsc::channel();
     siv.set_autorefresh(true);
     let cb_sink = siv.cb_sink().clone();
     let cb_sink_clone = siv.cb_sink().clone();
