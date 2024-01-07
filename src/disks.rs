@@ -843,8 +843,9 @@ pub fn commit(disk: &mut Disk) -> io::Result<()> {
 
 #[test]
 fn test_fs_recommendation() {
-    assert_eq!(get_recommended_fs_type("btrfs"), "btrfs");
+    assert_eq!(get_recommended_fs_type("btrfs"), "ext4");
     assert_eq!(get_recommended_fs_type("ext2"), "ext4");
+    assert_eq!(get_recommended_fs_type("xfs"), "xfs");
 }
 
 #[test]
