@@ -110,7 +110,7 @@ checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
 
 [[package]]
 name = "aoscdk-rs"
-version = "1.0.0-beta2"
+version = "1.0.0-beta3"
 dependencies = [
  "anyhow",
  "clap",
