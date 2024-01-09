@@ -1004,11 +1004,9 @@ fn select_user_password(config: InstallConfig) -> Dialog {
     })
     .button("Exit", |s| s.quit());
 
-    let r = user_password_dialog
+    user_password_dialog
         .focus_view(&Selector::Name("full_name"))
         .ok();
-
-    info!("{}", r.is_some());
 
     user_password_dialog
 }
