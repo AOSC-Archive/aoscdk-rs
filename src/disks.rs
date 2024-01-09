@@ -150,51 +150,43 @@ pub fn list_devices() -> Vec<Device<'static>> {
     libparted::Device::devices(true)
         .into_iter()
         .filter(|dev| {
-            let is_sata = Regex::new(r"^([^0-9]+)$")
-                .ok()
-                .and_then(|x| {
-                    dev.path()
-                        .display()
-                        .to_string()
-                        .split('/')
-                        .last()
-                        .and_then(|dev| x.is_match(dev).ok())
-                })
-                .unwrap_or(false);
-
+            let is_sata = device_is_sata(dev.path());
             info!("{} is sata: {is_sata}", dev.path().display());
 
-            let is_sdcard = Regex::new(r"^(mmcblk[0-9]+)$")
-                .ok()
-                .and_then(|x| {
-                    dev.path()
-                        .display()
-                        .to_string()
-                        .split('/')
-                        .last()
-                        .and_then(|dev| x.is_match(dev).ok())
-                })
-                .unwrap_or(false);
-
+            let is_sdcard = device_is_sdcard(dev.path());
             info!("{} is sdcard: {is_sdcard}", dev.path().display());
 
-            let is_nvme = Regex::new(r"^(nvme[0-9]+n[0-9]+)$")
-                .ok()
-                .and_then(|x| {
-                    dev.path()
-                        .display()
-                        .to_string()
-                        .split('/')
-                        .last()
-                        .and_then(|dev| x.is_match(dev).ok())
-                })
-                .unwrap_or(false);
-
+            let is_nvme = device_is_nvme(dev.path());
             info!("{} is nvme: {is_nvme}", dev.path().display());
 
             is_sata || is_sdcard || is_nvme
         })
         .collect()
+}
+
+fn device_is_sata(path: &Path) -> bool {
+    device_is_match(path, r"^([^0-9]+)$")
+}
+
+fn device_is_sdcard(path: &Path) -> bool {
+    device_is_match(path, r"^(mmcblk[0-9]+)$")
+}
+
+fn device_is_nvme(path: &Path) -> bool {
+    device_is_match(path, r"^(nvme[0-9]+n[0-9]+)$")
+}
+
+fn device_is_match(path: &Path, pattern: &str) -> bool {
+    Regex::new(pattern)
+        .ok()
+        .and_then(|x| {
+            path.display()
+                .to_string()
+                .split('/')
+                .last()
+                .and_then(|dev| x.is_match(dev).ok())
+        })
+        .unwrap_or(false)
 }
 
 pub fn list_partitions(device_path: Option<PathBuf>) -> Vec<Partition> {
@@ -902,4 +894,15 @@ fn test_recommend_swap_size() {
 
     let recommand_size = get_recommend_swap_size((0.5 * 1024.0 * 1024.0 * 1024.0) as u64).unwrap();
     assert_eq!(recommand_size, 1073741824.0);
+}
+
+#[test]
+fn test_device_is_match() {
+    assert!(device_is_nvme(Path::new("/dev/nvme0n1")));
+    assert!(device_is_sata(Path::new("/dev/sda")));
+    assert!(device_is_sdcard(Path::new("/dev/mmcblk0")));
+
+    assert!(!device_is_nvme(Path::new("/dev/sr0")));
+    assert!(!device_is_sata(Path::new("/dev/sr0")));
+    assert!(!device_is_sdcard(Path::new("/dev/sr0")));
 }
