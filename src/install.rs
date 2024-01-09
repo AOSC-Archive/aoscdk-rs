@@ -68,7 +68,12 @@ pub fn get_locale_list() -> Result<Vec<(&'static str, &'static str, &'static str
     let mut res = res.1;
     res.sort_unstable_by(|a, b| a.0.cmp(b.0));
 
-    for i in ["English (United States)", "English (United Kingdom)", "Chinese (Traditional)", "Chinese (Simplified)"] {
+    for i in [
+        "English (United States)",
+        "English (United Kingdom)",
+        "Chinese (Traditional)",
+        "Chinese (Simplified)",
+    ] {
         let pos = res.iter().position(|x| x.2 == i).unwrap();
         let entry = res.remove(pos);
         res.insert(0, entry);
