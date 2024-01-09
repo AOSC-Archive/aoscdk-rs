@@ -148,7 +148,10 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
 pub fn list_devices() -> Vec<Device<'static>> {
     libparted::Device::devices(true)
         .into_iter()
-        .filter(|x| !x.read_only())
+        .filter(|x| {
+            info!("{}, is_read_only: {}", x.path().display(), x.read_only());
+            !x.read_only()
+        })
         .collect()
 }
 
