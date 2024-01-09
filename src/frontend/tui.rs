@@ -1057,7 +1057,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
 
     let now_locale = read_locale().unwrap_or_else(|| "C.UTF-8".to_string());
-    let now_language = find_language_by_locale(&now_locale).unwrap_or_else(|| "C.UTF-8");
+    let now_language = find_language_by_locale(&now_locale).unwrap_or("C.UTF-8");
 
     let locale = Rc::new(RefCell::new(String::from(now_language)));
     let locale_copy = Rc::clone(&locale);
@@ -1125,7 +1125,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     .button("Continue", move |s| {
         // language to locale
         let locale = locale.as_ref().to_owned().into_inner();
-        let locale = find_locale_by_language(&locale).unwrap_or_else(|| "C.UTF-8");
+        let locale = find_locale_by_language(&locale).unwrap_or("C.UTF-8");
 
         let mut timezone = timezone.as_ref().to_owned().into_inner();
 
