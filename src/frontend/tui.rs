@@ -345,6 +345,7 @@ fn select_mirrors_view(
             let mirror = repo_list.selection();
             config.mirror = Some(Arc::new(Rc::as_ref(&mirror).clone()));
             if config.partition.is_some() {
+                s.pop_layer();
                 s.add_layer(select_user_password(config));
             } else {
                 select_disk(s, config);
