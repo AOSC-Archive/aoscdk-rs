@@ -42,6 +42,7 @@ unsquashfs-wrapper = "0.1"
 libc = "0.2"
 once_cell = "1.19"
 send_wrapper = "0.6.0"
+fancy-regex = "0.13"
 
 [patch.crates-io]
 loopdev = { git = "https://github.com/eatradish/loopdev", rev = "0dde43a15320cf84148e57fed8aec6683755c04f" }

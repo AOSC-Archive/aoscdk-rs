@@ -5,6 +5,7 @@ use disk_types::BlockDeviceExt;
 use disk_types::FileSystem;
 use disk_types::PartitionExt;
 use disk_types::PartitionType;
+use fancy_regex::Regex;
 use fstab_generate::BlockInfo;
 use libparted::Device;
 use libparted::Disk;
@@ -148,9 +149,50 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
 pub fn list_devices() -> Vec<Device<'static>> {
     libparted::Device::devices(true)
         .into_iter()
-        .filter(|x| {
-            info!("{}, is_read_only: {}", x.path().display(), x.read_only());
-            !x.read_only()
+        .filter(|dev| {
+            let is_sata = Regex::new(r"^([^0-9]+)$")
+                .ok()
+                .and_then(|x| {
+                    dev.path()
+                        .display()
+                        .to_string()
+                        .split('/')
+                        .last()
+                        .and_then(|dev| x.is_match(dev).ok())
+                })
+                .unwrap_or(false);
+
+            info!("{} is sata: {is_sata}", dev.path().display());
+
+            let is_sdcard = Regex::new(r"^(mmcblk[0-9]+)$")
+                .ok()
+                .and_then(|x| {
+                    dev.path()
+                        .display()
+                        .to_string()
+                        .split('/')
+                        .last()
+                        .and_then(|dev| x.is_match(dev).ok())
+                })
+                .unwrap_or(false);
+
+            info!("{} is sdcard: {is_sdcard}", dev.path().display());
+
+            let is_nvme = Regex::new(r"^(nvme[0-9]+n[0-9]+)$")
+                .ok()
+                .and_then(|x| {
+                    dev.path()
+                        .display()
+                        .to_string()
+                        .split('/')
+                        .last()
+                        .and_then(|dev| x.is_match(dev).ok())
+                })
+                .unwrap_or(false);
+
+            info!("{} is nvme: {is_nvme}", dev.path().display());
+
+            is_sata || is_sdcard || is_nvme
         })
         .collect()
 }
