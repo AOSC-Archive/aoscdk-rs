@@ -77,12 +77,41 @@ pub fn get_locale_list() -> Result<Vec<(&'static str, &'static str, &'static str
     Ok(res)
 }
 
+pub fn read_locale() -> Option<String> {
+    let f = std::fs::read_to_string("/etc/locale.conf").ok()?;
+    let lang = f.trim().strip_prefix("LANG=")?;
+
+    Some(lang.to_string())
+}
+
 fn read_system_zoneinfo_list() -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(SYSTEM_ZONEINFO1970_PATH)?;
     let mut data = Vec::with_capacity(8800);
     f.read_to_end(&mut data)?;
 
     Ok(data)
+}
+
+pub fn find_language_by_locale(locale: &str) -> Option<&str> {
+    get_locale_list()
+        .ok()?
+        .into_iter()
+        .find(|x| x.1 == locale)
+        .map(|x| x.0)
+}
+
+#[test]
+fn test() {
+    let lang = find_language_by_locale("zh_CN.UTF-8");
+    dbg!(lang);
+}
+
+pub fn find_locale_by_language(language: &str) -> Option<&str> {
+    get_locale_list()
+        .ok()?
+        .into_iter()
+        .find(|x| x.0 == language)
+        .map(|x| x.1)
 }
 
 /// Get the list of available timezone

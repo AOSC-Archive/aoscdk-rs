@@ -3,7 +3,7 @@ use crate::{
         self, auto_create_partitions, device_is_empty, is_efi_booted, mbr_is_primary_partition,
         DkDerive, ALLOWED_FS_TYPE,
     },
-    install::{self, umount_all},
+    install::{self, find_language_by_locale, find_locale_by_language, read_locale, umount_all},
     network::{self, Mirror, VariantEntry},
     LOG_FILE,
 };
@@ -1055,8 +1055,11 @@ fn select_hostname(siv: &mut Cursive, config: InstallConfig) {
 
 fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
-    // locale default is C.UTF-8
-    let locale = Rc::new(RefCell::new(String::from("C.UTF-8")));
+
+    let now_locale = read_locale().unwrap_or_else(|| "C.UTF-8".to_string());
+    let now_language = find_language_by_locale(&now_locale).unwrap_or_else(|| "C.UTF-8");
+
+    let locale = Rc::new(RefCell::new(String::from(now_language)));
     let locale_copy = Rc::clone(&locale);
     let timezone = Rc::new(RefCell::new(String::from("UTC")));
     let timezone_copy = Rc::clone(&timezone);
@@ -1064,11 +1067,10 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     let tc = Rc::new(RefCell::new(String::from("UTC")));
     let tc_copy = Rc::clone(&tc);
     let locales = Arc::new(install::get_locale_list().unwrap());
-    let locales_clone = locales.clone();
     let timezone_textview = TextView::new(ENTER_TIMEZONE_TEXT);
     let mut timezone_selected_status = TextView::new("UTC");
     let timezone_status_text = Arc::new(timezone_selected_status.get_shared_content());
-    let mut locale_selected_status = TextView::new("C.UTF-8");
+    let mut locale_selected_status = TextView::new(now_language);
     let locale_status_text = Arc::new(locale_selected_status.get_shared_content());
 
     let timezone_view = ListView::new()
@@ -1123,16 +1125,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     .button("Continue", move |s| {
         // language to locale
         let locale = locale.as_ref().to_owned().into_inner();
-        let locale = if locale == "C.UTF-8" {
-            locale
-        } else {
-            locales_clone
-                .iter()
-                .find(|x| x.0 == locale)
-                .map(|x| x.1)
-                .unwrap()
-                .to_string()
-        };
+        let locale = find_locale_by_language(&locale).unwrap_or_else(|| "C.UTF-8");
 
         let mut timezone = timezone.as_ref().to_owned().into_inner();
 
