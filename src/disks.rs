@@ -146,7 +146,10 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
 }
 
 pub fn list_devices() -> Vec<Device<'static>> {
-    libparted::Device::devices(true).collect()
+    libparted::Device::devices(true)
+        .into_iter()
+        .filter(|x| !x.read_only())
+        .collect()
 }
 
 pub fn list_partitions(device_path: Option<PathBuf>) -> Vec<Partition> {
@@ -364,6 +367,9 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
 #[cfg(debug_assertions)]
 pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let mut device = libparted::Device::new(dev)?;
+    // let t: DeviceType = device.
+    // if ["PED_DEVICE_LOOP", "PED_DEVICE_NVME", "PED_DEVICE_SDMMC", "PED_DEVICE_IDE", ]
+
     let device = &mut device as *mut Device;
     let device = unsafe { &mut (*device) };
     let efi_size = 512 * 1024 * 1024;
@@ -372,7 +378,6 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
 
     let length = device.length();
     let sector_size = device.sector_size();
-
     let size = length * sector_size;
 
     if get_partition_table_type(Some(dev))
@@ -574,7 +579,6 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
             label: None,
         };
 
-        info!("10");
         create_partition(&mut device, efi)?;
     }
 
@@ -602,9 +606,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         flags,
         label: None,
     };
-    info!("11");
     create_partition(&mut device, system)?;
-    info!("12");
     let disk = libparted::Disk::new(&mut device)?;
     let mut last = None;
     for p in disk.parts() {
