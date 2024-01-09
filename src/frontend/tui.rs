@@ -811,9 +811,8 @@ fn auto_partition_view(
                     },
                     move |res| {
                         let mut config = config_clone.clone();
-                        let config_clone = config.clone();
                         config.partition = Some(Arc::new(res));
-                        select_user_password(config_clone)
+                        select_user_password(config)
                     },
                 );
 
@@ -1139,6 +1138,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
         if locale.is_empty() || timezone.is_empty() || tc.is_empty() {
             fill_in_all_the_fields!(s);
         }
+    
         let mut config = config.clone();
         config.locale = Some(Arc::new(locale.to_string()));
         config.timezone = Some(Arc::new(timezone));
