@@ -148,7 +148,6 @@ pub fn find_esp_partition(device_path: &Path) -> Result<Partition> {
 
 pub fn list_devices() -> Vec<Device<'static>> {
     libparted::Device::devices(true)
-        .into_iter()
         .filter(|dev| {
             let is_sata = device_is_sata(dev.path());
             info!("{} is sata: {is_sata}", dev.path().display());
