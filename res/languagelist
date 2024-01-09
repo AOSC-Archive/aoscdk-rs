@@ -29,8 +29,7 @@ cs;Czech;Čeština;2;CZ;cs_CZ.UTF-8;;console-setup
 da;Danish;Dansk;1;DK;da_DK.UTF-8;;console-setup
 nl;Dutch;Nederlands;1;NL;nl_NL.UTF-8;;console-setup
 dz;Dzongkha;རྫོང་ཁ།;4;BT;dz_BT;;
-en_US;English (United States);English;0;US;en_US.UTF-8;;console-setup
-en_UK;English (United Kingdom);English;0;UK;en_UK.UTF-8;;console-setup
+en;English;English;0;US;en_US.UTF-8;;console-setup
 # The Esperanto locale is eo.UTF-8
 # so no country on purpose. The default country is Antarctica because...
 # ...why not..:-)
