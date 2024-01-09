@@ -994,6 +994,7 @@ fn select_user_password(config: InstallConfig) -> Dialog {
         } else {
             None
         };
+        s.pop_layer();
         select_hostname(s, config);
     })
     .button("Back", move |s| {
@@ -1122,11 +1123,16 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     .button("Continue", move |s| {
         // language to locale
         let locale = locale.as_ref().to_owned().into_inner();
-        let locale = locales_clone
-            .iter()
-            .find(|x| x.0 == locale)
-            .map(|x| x.1)
-            .unwrap();
+        let locale = if locale == "C.UTF-8" {
+            locale
+        } else {
+            locales_clone
+                .iter()
+                .find(|x| x.0 == locale)
+                .map(|x| x.1)
+                .unwrap()
+                .to_string()
+        };
 
         let mut timezone = timezone.as_ref().to_owned().into_inner();
 
