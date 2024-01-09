@@ -774,6 +774,7 @@ If you continue, the contents of your hard disk will be erased. Please make sure
             .button("Continue", move |s| {
                 let device_path = device_path_1.clone();
                 let config_clone = config.clone();
+                s.pop_layer();
                 auto_partition_view(s, config_clone, &select_device, &desc, device_path);
             })
             .button(btn_label, move |s| {
