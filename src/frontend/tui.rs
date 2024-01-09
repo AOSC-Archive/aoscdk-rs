@@ -10,6 +10,7 @@ use crate::{
 use anyhow::Result;
 use cursive::{
     event::Event,
+    view::Selector,
     views::{
         Dialog, DummyView, EditView, LinearLayout, ListView, NamedView, Panel, ProgressBar,
         RadioGroup, ResizedView, ScrollView, SelectView, TextContent, TextView,
@@ -945,7 +946,7 @@ fn select_user_password(config: InstallConfig) -> Dialog {
     }
 
     let config_clone = config.clone();
-    let user_password_dialog = wrap_in_dialog(
+    let mut user_password_dialog = wrap_in_dialog(
         LinearLayout::vertical()
             .child(user_password_textview)
             .child(DummyView {})
@@ -1002,6 +1003,12 @@ fn select_user_password(config: InstallConfig) -> Dialog {
         select_disk(s, config_clone.clone());
     })
     .button("Exit", |s| s.quit());
+
+    let r = user_password_dialog
+        .focus_view(&Selector::Name("full_name"))
+        .ok();
+
+    info!("{}", r.is_some());
 
     user_password_dialog
 }
