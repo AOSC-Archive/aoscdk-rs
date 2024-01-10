@@ -298,6 +298,8 @@ pub fn mbr_is_primary_partition(
 
             let part_type = part.type_get_name();
 
+            info!("part_type: {}", part_type);
+
             if part_type != "primary" {
                 return Err(anyhow!(MBR_NON_PRIMARY_PART_ERROR));
             } else {
