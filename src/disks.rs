@@ -33,6 +33,7 @@ const DEFAULT_FS_TYPE: &str = "ext4";
 const MBR_NON_PRIMARY_PART_ERROR: &str = r#"Installer has detected that you are attempting to install AOSC OS on an MBR extended partition. This is not allowed as it may cause startup issues.
 
 Please select a primary partition instead."#;
+const SUPPORT_PARTITION_TYPE: &[&str] = &["primary", "logical"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Partition {
@@ -239,12 +240,14 @@ fn loop_device_get_parts(
                 None
             };
 
-            partitions.push(Partition {
-                path: part.get_path().map(|path| path.to_owned()),
-                parent_path: Some(device_path.clone()),
-                size: sector_size * part_length,
-                fs_type,
-            });
+            if SUPPORT_PARTITION_TYPE.contains(&part.type_get_name()) {
+                partitions.push(Partition {
+                    path: part.get_path().map(|path| path.to_owned()),
+                    parent_path: Some(device_path.clone()),
+                    size: sector_size * part_length,
+                    fs_type,
+                });
+            }
         }
     }
 }
