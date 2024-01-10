@@ -526,7 +526,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     }
 
     if let Ok(disk) = libparted::Disk::new(&mut *device) {
-        info!("Disk already exists, open disk and reemove existing partitions");
+        info!("Disk already exists, open disk and remove existing partitions");
         let mut nums = vec![];
 
         // 先删除主分区
