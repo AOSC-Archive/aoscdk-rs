@@ -291,13 +291,12 @@ pub fn mbr_is_primary_partition(
 
     for mut device in libparted::Device::devices(true) {
         if let Ok(disk) = libparted::Disk::new(&mut device) {
-            let parts = disk.parts().collect::<Vec<_>>();
-            let index = parts
-                .iter()
-                .position(|x| x.get_path() == part_path)
+            let mut parts = disk.parts();
+            let part = parts
+                .find(|x| x.get_path() == part_path)
                 .ok_or_else(|| anyhow!("Can not find select partition!"))?;
 
-            let part_type = parts[index].type_get_name();
+            let part_type = part.type_get_name();
 
             if part_type != "primary" {
                 return Err(anyhow!(MBR_NON_PRIMARY_PART_ERROR));
