@@ -560,9 +560,27 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         info!("Disk already exists, open disk and reemove existing partitions");
         let mut nums = vec![];
 
+        // 先删除主分区
         let primarys = disk.parts().filter(|x| x.type_get_name() == "primary");
 
         for i in primarys {
+            let num = i.num();
+            if num > 0 {
+                nums.push(num as u32);
+            }
+        }
+
+        remove_part_by_nums(dev, nums)?;
+
+        let mut device = libparted::Device::new(dev)?;
+        let device = &mut device as *mut Device;
+        let device = unsafe { &mut (*device) };
+        let disk = libparted::Disk::new(&mut *device)?;
+        // 再删除逻辑分区
+        let logical = disk.parts().filter(|x| x.type_get_name() == "logical");
+
+        let mut nums = vec![];
+        for i in logical {
             let num = i.num();
             if num > 0 {
                 nums.push(num as u32);
@@ -584,6 +602,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
             }
         }
 
+        // 再删除其他分区
         remove_part_by_nums(dev, nums)?;
     } else {
         info!("Disk does not exists, creating new ...");
