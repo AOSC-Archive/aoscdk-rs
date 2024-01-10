@@ -715,6 +715,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     Ok(p)
 }
 
+#[cfg(not(debug_assertions))]
 fn remove_part_by_nums(dev: &Path, nums: Vec<u32>) -> Result<()> {
     let mut device = libparted::Device::new(dev)?;
     let device = &mut device as *mut Device;
