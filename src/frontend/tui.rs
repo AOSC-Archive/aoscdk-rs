@@ -156,7 +156,7 @@ fn partition_button(device_path: PathBuf) -> PartitionButton {
                             let partitions =
                                 disks::list_partitions(Some(device_path.to_path_buf()));
                             let (disk_list, disk_view) = make_partition_list(partitions);
-                            s.set_user_data(disk_list);
+                            s.set_user_data(SendWrapper::new(disk_list));
                             s.call_on_name("part_list", |view: &mut NamedView<LinearLayout>| {
                                 *view = disk_view;
                             });
