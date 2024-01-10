@@ -13,7 +13,6 @@ reqwest = { version = "0.11", features = ["json", "blocking"] }
 libparted = "0.1"
 cursive = { version = "0.20", features = ["crossterm-backend"], default-features = false }
 cursive_table_view = "0.14"
-lazy_static = "1.4"
 number_prefix = "0.4"
 xz2 = "0.1"
 tar = "0.4"
@@ -21,7 +20,7 @@ sha2 = "0.10"
 hex = "0.4"
 tempfile = "3.2"
 cursive-async-view = "0.6"
-tokio = { version = "1.15", features = ["rt", "rt-multi-thread", "macros"]}
+tokio = { version = "1.15", features = ["rt-multi-thread"] }
 futures = "0.3"
 rand = "0.8"
 ctrlc = { version = "3.2", features = ["termination"] }
