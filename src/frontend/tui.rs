@@ -1,7 +1,6 @@
 use crate::{
     disks::{
-        self, auto_create_partitions, device_is_empty, is_efi_booted,
-        DkDerive, ALLOWED_FS_TYPE,
+        self, auto_create_partitions, device_is_empty, is_efi_booted, DkDerive, ALLOWED_FS_TYPE,
     },
     install::{self, find_language_by_locale, find_locale_by_language, read_locale, umount_all},
     network::{self, Mirror, VariantEntry},
