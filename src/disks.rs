@@ -560,6 +560,23 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         info!("Disk already exists, open disk and reemove existing partitions");
         let mut nums = vec![];
 
+        let primarys = disk.parts().filter(|x| x.type_get_name() == "primary");
+
+        for i in primarys {
+            let num = i.num();
+            if num > 0 {
+                nums.push(num as u32);
+            }
+        }
+
+        remove_part_by_nums(dev, nums)?;
+
+        let mut device = libparted::Device::new(dev)?;
+        let device = &mut device as *mut Device;
+        let device = unsafe { &mut (*device) };
+        let disk = libparted::Disk::new(&mut *device)?;
+
+        let mut nums = vec![];
         for i in disk.parts() {
             let num = i.num();
             if num > 0 {
@@ -567,16 +584,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
             }
         }
 
-        let mut device = libparted::Device::new(dev)?;
-        let device = &mut device as *mut Device;
-        let device = unsafe { &mut (*device) };
-        let mut disk = libparted::Disk::new(&mut *device)?;
-
-        for i in nums {
-            disk.remove_partition_by_number(i)?;
-        }
-
-        commit(&mut disk)?;
+        remove_part_by_nums(dev, nums)?;
     } else {
         info!("Disk does not exists, creating new ...");
     }
@@ -685,6 +693,21 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     format_partition(&p)?;
 
     Ok(p)
+}
+
+fn remove_part_by_nums(dev: &Path, nums: Vec<u32>) -> Result<()> {
+    let mut device = libparted::Device::new(dev)?;
+    let device = &mut device as *mut Device;
+    let device = unsafe { &mut (*device) };
+    let mut disk = libparted::Disk::new(&mut *device)?;
+
+    for i in nums {
+        disk.remove_partition_by_number(i)?;
+    }
+
+    commit(&mut disk)?;
+
+    Ok(())
 }
 
 /// Defines a new partition to be created on the file system.
