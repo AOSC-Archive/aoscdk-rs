@@ -30,9 +30,6 @@ const EFI_DETECT_PATH: &str = "/sys/firmware/efi";
 pub const ALLOWED_FS_TYPE: &[&str] = &["ext4", "xfs"];
 const DEFAULT_FS_TYPE: &str = "ext4";
 
-const MBR_NON_PRIMARY_PART_ERROR: &str = r#"Installer has detected that you are attempting to install AOSC OS on an MBR extended partition. This is not allowed as it may cause startup issues.
-
-Please select a primary partition instead."#;
 const SUPPORT_PARTITION_TYPE: &[&str] = &["primary", "logical"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -280,38 +277,6 @@ fn get_partition_table_type(device_path: Option<&Path>) -> Result<String> {
     Err(anyhow!(
         "Installer does support the specified partition map for your device."
     ))
-}
-
-pub fn mbr_is_primary_partition(
-    device_path: Option<&Path>,
-    part_path: Option<&Path>,
-) -> Result<()> {
-    let partition_t = get_partition_table_type(device_path)?;
-
-    if partition_t != "msdos" {
-        return Ok(());
-    }
-
-    for mut device in libparted::Device::devices(true) {
-        if let Ok(disk) = libparted::Disk::new(&mut device) {
-            let mut parts = disk.parts();
-            let part = parts
-                .find(|x| x.get_path() == part_path)
-                .ok_or_else(|| anyhow!("Can not find select partition!"))?;
-
-            let part_type = part.type_get_name();
-
-            info!("part_type: {}", part_type);
-
-            if part_type != "primary" {
-                return Err(anyhow!(MBR_NON_PRIMARY_PART_ERROR));
-            } else {
-                return Ok(());
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg(not(target_arch = "powerpc64"))]

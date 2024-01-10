@@ -1,6 +1,6 @@
 use crate::{
     disks::{
-        self, auto_create_partitions, device_is_empty, is_efi_booted, mbr_is_primary_partition,
+        self, auto_create_partitions, device_is_empty, is_efi_booted,
         DkDerive, ALLOWED_FS_TYPE,
     },
     install::{self, find_language_by_locale, find_locale_by_language, read_locale, umount_all},
@@ -546,10 +546,6 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>)
                 let config_copy_2 = config.clone();
                 let fs_type = current_partition.fs_type.clone();
                 let current_partition_clone = current_partition.clone();
-                if let Err(e) = mbr_is_primary_partition(current_partition.parent_path.as_deref(), current_partition.path.as_deref()) {
-                    show_msg(s, &e.to_string());
-                    return;
-                }
 
                 if let Err(e) = disks::right_combine(current_partition.parent_path.as_deref()) {
                     let view = wrap_in_dialog(LinearLayout::vertical()
