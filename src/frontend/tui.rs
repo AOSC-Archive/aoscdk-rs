@@ -1063,7 +1063,7 @@ fn select_timezone(siv: &mut Cursive, config: InstallConfig) {
     siv.pop_layer();
 
     let now_locale = read_locale().unwrap_or_else(|| "C.UTF-8".to_string());
-    let now_language = find_language_by_locale(&now_locale).unwrap_or("C.UTF-8");
+    let now_language = find_language_by_locale(&now_locale).unwrap_or("No localization (UTF-8)");
 
     let locale = Rc::new(RefCell::new(String::from(now_language)));
     let locale_copy = Rc::clone(&locale);
