@@ -435,7 +435,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     let device = &mut device as *mut Device;
     let device = unsafe { &mut (*device) };
 
-    let start_sector =  1024 * 1024 / sector_size;
+    let start_sector = 1024 * 1024 / sector_size;
 
     let system_end_sector = if is_efi {
         length - efi_size / sector_size + start_sector
@@ -457,7 +457,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         file_system: Some(FileSystem::Ext4),
         kind: PartitionType::Primary,
         flags,
-        label: None, 
+        label: None,
     };
 
     create_partition(device, system)?;
@@ -498,7 +498,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         let device = unsafe { &mut (*device) };
 
         create_partition(device, efi)?;
- 
+
         let p = Partition {
             path: Some(PathBuf::from("/dev/loop30p2")),
             parent_path: Some(dev.to_path_buf()),
@@ -608,7 +608,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     let mut device = unsafe { &mut (*device) };
 
     let start_sector = 1024 * 1024 / sector_size;
-    let end_sector =  start_sector + (512 * 1024 * 1024 / device.sector_size());
+    let end_sector = start_sector + (512 * 1024 * 1024 / device.sector_size());
 
     if is_efi {
         let efi = &PartitionCreate {
@@ -628,11 +628,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         create_partition(&mut device, efi)?;
     }
 
-    let system_start_sector = if is_efi {
-        end_sector
-    } else {
-        start_sector
-    };
+    let system_start_sector = if is_efi { end_sector } else { start_sector };
 
     let mut flags = vec![];
 
