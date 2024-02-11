@@ -242,7 +242,6 @@ pub fn genfstab_to_file(partition: &Partition, root_path: &Path, mount_path: &Pa
     })?;
     let s = fstab_entries(partition.path.as_ref(), fs_type, Some(mount_path))?;
     let mut f = std::fs::OpenOptions::new()
-        
         .append(true)
         .open(root_path.join("etc/fstab"))?;
     f.write_all(s.as_bytes())?;
