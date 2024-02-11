@@ -361,7 +361,9 @@ pub fn is_enable_hibernation(custom_size: f64) -> Result<bool> {
     let no_hibernation_size = recommand_size - mem as f64;
     if custom_size >= no_hibernation_size && custom_size < recommand_size {
         return Ok(false);
-    } else if custom_size >= recommand_size {
+    }
+
+    if custom_size >= recommand_size {
         return Ok(true);
     }
 
@@ -640,7 +642,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     // Ref: https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries_(LBA_2%E2%80%9333)
     let last_usable_sector = device.length() - 34;
-    let mmod = (last_usable_sector - start_sector) % (1024 * 1024 / sector_size);
+    let mmod = (last_usable_sector - system_start_sector) % (1024 * 1024 / sector_size);
 
     let system = &PartitionCreate {
         path: dev.to_path_buf(),
