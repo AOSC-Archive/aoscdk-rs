@@ -521,8 +521,8 @@ fn select_partition(siv: &mut Cursive, config: InstallConfig, dev: Rc<DkDerive>)
                     // prevent developer/tester accidentally delete their partitions
                     Rc::new(disks::Partition {
                         fs_type: None,
-                        path: Some(PathBuf::from("/dev/loop20p1")),
-                        parent_path: Some(PathBuf::from("/dev/loop20")),
+                        path: Some(PathBuf::from("/dev/loop30p1")),
+                        parent_path: Some(PathBuf::from("/dev/loop30")),
                         size: required_size,
                     })
                 } else {
@@ -707,7 +707,7 @@ fn select_disk(siv: &mut Cursive, config: InstallConfig) {
                     let d = d.clone().take();
                     let device = if cfg!(debug_assertions) {
                         Rc::new(DkDerive {
-                            path: PathBuf::from("/dev/loop20"),
+                            path: PathBuf::from("/dev/loop30"),
                             model: "Test".to_string(),
                             size: 50 * 1024_u64.pow(3),
                         })

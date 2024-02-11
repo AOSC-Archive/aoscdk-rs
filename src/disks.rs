@@ -378,7 +378,6 @@ pub fn auto_create_partitions(dev: &Path) -> Result<Partition> {
     let device = &mut device as *mut Device;
     let device = unsafe { &mut (*device) };
     let efi_size = 512 * 1024 * 1024;
-    let partition_table_end_size = 1024 * 1024;
     let is_efi = is_efi_booted();
 
     let length = device.length();
@@ -436,10 +435,12 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     let device = &mut device as *mut Device;
     let device = unsafe { &mut (*device) };
 
+    let start_sector =  1024 * 1024 / sector_size;
+
     let system_end_sector = if is_efi {
-        length - (efi_size + partition_table_end_size) / sector_size
+        length - efi_size / sector_size + start_sector
     } else {
-        length - partition_table_end_size / sector_size
+        length + start_sector
     };
 
     let mut flags = vec![];
@@ -450,32 +451,38 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     let system = &PartitionCreate {
         path: dev.to_path_buf(),
-        start_sector: 2048,
+        start_sector,
         end_sector: system_end_sector,
         format: true,
         file_system: Some(FileSystem::Ext4),
         kind: PartitionType::Primary,
         flags,
-        label: None,
+        label: None, 
     };
 
     create_partition(device, system)?;
 
     let p = Partition {
-        path: Some(PathBuf::from("/dev/loop20p1")),
+        path: Some(PathBuf::from("/dev/loop30p1")),
         parent_path: Some(dev.to_path_buf()),
         fs_type: Some("ext4".to_string()),
         size: system_end_sector * device.sector_size(),
     };
 
     format_partition(&p)?;
-
     if is_efi {
-        let start_sector = length - (partition_table_end_size + efi_size) / sector_size + 1;
+        let start_sector = system_end_sector;
+        let length = device.length();
+
+        // Ref: https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries_(LBA_2%E2%80%9333)
+        let last_usable_sector = length - 34;
+
+        let mmod = (last_usable_sector - start_sector) % (1024 * 1024 / 512);
+
         let efi = &PartitionCreate {
             path: dev.to_path_buf(),
             start_sector,
-            end_sector: length - partition_table_end_size / sector_size,
+            end_sector: last_usable_sector - mmod,
             format: true,
             file_system: Some(FileSystem::Fat32),
             kind: PartitionType::Primary,
@@ -486,10 +493,14 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
             label: None,
         };
 
-        create_partition(device, efi)?;
+        let mut device = libparted::Device::new(dev)?;
+        let device = &mut device as *mut Device;
+        let device = unsafe { &mut (*device) };
 
+        create_partition(device, efi)?;
+ 
         let p = Partition {
-            path: Some(PathBuf::from("/dev/loop20p2")),
+            path: Some(PathBuf::from("/dev/loop30p2")),
             parent_path: Some(dev.to_path_buf()),
             fs_type: Some("vfat".to_string()),
             size: 512 * 1024_u64.pow(2),
@@ -596,11 +607,14 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
     let device = &mut device as *mut Device;
     let mut device = unsafe { &mut (*device) };
 
+    let start_sector = 1024 * 1024 / sector_size;
+    let end_sector =  start_sector + (512 * 1024 * 1024 / device.sector_size());
+
     if is_efi {
         let efi = &PartitionCreate {
             path: dev.to_path_buf(),
-            start_sector: 2048,
-            end_sector: 2048 + (512 * 1024 * 1024 / device.sector_size()),
+            start_sector,
+            end_sector,
             format: true,
             file_system: Some(FileSystem::Fat32),
             kind: PartitionType::Primary,
@@ -614,10 +628,10 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         create_partition(&mut device, efi)?;
     }
 
-    let start_sector = if is_efi {
-        2048 + (512 * 1024 * 1024 / sector_size) + 1
+    let system_start_sector = if is_efi {
+        end_sector
     } else {
-        2048 + 1
+        start_sector
     };
 
     let mut flags = vec![];
@@ -628,17 +642,23 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     let length = device.length();
 
+    // Ref: https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_entries_(LBA_2%E2%80%9333)
+    let last_usable_sector = device.length() - 34;
+    let mmod = (last_usable_sector - start_sector) % (1024 * 1024 / sector_size);
+
     let system = &PartitionCreate {
         path: dev.to_path_buf(),
-        start_sector,
-        end_sector: device.length() - 1 * 1024 * 1024 / sector_size,
+        start_sector: system_start_sector,
+        end_sector: last_usable_sector - mmod,
         format: true,
         file_system: Some(FileSystem::Ext4),
         kind: PartitionType::Primary,
         flags,
         label: None,
     };
+
     create_partition(&mut device, system)?;
+
     let disk = libparted::Disk::new(&mut device)?;
     let mut last = None;
     for p in disk.parts() {
@@ -649,8 +669,8 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
 
     if is_efi {
         let part_efi = disk
-            .get_partition_by_sector(2048)
-            .ok_or_else(|| anyhow!("Could not find partition by sector: 2048"))?;
+            .get_partition_by_sector(start_sector as i64)
+            .ok_or_else(|| anyhow!("Could not find partition by sector: {start_sector}"))?;
 
         let geom_length = part_efi.geom_length();
         let part_length = if geom_length < 0 {
@@ -675,7 +695,7 @@ If you want to do this, change your computer's boot mode to UEFI mode."#
         path: Some(p),
         parent_path: Some(dev.to_path_buf()),
         fs_type: Some("ext4".to_owned()),
-        size: (length - start_sector) * sector_size,
+        size: (length - system_start_sector) * sector_size,
     };
 
     format_partition(&p)?;

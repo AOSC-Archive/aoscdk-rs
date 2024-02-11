@@ -164,12 +164,12 @@ fn get_variant(tarball: &str) -> Result<VariantEntry> {
 fn get_partition(path: &str, variant: &VariantEntry) -> Result<Partition> {
     let required_size = variant.install_size + variant.size;
     if cfg!(debug_assertions) {
-        disks::right_combine(Some(&PathBuf::from("/dev/loop20")))?;
+        disks::right_combine(Some(&PathBuf::from("/dev/loop30")))?;
 
         return Ok(Partition {
             fs_type: Some("ext4".to_string()),
-            path: Some(PathBuf::from("/dev/loop20p1")),
-            parent_path: Some(PathBuf::from("/dev/loop20")),
+            path: Some(PathBuf::from("/dev/loop30p1")),
+            parent_path: Some(PathBuf::from("/dev/loop30")),
             size: 53687091200,
         });
     }
