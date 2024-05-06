@@ -801,11 +801,24 @@ fn auto_partition_view(
         wrap_in_dialog(TextView::new(tips), "AOSC OS Installer", None)
             .button("Yes, Please Partition My Drive!", move |s| {
                 let config_clone = config_clone.clone();
+                let config = config_clone.clone();
+                let variant = config.variant.unwrap();
                 let device_path = device_path.clone();
+                let required_size = variant.install_size + variant.size;
                 let view = AsyncView::new_with_bg_creator(
                     s,
                     move || match auto_create_partitions(&device_path) {
-                        Ok(part) => Ok(part),
+                        Ok(part) => {
+                            if required_size > part.size {
+                                return Err(format!(
+                                    "The specified partition does not contain enough space to install AOSC OS release!\n\nAvailable space: {:.3}GiB\nRequired space: {:.3}GiB", 
+                                    part.size as f32 / 1024.0 / 1024.0 / 1024.0,
+                                    required_size as f32 / 1024.0 / 1024.0 / 1024.0
+                                ));
+                            }
+
+                            Ok(part)
+                        },
                         Err(e) => Err(e.to_string()),
                     },
                     move |res| {
