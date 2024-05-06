@@ -12,6 +12,8 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::prelude::{OsStrExt, PermissionsExt};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::{fs::File, path::Path};
 use sysinfo::System;
 
@@ -160,9 +162,15 @@ fn extract_squashfs<P: AsRef<Path>>(
 
     let limit_thread = if total_memory <= 2 { Some(1) } else { None };
 
-    unsquashfs_wrapper::extract(archive, path, limit_thread, move |count| {
-        counter.set((file_size * count as f64 / 100.0) as usize);
-    })?;
+    unsquashfs_wrapper::extract(
+        archive,
+        path,
+        limit_thread,
+        move |count| {
+            counter.set((file_size * count as f64 / 100.0) as usize);
+        },
+        Arc::new(AtomicBool::new(false)),
+    )?;
 
     Ok(())
 }
